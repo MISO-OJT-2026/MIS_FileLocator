@@ -1,0 +1,40 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+
+namespace MIS_FileLocator.Data.Initialization
+{
+    public static class AdminUserInitializer
+    {
+        public static async Task InitializerAdminUserAsync(
+            UserManager<ApplicationUser>userManager)
+        {
+            var employeeId = "19-01690";
+            var adminPassword = "Password123";
+
+            var existingUser = await userManager.Users.FirstOrDefaultAsync(u => u.EmployeeId == employeeId); //search the first match user table using lambda 
+
+
+            if (existingUser == null) // if not, edi create new admin user 
+            {
+                var adminUser = new ApplicationUser
+                {
+                    UserName = employeeId,
+                    EmployeeId = employeeId,
+                    FullName = "Taylor Batumbakal",
+                    EmailConfirmed = true
+
+                };
+
+                var result = await userManager.CreateAsync(adminUser,  adminPassword);
+
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
+
+            }
+                
+        }
+    }
+}
