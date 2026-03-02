@@ -1,5 +1,39 @@
-﻿@page "/dashboard"
+﻿@page "/"
+
 @using MudBlazor
 @attribute [Authorize]
 
-<MudText Typo ="Typo.h4">Dashboard</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">
+    Dashboard
+</MudText>
+
+<MudGrid>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2">Total Cabinets</MudText>
+                <MudText Typo="Typo.h5">12</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2">Total Documents</MudText>
+                <MudText Typo="Typo.h5">230</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2">Disposed Files</MudText>
+                <MudText Typo="Typo.h5">14</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+</MudGrid>

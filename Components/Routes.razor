@@ -1,7 +1,7 @@
 ﻿@using MIS_FileLocator.Components.Account.Shared
-<Router AppAssembly="@typeof(Program).Assembly">
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>
                 <RedirectToLogin />
             </NotAuthorized>
@@ -9,3 +9,6 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+
+@* DO NO TOUCH *@

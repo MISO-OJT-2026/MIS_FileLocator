@@ -1,79 +1,115 @@
 ﻿@using MudBlazor
+@using Microsoft.AspNetCore.Authorization
 @inherits LayoutComponentBase
 
-<MudThemeProvider />
+
+<MudThemeProvider Theme="@_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<MudPopoverProvider />
 
 <MudLayout>
 
+    <!-- TOP BAR -->
     <MudAppBar Elevation="1" Color="Color.Primary">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-                       OnClick="@(()=>_drawerOpen = !_drawerOpen)" />
-        <MudText Typo="Typo.h6">MIS File Locator</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="ToggleDrawer" />
+
+        <MudText Typo="Typo.h6" Class="ml-2">
+            MIS FILE LOCATOR
+        </MudText>
 
         <MudSpacer />
-
-        <AuthorizeView>
-            <Authorized>
-                <MudMenu Icon="@Icons.Material.Filled.AccountCircle">
-                    <MudMenuItem Href="/profile">Profile</MudMenuItem>
-                    <MudMenuItem Href="/admin/users">User Management</MudMenuItem>
-                    <MudMenuItem Href="/Account/Logout">Logout</MudMenuItem>
-                </MudMenu>
-            </Authorized>
-            <NotAuthorized>
-                <MudButton Variant="Variant.Text" Href="/Account/Login">Login</MudButton>
-            </NotAuthorized>
-        </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer Open="@_drawerOpen" Elevation="1" Variant="DrawerVariant.Responsive">
+    <!-- SIDEBAR -->
+    <MudDrawer @bind-Open="_drawerOpen"
+               Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md"
+               Elevation="1">
+
         <MudNavMenu>
 
-            <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+            <MudNavLink Href="/dashboard"
+                        Icon="@Icons.Material.Filled.Dashboard">
                 Dashboard
             </MudNavLink>
 
-            <MudNavGroup Text="Storages" Icon="@Icons.Material.Filled.Storage">
+            <MudNavLink Href="/profile"
+                        Icon="@Icons.Material.Filled.Person">
+                Profile
+            </MudNavLink>
+
+            <AuthorizeView Roles="Admin">
+                <MudNavLink Href="/admin/users"
+                            Icon="@Icons.Material.Filled.AdminPanelSettings">
+                    User Management
+                </MudNavLink>
+            </AuthorizeView>
+
+
+            <!-- STORAGESSSS -->
+            <MudNavGroup Title="Storage"
+                         Icon="@Icons.Material.Filled.Inventory2"
+                         @bind-Expanded="_storageExpanded">
                 <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
                 <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
                 <MudNavLink Href="/storages/folders">Folders</MudNavLink>
             </MudNavGroup>
-
-            <MudNavGroup Text="Documents" Icon="@Icons.Material.Filled.Description">
-                <MudNavLink Href="/documents">Documents</MudNavLink>
-                <MudNavLink Href="/documents/disposed">Disposed Documents</MudNavLink>
-                <MudNavLink Href="/documents/recycle">Recycle Bin</MudNavLink>
+            
+            <!-- DOCUMENTSSS -->
+            <MudNavGroup Title="Documents"
+                         Icon="@Icons.Material.Filled.Description"
+                         @bind-Expanded="_documentsExpanded">
+                <MudNavLink Href="/documents">All Documents</MudNavLink>
+                <MudNavLink Href="/documents/disposed">Disposed</MudNavLink>
             </MudNavGroup>
 
-            <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.FolderOpen">
+            <MudNavLink Href="/forms"
+                        Icon="@Icons.Material.Filled.Assignment">
                 Forms
             </MudNavLink>
 
-            <AuthorizeView Roles="Admin">
-                <MudDivider Class="my-2" />
-                <MudNavGroup Text="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings">
-                    <MudNavLink Href="/admin/users">User Management</MudNavLink>
-                </MudNavGroup>
-            </AuthorizeView>
+            <MudDivider />
 
-            <MudDivider Class="my-2" />
-            <MudNavLink Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout">
+            <MudNavLink Href="/Account/Logout"
+                        Icon="@Icons.Material.Filled.Logout">
                 Logout
             </MudNavLink>
 
         </MudNavMenu>
+
     </MudDrawer>
 
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-            @Body
-        </MudContainer>
+    <!-- MAIN CONTENT -->
+    <MudMainContent Class="pa-6">
+        @Body
     </MudMainContent>
 
 </MudLayout>
 
 @code {
+    private bool _storageExpanded = false;
+
+    private bool _documentsExpanded = false;
+
     private bool _drawerOpen = true;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#4F46E5",
+            Secondary = "#6366F1",
+            Background = "#F5F6FA",
+            AppbarBackground = "#4F46E5",
+        }
+    };
 }

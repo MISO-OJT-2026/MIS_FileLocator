@@ -1,8 +1,22 @@
-﻿@inject NavigationManager NavigationManager
+﻿@namespace MIS_FileLocator.Components.Account
+@inject NavigationManager NavigationManager
+@inject ILogger<RedirectToLogin> Logger
 
 @code {
     protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
+        var current = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        
+        Logger.LogInformation("RedirectToLogin initialized. Current path: {CurrentPath}", current);
+
+        if (current.StartsWith("Account/Login", StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.LogInformation("Already on login page, preventing redirect loop");
+            return;
+        }
+
+        var redirectUrl = $"Account/Login?ReturnUrl={current}";
+        Logger.LogInformation("Redirecting to: {RedirectUrl}", redirectUrl);
+        NavigationManager.NavigateTo(redirectUrl, true);
     }
 }

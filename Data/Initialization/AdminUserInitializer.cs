@@ -10,7 +10,7 @@ namespace MIS_FileLocator.Data.Initialization
             UserManager<ApplicationUser>userManager)
         {
             var employeeId = "19-01690";
-            var adminPassword = "Password123";
+            var adminPassword = "Admin@123";
 
             var existingUser = await userManager.Users.FirstOrDefaultAsync(u => u.EmployeeId == employeeId); //search the first match user table using lambda 
 
