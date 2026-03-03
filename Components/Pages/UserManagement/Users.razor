@@ -1,7 +1,7 @@
 ﻿@page "/admin/users"
 @attribute [Authorize(Roles = "Admin")]
 
-@rendermode InteractiveServer
+
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -18,7 +18,7 @@
         Add New User
     </MudButton>
 
-    <MudTable Items="@_users" Dense="true" Hover="true" Elevation="3" Loading="@_loading">
+    <MudTable T="UserDisplayModel" Items="@_users" Dense="true" Hover="true" Elevation="3" Loading="@_loading" OnRowClick="HandleRowClick">
         <HeaderContent>
             <MudTh>Employee ID</MudTh>
             <MudTh>Username</MudTh>
@@ -123,5 +123,28 @@
         public string FullName { get; set; } = "";
         public string Department { get; set; } = "";
         public string Role { get; set; } = "";
+    }
+
+    private async Task HandleRowClick(TableRowClickEventArgs<UserDisplayModel> args)
+    {
+        var parameters = new DialogParameters
+    {
+        { "UserId", args.Item.Id }
+    };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<EditUser>("Edit User", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            await LoadUsersAsync();
+        }
     }
 }  

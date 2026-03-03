@@ -28,9 +28,8 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    // This is the traffic cop!
     private IComponentRenderMode? RenderModeForPage =>
         HttpContext.Request.Path.StartsWithSegments("/Account")
-            ? null // Returns null (Static SSR) for all Account pages (Login, Register, etc.)
-            : InteractiveServer; // Returns Interactive for everything else (MudBlazor)
+            ? null
+            : new InteractiveServerRenderMode(prerender: false); // Disable prerender here!
 }

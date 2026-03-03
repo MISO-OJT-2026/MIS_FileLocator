@@ -1,0 +1,112 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using MIS_FileLocator.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="_editUser" OnValidSubmit="UpdateUser">
+            <DataAnnotationsValidator />
+
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_editUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_editUser.UserName" Label="Username" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_editUser.FullName" Label="Full Name" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="_editUser.Role" Label="Role" Required="true" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                        <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
+                        <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex justify-end mt-4">
+                <MudButton OnClick="Cancel" Class="mr-2">Cancel</MudButton>
+                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled">
+                    Update
+                </MudButton>
+            </div>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public string UserId { get; set; } = "";
+
+    private EditUserModel _editUser = new();
+    private ApplicationUser? _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await UserManager.FindByIdAsync(UserId);
+
+        if (_user != null)
+        {
+            var roles = await UserManager.GetRolesAsync(_user);
+
+            _editUser = new EditUserModel
+            {
+                EmployeeId = _user.EmployeeId ?? "",
+                UserName = _user.UserName ?? "",
+                FullName = _user.FullName ?? "",
+                Department = _user.Department ?? "",
+                Role = roles.FirstOrDefault() ?? "Viewer"
+            };
+        }
+    }
+
+    private async Task UpdateUser(EditContext context)
+    {
+        if (_user == null) return;
+
+        _user.EmployeeId = _editUser.EmployeeId;
+        _user.UserName = _editUser.UserName;
+        _user.FullName = _editUser.FullName;
+        _user.Department = _editUser.Department;
+
+        var updateResult = await UserManager.UpdateAsync(_user);
+
+        if (!updateResult.Succeeded)
+        {
+            foreach (var error in updateResult.Errors)
+                Snackbar.Add(error.Description, Severity.Error);
+            return;
+        }
+
+        var currentRoles = await UserManager.GetRolesAsync(_user);
+        await UserManager.RemoveFromRolesAsync(_user, currentRoles);
+        await UserManager.AddToRoleAsync(_user, _editUser.Role);
+
+        Snackbar.Add("User updated successfully!", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class EditUserModel
+    {
+        [Required] public string EmployeeId { get; set; } = "";
+        [Required] public string UserName { get; set; } = "";
+        [Required] public string FullName { get; set; } = "";
+        [Required] public string Department { get; set; } = "";
+        [Required] public string Role { get; set; } = "";
+    }
+}
