@@ -3,7 +3,6 @@
 
 @layout MIS_FileLocator.Components.Layout.AuthLayout
 
-
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
@@ -17,58 +16,65 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudCard Elevation="4" Class="pa-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="mb-2">Log in</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                    Use your local account to access the system.
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input"  OnValidSubmit="LoginUser" FormName="login">
+        <MudCardContent>
+            @* Replaced standard StatusMessage with a MudAlert for better UI integration *@
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+            }
+
+            <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.EmployeeId" id="Input.EmployeeId" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.EmployeeId" class="form-label">Employee ID</label>
-                    <ValidationMessage For="() => Input.EmployeeId" class="text-danger" />
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+
+                <div class="d-flex flex-column gap-4">
+                    @* Notice the Name parameter here! 
+                        It is required for static form POSTs to bind back to the InputModel.
+                    *@
+                    <MudTextField @bind-Value="Input.EmployeeId"
+                                  For="@(() => Input.EmployeeId)"
+                                  Label="Employee ID"
+                                  Variant="Variant.Outlined"
+                                  Name="Input.EmployeeId"
+                                  Required="true" />
+
+                    <MudTextField @bind-Value="Input.Password"
+                                  For="@(() => Input.Password)"
+                                  Label="Password"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Name="Input.Password"
+                                  Required="true" />
+
+                    <MudCheckBox @bind-Value="Input.RememberMe"
+                                 Label="Remember me"
+                                 Name="Input.RememberMe"
+                                 Color="Color.Primary" />
+
+                    @* ButtonType.Submit is critical here to trigger the form POST *@
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               FullWidth="true"
+                               Class="mt-2">
+                        Log in
+                    </MudButton>
                 </div>
             </EditForm>
-        </section>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
-    </div>
-</div>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
     private string? errorMessage;
@@ -113,7 +119,7 @@
 
         if (result.Succeeded)
         {
-            NavigationManager.NavigateTo("/", true);
+            NavigationManager.NavigateTo(ReturnUrl ?? "/", true);
         }
         else
         {
@@ -124,14 +130,12 @@
     private sealed class InputModel
     {
         [Required]
-        
         public string EmployeeId { get; set; } = "";
 
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
     }
 }

@@ -1,0 +1,127 @@
+﻿@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using MIS_FileLocator.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">User Management</MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class="mb-4">
+        Add New User
+    </MudButton>
+
+    <MudTable Items="@_users" Dense="true" Hover="true" Elevation="3" Loading="@_loading">
+        <HeaderContent>
+            <MudTh>Employee ID</MudTh>
+            <MudTh>Username</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Department</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Employee ID">@context.EmployeeId</MudTd>
+            <MudTd DataLabel="Username">@context.UserName</MudTd>
+            <MudTd DataLabel="Full Name">@context.FullName</MudTd>
+            <MudTd DataLabel="Department">@context.Department</MudTd>
+            <MudTd DataLabel="Role">
+                <MudChip T="string" Color="@GetRoleColor(context.Role)" Size="Size.Small">@context.Role</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context.Id))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private List<UserDisplayModel> _users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        _users.Clear();
+
+        var allUsers = await UserManager.Users.ToListAsync();
+
+        foreach (var user in allUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            _users.Add(new UserDisplayModel
+                {
+                    Id = user.Id,
+                    EmployeeId = user.EmployeeId ?? "N/A",
+                    UserName = user.UserName!,
+                    FullName = user.FullName ?? "N/A",
+                    Department = user.Department ?? "N/A",
+                    Role = roles.FirstOrDefault() ?? "No Role"
+                });
+        }
+
+        _loading = false;
+    }
+
+    private async Task OpenAddUserDialog()
+    {
+        // This tells MudBlazor to pop open your CreateUser.razor component!
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreateUser>("Create New User", options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            // If the user was saved successfully in the popup, refresh the table
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task DeleteUser(string userId)
+    {
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user != null)
+        {
+            var result = await UserManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                Snackbar.Add("User deleted.", Severity.Info);
+                await LoadUsersAsync();
+            }
+        }
+    }
+
+    private Color GetRoleColor(string role) => role switch
+    {
+        "Admin" => Color.Error,
+        "Editor" => Color.Warning,
+        "Viewer" => Color.Info,
+        _ => Color.Default
+    };
+
+    private class UserDisplayModel
+    {
+        public string Id { get; set; } = "";
+        public string EmployeeId { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Role { get; set; } = "";
+    }
+}  
