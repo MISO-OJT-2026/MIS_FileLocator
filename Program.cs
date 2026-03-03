@@ -5,6 +5,7 @@ using MIS_FileLocator.Components.Account;
 using MIS_FileLocator.Data;
 using MIS_FileLocator.Data.Initialization;
 using MudBlazor.Services;
+using MIS_FileLocator.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,9 +13,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
-
+builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IdentityRedirectManager>();
+builder.Services.AddScoped<UserAdminService>();
 
 // enable detailed circuit errors (good for debugging)
 builder.Services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options =>
@@ -45,15 +47,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/AccessDenied";
 
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;   // important for local dev
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-});
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
@@ -95,6 +89,6 @@ app.UseAntiforgery();
 app.MapRazorComponents<MIS_FileLocator.Components.App>()
     .AddInteractiveServerRenderMode();
 
-//app.MapAdditionalIdentityEndpoints();
+
 
 app.Run();

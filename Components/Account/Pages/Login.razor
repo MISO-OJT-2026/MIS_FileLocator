@@ -1,6 +1,5 @@
-﻿@attribute [AllowAnonymous]
-@page "/Account/Login"
-
+﻿@page "/Account/Login"
+@attribute [AllowAnonymous]
 @layout MIS_FileLocator.Components.Layout.AuthLayout
 
 
@@ -23,7 +22,7 @@
     <div class="col-lg-6">
         <section>
             <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input"  OnValidSubmit="LoginUser" FormName="login">
+            <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
                 <h2>Use a local account to log in.</h2>
                 <hr />
@@ -113,7 +112,8 @@
 
         if (result.Succeeded)
         {
-            NavigationManager.NavigateTo("/", true);
+            var redirectUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+            NavigationManager.NavigateTo(redirectUrl, true);
         }
         else
         {
@@ -124,7 +124,7 @@
     private sealed class InputModel
     {
         [Required]
-        
+
         public string EmployeeId { get; set; } = "";
 
         [Required]

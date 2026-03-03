@@ -3,6 +3,7 @@
 @inherits LayoutComponentBase
 
 
+
 <MudThemeProvider Theme="@_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -95,7 +96,7 @@
 
     private bool _documentsExpanded = false;
 
-    private bool _drawerOpen = true;
+    private bool _drawerOpen = false;
 
     private void ToggleDrawer()
     {

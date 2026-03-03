@@ -1,0 +1,113 @@
+﻿@page "/admin/users"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@using MudBlazor
+@using MIS_FileLocator.Data
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-6" MaxWidth="500px">
+
+    <MudText Typo="Typo.h5" Class="mb-4">
+        Add Employee User
+    </MudText>
+
+    <MudForm @ref="_form">
+
+        <MudTextField Label="Employee ID"
+                      @bind-Value="_employeeId"
+                      Required="true" />
+
+        <MudTextField Label="Username"
+                      @bind-Value="_username"
+                      Required="true" />
+
+        <MudTextField Label="Full Name"
+                      @bind-Value="_fullName"
+                      Required="true" />
+
+        <MudTextField Label="Department"
+                      @bind-Value="_department"
+                      Required="true" />
+
+        <MudTextField Label="Password"
+                      @bind-Value="_password"
+                      InputType="InputType.Password"
+                      Required="true" />
+
+        <MudSelect T="string"
+                   Label="Role"
+                   @bind-Value="_role"
+                   Required="true"
+                   Class="mt-2">
+
+            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+            <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
+            <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
+
+        </MudSelect>
+
+        <MudStack Row="true" Spacing="2" Class="mt-4">
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="CreateUserAsync">
+                Save
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined"
+                       OnClick="@(()=>Nav.NavigateTo("/admin/users"))">
+                Cancel
+            </MudButton>
+
+        </MudStack>
+
+    </MudForm>
+
+</MudPaper>
+
+@code {
+
+    private MudForm? _form;
+
+    private string _employeeId = "";
+    private string _username = "";
+    private string _fullName = "";
+    private string _department = "";
+    private string _password = "";
+    private string _role = "Viewer";
+
+    private async Task CreateUserAsync()
+    {
+        if (_form == null) return;
+
+        await _form.Validate();
+
+        if (!_form.IsValid)
+            return;
+
+        var user = new ApplicationUser
+        {
+            EmployeeId = _employeeId,
+            UserName = _username,
+            FullName = _fullName,
+            Department = _department
+        };
+
+        var result = await UserManager.CreateAsync(user, _password);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+                Snackbar.Add(error.Description, Severity.Error);
+            return;
+        }
+
+        await UserManager.AddToRoleAsync(user, _role);
+
+        Snackbar.Add("User created successfully!", Severity.Success);
+
+        Nav.NavigateTo("/admin/users");
+    }
+}

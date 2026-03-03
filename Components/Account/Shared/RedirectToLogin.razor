@@ -17,6 +17,6 @@
 
         var redirectUrl = $"Account/Login?ReturnUrl={current}";
         Logger.LogInformation("Redirecting to: {RedirectUrl}", redirectUrl);
-        NavigationManager.NavigateTo(redirectUrl, true);
+        NavigationManager.NavigateTo("/Account/Login", true);
     }
 }
