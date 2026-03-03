@@ -1,113 +1,96 @@
-﻿@page "/admin/users"
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
-@using MudBlazor
-@using MIS_FileLocator.Data
+﻿@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using MIS_FileLocator.Data
+ 
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
 @inject UserManager<ApplicationUser> UserManager
 @inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
-<MudPaper Class="pa-6" MaxWidth="500px">
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="_newUser" OnValidSubmit="SaveUser">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_newUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_newUser.UserName" Label="Username" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_newUser.FullName" Label="Full Name" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_newUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_newUser.Password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="_newUser.Role" Label="Role" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                        <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
+                        <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
 
-    <MudText Typo="Typo.h5" Class="mb-4">
-        Add Employee User
-    </MudText>
-
-    <MudForm @ref="_form">
-
-        <MudTextField Label="Employee ID"
-                      @bind-Value="_employeeId"
-                      Required="true" />
-
-        <MudTextField Label="Username"
-                      @bind-Value="_username"
-                      Required="true" />
-
-        <MudTextField Label="Full Name"
-                      @bind-Value="_fullName"
-                      Required="true" />
-
-        <MudTextField Label="Department"
-                      @bind-Value="_department"
-                      Required="true" />
-
-        <MudTextField Label="Password"
-                      @bind-Value="_password"
-                      InputType="InputType.Password"
-                      Required="true" />
-
-        <MudSelect T="string"
-                   Label="Role"
-                   @bind-Value="_role"
-                   Required="true"
-                   Class="mt-2">
-
-            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
-            <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
-            <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
-
-        </MudSelect>
-
-        <MudStack Row="true" Spacing="2" Class="mt-4">
-
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       OnClick="CreateUserAsync">
-                Save
-            </MudButton>
-
-            <MudButton Variant="Variant.Outlined"
-                       OnClick="@(()=>Nav.NavigateTo("/admin/users"))">
-                Cancel
-            </MudButton>
-
-        </MudStack>
-
-    </MudForm>
-
-</MudPaper>
+            <div class="d-flex justify-end mt-4">
+                <MudButton OnClick="Cancel" Class="mr-2">Cancel</MudButton>
+                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled">Save User</MudButton>
+            </div>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
 
 @code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    private MudForm? _form;
+    private AddUserModel _newUser = new() { Role = "Viewer" };
 
-    private string _employeeId = "";
-    private string _username = "";
-    private string _fullName = "";
-    private string _department = "";
-    private string _password = "";
-    private string _role = "Viewer";
-
-    private async Task CreateUserAsync()
+    private async Task SaveUser()
     {
-        if (_form == null) return;
-
-        await _form.Validate();
-
-        if (!_form.IsValid)
-            return;
-
         var user = new ApplicationUser
-        {
-            EmployeeId = _employeeId,
-            UserName = _username,
-            FullName = _fullName,
-            Department = _department
-        };
+            {
+                UserName = _newUser.UserName,
+                EmployeeId = _newUser.EmployeeId,
+                FullName = _newUser.FullName,
+                Department = _newUser.Department,
+                EmailConfirmed = true
+            };
 
-        var result = await UserManager.CreateAsync(user, _password);
+        var result = await UserManager.CreateAsync(user, _newUser.Password);
 
-        if (!result.Succeeded)
+        if (result.Succeeded)
         {
-            foreach (var error in result.Errors)
-                Snackbar.Add(error.Description, Severity.Error);
-            return;
+            await UserManager.AddToRoleAsync(user, _newUser.Role);
+            Snackbar.Add($"User {_newUser.UserName} created successfully!", Severity.Success);
+
+            // Close the dialog and tell the parent page it was successful
+            MudDialog.Close(DialogResult.Ok(true));
         }
+        else
+        {
+            foreach (var err in result.Errors)
+            {
+                Snackbar.Add(err.Description, Severity.Error);
+            }
+        }
+    }
 
-        await UserManager.AddToRoleAsync(user, _role);
+    private void Cancel() => MudDialog.Cancel();
 
-        Snackbar.Add("User created successfully!", Severity.Success);
-
-        Nav.NavigateTo("/admin/users");
+    public class AddUserModel
+    {
+        [Required] public string EmployeeId { get; set; } = "";
+        [Required] public string UserName { get; set; } = "";
+        [Required] public string FullName { get; set; } = "";
+        [Required] public string Department { get; set; } = "";
+        [Required] public string Password { get; set; } = "";
+        [Required] public string Role { get; set; } = "";
     }
 }
