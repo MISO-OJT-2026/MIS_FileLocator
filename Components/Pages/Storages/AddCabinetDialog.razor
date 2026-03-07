@@ -1,0 +1,54 @@
+﻿
+
+@using FileLocator.Models
+@using MIS_FileLocator.Data
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="_newCabinet" OnValidSubmit="SaveCabinet">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="_newCabinet.Name" Label="Cabinet Name" Required="true"
+                          Variant="Variant.Outlined" Class="mb-3" Placeholder="e.g., Cabinet A" />
+
+            <MudTextField @bind-Value="_newCabinet.Description" Label="Description (Optional)"
+                          Variant="Variant.Outlined" Lines="3" Placeholder="e.g., Located in the Server Room" />
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveCabinet">Save Cabinet</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // This allows the dialog to close itself
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    // Our empty bucket for the new data
+    private FillingCabinet _newCabinet = new();
+
+    private async Task SaveCabinet()
+    {
+        // 1. Basic validation
+        if (string.IsNullOrWhiteSpace(_newCabinet.Name))
+        {
+            Snackbar.Add("Cabinet Name is required.", Severity.Warning);
+            return;
+        }
+
+        // 2. Add to the database context
+        _context.FillingCabinets.Add(_newCabinet);
+
+        // 3. Save changes
+        await _context.SaveChangesAsync();
+
+        Snackbar.Add($"Cabinet '{_newCabinet.Name}' added successfully!", Severity.Success);
+
+        // 4. Close the dialog and send a "Success" signal back to the main page
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

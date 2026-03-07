@@ -6,8 +6,12 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
 
 @inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext _context
+@inject ICurrentUserService _currentUserService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -55,7 +59,7 @@
         await LoadUsersAsync();
     }
 
-    private async Task LoadUsersAsync()
+    private async Task LoadUsersAsync() // fetch users in the database 
     {
         _loading = true;
         _users.Clear();
@@ -96,16 +100,52 @@
     private async Task DeleteUser(string userId)
     {
         var user = await UserManager.FindByIdAsync(userId);
-        if (user != null)
+
+
+        if (user == null)
+            return;
+
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Confirm Delete",
+            $"Are you sure you want to delete this user '{user.FullName}'?",
+            yesText:"Delete",
+            cancelText:"Cancel"
+    );
+        if(result == true)
         {
-            var result = await UserManager.DeleteAsync(user);
-            if (result.Succeeded)
+
+
+            var deleteResult = await UserManager.DeleteAsync(user);
+
+            if (deleteResult.Succeeded)
             {
-                Snackbar.Add("User deleted.", Severity.Info);
-                await LoadUsersAsync();
+                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync(); // get full name from ICurrentUserService class
+                var log = new TransactionLog
+                    {
+                        FullName = currentAdmin,
+                        EventName = "User Deleted",
+                        Description = $"Permanently deleted the account for {user.FullName} ({user.UserName}).",
+                        Status = "Warning", // This will make the status chip stand out!
+                        PerformedAt = DateTime.UtcNow
+                    };
+
+                _context.TransactionLogs.Add(log);
+
+                await _context.SaveChangesAsync();
+
+                    Snackbar.Add($"User '{user.FullName}'deleted.", Severity.Info);
+                    await LoadUsersAsync();
+                }
+                else
+                {
+                    foreach (var error in deleteResult.Errors)
+                    {
+                        Snackbar.Add(error.Description, Severity.Error);                    
+                    }
+                }
             }
         }
-    }
+    
 
     private Color GetRoleColor(string role) => role switch
     {

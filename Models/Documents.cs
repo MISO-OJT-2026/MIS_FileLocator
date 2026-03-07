@@ -12,9 +12,9 @@
 
         public DateTime FiledAt { get; set; } = DateTime.UtcNow; //when docs physically filed sa cabinet
 
-        public DateTime CreatedBy { get; set; } = DateTime.UtcNow; //when docs created in system
+        public string CreatedBy { get; set; } = " "; //when docs created in system
 
-        public DateTime UpdatedBy { get; set; } 
+        public string? UpdatedBy { get; set; } 
 
 
         public bool IsDisposal { get; set; } 
@@ -29,8 +29,11 @@
          
         public string? DeletedByUserId{ get; set; }
 
-
-
+        public bool IsBorrowed { get; set; } = false;
+        public string? CurrentBorrower { get; set; }
+        public DateTime? BorrowedAt { get; set; }
+        public DateTime? ExpectedReturnDate { get; set; }
+        public string? BorrowRemarks { get; set; }
         // confidentiality level table foreign key
         public int ConfidentialityLevelId { get; set; }
         public ConfidentialityLevel? ConfidentialityLevel { get; set; }

@@ -16,6 +16,12 @@
         </MudNavLink>
     </AuthorizeView>
 
+    <AuthorizeView Roles="Admin">
+        <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">
+           Transaction Logs
+        </MudNavLink>
+    </AuthorizeView>
+
     <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2" @bind-Expanded="_storageExpanded">
         <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
         <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>

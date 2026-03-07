@@ -1,8 +1,12 @@
 ﻿@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using MIS_FileLocator.Data
+@using MIS_FileLocator.Services
+@using MIS_FileLocator.Models
 
 @inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext _context
+@inject ICurrentUserService _currentUserService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -94,6 +98,18 @@
         var currentRoles = await UserManager.GetRolesAsync(_user);
         await UserManager.RemoveFromRolesAsync(_user, currentRoles);
         await UserManager.AddToRoleAsync(_user, _editUser.Role);
+
+        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+        var log = new TransactionLog
+        {
+            FullName = currentAdmin,
+            EventName = "User Updated",
+            Description = $"Updated the profile and role information for {_editUser.FullName}.",
+            Status = "Success",
+            PerformedAt = DateTime.UtcNow
+        };
+        _context.TransactionLogs.Add(log);
+        await _context.SaveChangesAsync();
 
         Snackbar.Add("User updated successfully!", Severity.Success);
         MudDialog.Close(DialogResult.Ok(true));

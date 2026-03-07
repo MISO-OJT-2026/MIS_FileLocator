@@ -1,0 +1,68 @@
+﻿@page "/transaction-logs"
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<MudText Typo="Typo.h4" Class="mb-4">System Activity Logs</MudText>
+
+@* transactionLog in t came from mmodel clas. only accept data from thereeee *@
+
+<MudDataGrid T="TransactionLog" Items="@_logs" SortMode="SortMode.Multiple" Filterable="true" QuickFilter="@_quickFilter">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString" Placeholder="Search logs..." Adornment="Adornment.Start" Immediate="true"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.PerformedAt" Title="Date & Time" Format="MMM dd, yyyy hh:mm tt" />
+        <PropertyColumn Property="x => x.FullName" Title="User" />
+        <PropertyColumn Property="x => x.EventName" Title="Action" />
+        <PropertyColumn Property="x => x.Description" Title="Details" />
+        <TemplateColumn Title="Status">
+            <CellTemplate>
+                <MudChip Size="Size.Small" Color="@GetStatusColor(context.Item.Status)">
+                    @context.Item.Status
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="TransactionLog" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private string _searchString = string.Empty;
+    private List<TransactionLog> _logs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Fetch the data when the page loads
+        _logs = await _context.TransactionLogs
+                              .OrderByDescending(x => x.PerformedAt)
+                              .ToListAsync();
+    }
+
+    // 2. Change the chip color based on the status text
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Success" => Color.Success,
+            "Warning" => Color.Warning,
+            "Error" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    // 3. The logic for the search bar
+    private Func<TransactionLog, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        if (x.FullName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        if (x.EventName.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    };
+}

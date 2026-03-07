@@ -6,6 +6,11 @@
 
         public string Name { get; set; } = ""; // to avoid null anteh
 
+        public string? Description { get; set; }
+
+       
+        public bool IsArchived { get; set; } = false;
+
         public int FileBoxId { get; set; } 
         public FileBoxes? FileBox { get; set; } 
 

@@ -1,10 +1,13 @@
 using FileLocator.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-
+using MIS_FileLocator.Models;
+using MIS_FileLocator.Services;
+using System.Text.Json;
+using System.Threading.Channels;
 namespace MIS_FileLocator.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUserService) : IdentityDbContext<ApplicationUser>(options)
     {
 
          public DbSet<FillingCabinet> FillingCabinets { get; set; }
@@ -16,6 +19,8 @@ namespace MIS_FileLocator.Data
         public DbSet<ConfidentialityLevel> ConfidentialityLevels { get; set; }
 
         public DbSet<AuditTrails>AuditTrails { get; set; }
+
+        public DbSet<TransactionLog> TransactionLogs { get; set; }
 
         // for tables configuration and relationships ( wag na wag na)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -64,6 +69,63 @@ namespace MIS_FileLocator.Data
                 new ConfidentialityLevel { Id = 3, Name = "Restricted" },
                 new ConfidentialityLevel { Id = 4, Name = "Confidential" }
                 );
+        }
+
+      
+         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            // Grab the logged-in user's name
+            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
+
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added ||
+                            e.State == EntityState.Modified ||
+                            e.State == EntityState.Deleted)
+                .ToList();
+
+            var auditLogs = new List<AuditTrails>();
+
+            foreach (var entry in entries)
+            {
+                // Skip our tracking tables to prevent an infinite loop!
+                if (entry.Entity is AuditTrails || entry.Entity is TransactionLog)
+                    continue;
+
+                var auditTrail = new AuditTrails
+                {
+                    TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
+                    Action = entry.State.ToString(),
+                    PerformedAt = DateTime.UtcNow,
+                    FullName = currentUsername 
+                };
+
+                // Get the ID of the specific record being changed
+                var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
+                auditTrail.RecordId = primaryKey?.CurrentValue?.ToString() ?? "Unknown";
+
+                // Capture what the data looked like BEFORE the change
+                if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
+                {
+                    var oldValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.OriginalValue);
+                    auditTrail.OldValues = JsonSerializer.Serialize(oldValues);
+                }
+
+                // Capture what the data looks like AFTER the change
+                if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
+                {
+                    var newValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
+                    auditTrail.NewValues = JsonSerializer.Serialize(newValues);
+                }
+
+                auditLogs.Add(auditTrail);
+            }
+
+            if (auditLogs.Any())
+            {
+                await AuditTrails.AddRangeAsync(auditLogs, cancellationToken);
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }

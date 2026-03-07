@@ -5,6 +5,11 @@
         public int Id { get; set; }
         public string Name { get; set; } = " ";
 
+        public string? Description { get; set; }
+
+        //  The Soft Delete/Archive flag
+        public bool IsArchived { get; set; } = false;
+
         //foreign key:must belong to a filling cab.
         public int FillingCabinetId { get; set; }
 

@@ -1,7 +1,13 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
 @using Microsoft.AspNetCore.Identity
 @using MIS_FileLocator.Data
- 
+@using FileLocator.Models
+@using FileLocator.Services
+
+@inject ApplicationDbContext _context
+@inject ICurrentUserService _currentUserService
 
 
 @inject UserManager<ApplicationUser> UserManager
@@ -13,7 +19,7 @@
             <DataAnnotationsValidator />
             <MudGrid>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_newUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_newUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" Immediate="true" />
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudTextField @bind-Value="_newUser.UserName" Label="Username" Required="true" Variant="Variant.Outlined" />
@@ -22,10 +28,16 @@
                     <MudTextField @bind-Value="_newUser.FullName" Label="Full Name" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_newUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" />
+                <MudSelect T="string" @bind-Value = "_newUser.Department" Label = "Department" Required = "true" Variant ="Variant.Outlined">
+
+                    <MudSelectItem Value="@("Network Unit")">Network Unit</MudSelectItem>
+                    <MudSelectItem Value="@("Hardware Unit")">Hardware Unit</MudSelectItem>
+                    <MudSelectItem Value="@("Software Unit")">Software Unit</MudSelectItem>
+                    <MudSelectItem Value="@("Front Desk")">Front Desk</MudSelectItem>
+                </MudSelect>
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_newUser.Password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_newUser.Password" Label="Password" InputType="InputType.Text"  Variant="Variant.Outlined" ReadOnly = "true" Adornment = "Adornment.End" AdornmentIcon="@Icons.Material.Filled.Refresh" OnAdornmentClick="GeneratePassword"/>
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudSelect @bind-Value="_newUser.Role" Label="Role" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
@@ -65,6 +77,18 @@
         if (result.Succeeded)
         {
             await UserManager.AddToRoleAsync(user, _newUser.Role);
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+            var log = new TransactionLog
+                {
+                    FullName = currentAdmin,
+                    EventName = "User Registered",
+                    Description = $"Created a new system account for {_newUser.FullName} with the role of {_newUser.Role}.",
+                    Status = "Success",
+                    PerformedAt = DateTime.UtcNow
+                };
+            _context.TransactionLogs.Add(log);
+            await _context.SaveChangesAsync();
+
             Snackbar.Add($"User {_newUser.UserName} created successfully!", Severity.Success);
 
             // Close the dialog and tell the parent page it was successful
@@ -77,6 +101,55 @@
                 Snackbar.Add(err.Description, Severity.Error);
             }
         }
+    }
+
+    private void GeneratePassword()
+    {
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lower = "abcdefghijkmnopqrstuvwxyz";
+        const string numbers = "23456789";
+        const string specials = "!@#$%^&*";
+
+        var random = new Random();
+
+        // Ensure required characters exist
+        char upperChar = upper[random.Next(upper.Length)];
+        char lowerChar = lower[random.Next(lower.Length)];
+        char numberChar = numbers[random.Next(numbers.Length)];
+        char specialChar = specials[random.Next(specials.Length)];
+
+        // Remaining characters
+        const string all = upper + lower + numbers + specials;
+
+        string remaining = new string(Enumerable
+            .Repeat(all, 6)
+            .Select(s => s[random.Next(s.Length)])
+            .ToArray());
+
+        // Combine everything
+        var password = new List<char>
+    {
+        upperChar,
+        lowerChar,
+        numberChar,
+        specialChar
+    };
+
+        password.AddRange(remaining);
+
+        // Shuffle password so pattern isn't predictable
+        _newUser.Password = new string(password
+            .OrderBy(x => random.Next())
+            .ToArray());
+
+
+    }
+
+    private void OnEmployeeIdChanged(string value)
+    {
+       _newUser.EmployeeId = value;
+
+       _newUser.UserName = value;
     }
 
     private void Cancel() => MudDialog.Cancel();
