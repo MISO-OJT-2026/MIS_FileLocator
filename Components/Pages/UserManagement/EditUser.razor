@@ -106,7 +106,7 @@
             EventName = "User Updated",
             Description = $"Updated the profile and role information for {_editUser.FullName}.",
             Status = "Success",
-            PerformedAt = DateTime.UtcNow
+            PerformedAt = DateTime.UtcNow.AddHours(8)
         };
         _context.TransactionLogs.Add(log);
         await _context.SaveChangesAsync();

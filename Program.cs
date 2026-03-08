@@ -8,6 +8,7 @@ using MudBlazor.Services;
 using MIS_FileLocator.Services;
 using FileLocator.Services;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()

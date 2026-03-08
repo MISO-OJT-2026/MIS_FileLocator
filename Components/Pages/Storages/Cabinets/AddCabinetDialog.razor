@@ -1,9 +1,17 @@
 ﻿
-
+@using FileLocator.Services
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
 @using FileLocator.Models
 @using MIS_FileLocator.Data
-@inject ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+
+
 @inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+@inject ApplicationDbContext _context
+
+
 
 <MudDialog>
     <DialogContent>
@@ -28,27 +36,38 @@
 
     // Our empty bucket for the new data
     private FillingCabinet _newCabinet = new();
+    
+
 
     private async Task SaveCabinet()
     {
-        // 1. Basic validation
+
         if (string.IsNullOrWhiteSpace(_newCabinet.Name))
         {
-            Snackbar.Add("Cabinet Name is required.", Severity.Warning);
+            Snackbar.Add("Cabinet name is required.", Severity.Error);
             return;
         }
-
-        // 2. Add to the database context
+        //add in databaseeee
         _context.FillingCabinets.Add(_newCabinet);
 
-        // 3. Save changes
+        //get admin o r editor 
+        var curentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+        var log = new TransactionLog
+            {
+                FullName = curentAdmin,
+                EventName = "Cabinet Created",
+                Description = $"Added a new physical cabinet named '{_newCabinet.Name}' to the system.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            };
+
+        _context.TransactionLogs.Add(log);
+
+
+        //save cabinet and log
         await _context.SaveChangesAsync();
-
-        Snackbar.Add($"Cabinet '{_newCabinet.Name}' added successfully!", Severity.Success);
-
-        // 4. Close the dialog and send a "Success" signal back to the main page
         MudDialog.Close(DialogResult.Ok(true));
-    }
-
+        }
     private void Cancel() => MudDialog.Cancel();
 }

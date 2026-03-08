@@ -84,7 +84,7 @@
                     EventName = "User Registered",
                     Description = $"Created a new system account for {_newUser.FullName} with the role of {_newUser.Role}.",
                     Status = "Success",
-                    PerformedAt = DateTime.UtcNow
+                PerformedAt = DateTime.UtcNow.AddHours(8)
                 };
             _context.TransactionLogs.Add(log);
             await _context.SaveChangesAsync();

@@ -126,7 +126,7 @@
                         EventName = "User Deleted",
                         Description = $"Permanently deleted the account for {user.FullName} ({user.UserName}).",
                         Status = "Warning", // This will make the status chip stand out!
-                        PerformedAt = DateTime.UtcNow
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
                     };
 
                 _context.TransactionLogs.Add(log);

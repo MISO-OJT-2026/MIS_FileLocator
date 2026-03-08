@@ -10,6 +10,10 @@
         //  The Soft Delete/Archive flag
         public bool IsArchived { get; set; } = false;
 
+        public DateTime? ArchivedAt { get; set; }
+
+        public string? ArchivedBy { get; set; }
+
         //foreign key:must belong to a filling cab.
         public int FillingCabinetId { get; set; }
 

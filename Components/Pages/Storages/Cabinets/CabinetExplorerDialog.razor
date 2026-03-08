@@ -1,0 +1,36 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Models
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Contents of @SelectedCabinet.Name</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (SelectedCabinet.FileBox == null || !SelectedCabinet.FileBox.Any())
+        {
+            <MudAlert Severity="Severity.Info">This cabinet is currently empty.</MudAlert>
+        }
+        else
+        {
+            <MudList T="string">
+                @foreach (var box in SelectedCabinet.FileBox)
+                {
+                    <MudListItem Text="@($"Box {box.Id}")"
+                                 Icon="@Icons.Material.Filled.Inventory2" />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public FillingCabinet SelectedCabinet { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+}

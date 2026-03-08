@@ -22,7 +22,6 @@ namespace MIS_FileLocator.Data
 
         public DbSet<TransactionLog> TransactionLogs { get; set; }
 
-        // for tables configuration and relationships ( wag na wag na)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -71,12 +70,13 @@ namespace MIS_FileLocator.Data
                 );
         }
 
-      
+       // LIKE A TRIGGER
          public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // Grab the logged-in user's name
             var currentUsername = await currentUserService.GetCurrentFullNameAsync();
 
+            // Get all the entries that are being Added, Modified, or Deleted
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added ||
                             e.State == EntityState.Modified ||
@@ -85,6 +85,7 @@ namespace MIS_FileLocator.Data
 
             var auditLogs = new List<AuditTrails>();
 
+            //RUN LOOP THROUGH CHANGES
             foreach (var entry in entries)
             {
                 // Skip our tracking tables to prevent an infinite loop!
@@ -125,6 +126,7 @@ namespace MIS_FileLocator.Data
                 await AuditTrails.AddRangeAsync(auditLogs, cancellationToken);
             }
 
+            //RUN SQL QUERIES
             return await base.SaveChangesAsync(cancellationToken);
         }
     }
