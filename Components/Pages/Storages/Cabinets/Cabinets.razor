@@ -5,12 +5,14 @@
 @using Microsoft.EntityFrameworkCore
 @using FileLocator.Models
 @using MIS_FileLocator.Components.Pages.Storages
+@using System.Text
 
 @inject ApplicationDbContext _context
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject ICurrentUserService _currentUserService
+@inject IJSRuntime JSRuntime
 
 <MudText Typo="Typo.h4" Class="mb-4">Filing Cabinets</MudText>
 
@@ -25,6 +27,10 @@
             <ToolBarContent>
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
                     Add Cabinet
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Download" Class="ml-2"
+                           OnClick="@(() => ExportToCSV(false))">
+                    Export Active
                 </MudButton>
                 <MudSpacer />
                 <MudTextField @bind-Value="_searchString" Placeholder="Search active cabinets..." Adornment="Adornment.Start" Immediate="true"
@@ -63,6 +69,10 @@
                 <MudSpacer />
                 <MudTextField @bind-Value="_searchString" Placeholder="Search archived cabinets..." Adornment="Adornment.Start" Immediate="true"
                               AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Download"
+                           OnClick="@(() => ExportToCSV(true))">
+                    Export Archived
+                </MudButton>
             </ToolBarContent>
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Cabinet Name" />
@@ -272,5 +282,28 @@
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
 
         await DialogService.ShowAsync<CabinetExplorerDialog>($"Contents of {cabinet.Name}", parameters, options);
+    }
+
+    private async Task ExportToCSV(bool exportArchived)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Cabinet Name,Description,Status,Date Archived,Archived By");
+
+        // FILTER THE LIST BEFORE WE LOOP!
+        // This grabs only the ones that match the tab we are looking at.
+        var cabinetsToExport = _cabinets.Where(c => c.IsArchived == exportArchived).ToList();
+
+        foreach (var cab in cabinetsToExport)
+        {
+            var status = cab.IsArchived ? "Archived" : "Active";
+            var dateArchived = cab.ArchivedAt?.ToString("MMM dd, yyyy") ?? "N/A";
+            var archivedBy = cab.ArchivedBy ?? "N/A";
+
+            builder.AppendLine($"\"{cab.Name}\",\"{cab.Description}\",\"{status}\",\"{dateArchived}\",\"{archivedBy}\"");
+        }
+
+        // Give them different file names so you don't get confused!
+        string fileName = exportArchived ? "Archived_Cabinets.csv" : "Active_Cabinets.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, builder.ToString());
     }
 }
