@@ -14,13 +14,16 @@
 
 <MudText Typo="Typo.h4" Class="mb-4">Filing Cabinets</MudText>
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" SliderColor="Color.Secondary"
+         Color="Color.Transparent"
+>
 
  
-    <MudTabPanel Text="Active Cabinets" Icon="@Icons.Material.Filled.Folder">
+    <MudTabPanel Text="Active Cabinets" 
+                 Icon="@Icons.Material.Filled.Folder" >
         <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => !c.IsArchived)" Filterable="true" QuickFilter="@_quickFilter">
             <ToolBarContent>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
                     Add Cabinet
                 </MudButton>
                 <MudSpacer />
@@ -54,7 +57,7 @@
     </MudTabPanel>
 
     
-    <MudTabPanel Text="Archived Cabinets" Icon="@Icons.Material.Filled.Archive">
+    <MudTabPanel Text="Archived Cabinets" Icon="@Icons.Material.Filled.Archive" >
         <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => c.IsArchived)" Filterable="true" QuickFilter="@_quickFilter">
             <ToolBarContent>
                 <MudSpacer />
@@ -85,6 +88,7 @@
     </MudTabPanel>
 
 </MudTabs>
+
 
 @code {
     private List<FillingCabinet> _cabinets = new();

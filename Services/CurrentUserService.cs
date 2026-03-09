@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using MIS_FileLocator.Services;
+using Microsoft.AspNetCore.Identity;
+using FileLocator.Models;
+using MIS_FileLocator.Data;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 
 namespace FileLocator.Services
@@ -7,10 +11,11 @@ namespace FileLocator.Services
     public class CurrentUserService : ICurrentUserService
     {
         private readonly AuthenticationStateProvider _authStateProvider;
-
-        public CurrentUserService(AuthenticationStateProvider authStateProvider)
+        private readonly IServiceProvider _serviceProvider ;
+        public CurrentUserService(AuthenticationStateProvider authStateProvider, IServiceProvider serviceProvider)
         {
             _authStateProvider = authStateProvider;
+            _serviceProvider = serviceProvider; 
         }
 
         public async Task<string> GetCurrentFullNameAsync()
@@ -21,14 +26,27 @@ namespace FileLocator.Services
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
                 
-                var fullName = user.FindFirst("FullName")?.Value;
+                var fullNameClaim = user.FindFirst("FullName")?.Value;
 
-                if (!string.IsNullOrWhiteSpace(fullName))
+                if (!string.IsNullOrWhiteSpace(fullNameClaim))
                 {
-                    return fullName;
+                    return fullNameClaim;
                 }
 
-                
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+                    var appUser = await userManager.FindByIdAsync(userId);
+
+                    if (appUser != null && !string.IsNullOrWhiteSpace(appUser.FullName))
+                    {
+                        return appUser.FullName;
+                    }
+                }
+
                 return user.Identity.Name ?? "Unknown User";
             }
 

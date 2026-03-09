@@ -16,37 +16,35 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
-    <MudCard Elevation="4" Class="pa-4">
-        <MudCardHeader>
-            <CardHeaderContent>
-                <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="mb-2">Log in</MudText>
-                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                    Use your local account to access the system.
-                </MudText>
-            </CardHeaderContent>
-        </MudCardHeader>
+<div class="login-page-wrapper">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="height: 100vh;">
 
-        <MudCardContent>
-            @* Replaced standard StatusMessage with a MudAlert for better UI integration *@
+        @* We use MudPaper with Elevation 0 to let our custom glass CSS handle the look *@
+        <MudPaper Elevation="0" Class="glass-card pa-10">
+
+            <div class="d-flex flex-column align-center mb-6">
+              
+                <MudText Typo="Typo.h4" Style="font-weight: 800; color: #7a0102; letter-spacing: 1px;">LOG IN</MudText>
+                <MudText Typo="Typo.body2" Style="color: #555;" Align="Align.Center">Access the MIS File Locator System</MudText>
+            </div>
+
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4" Style="border-radius: 12px;">@errorMessage</MudAlert>
             }
 
             <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
 
-                <div class="d-flex flex-column gap-4">
-                    @* Notice the Name parameter here! 
-                        It is required for static form POSTs to bind back to the InputModel.
-                    *@
+                <div class="d-flex flex-column gap-5">
                     <MudTextField @bind-Value="Input.EmployeeId"
                                   For="@(() => Input.EmployeeId)"
                                   Label="Employee ID"
                                   Variant="Variant.Outlined"
                                   Name="Input.EmployeeId"
-                                  Required="true" />
+                                  Required="true"
+                                  ShrinkLabel= "true"
+                                  Class="glass-input mb-4" />
 
                     <MudTextField @bind-Value="Input.Password"
                                   For="@(() => Input.Password)"
@@ -54,30 +52,120 @@
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined"
                                   Name="Input.Password"
-                                  Required="true" />
+                                  Required="true"
+                                  ShrinkLabel="true"
+                                  Class="glass-input mb-4" />
 
-                    <MudCheckBox @bind-Value="Input.RememberMe"
-                                 Label="Remember me"
-                                 Name="Input.RememberMe"
-                                 Color="Color.Primary" />
+                    <div class="d-flex align-center justify-space-between mt-n2">
+                        <MudCheckBox @bind-Value="Input.RememberMe"
+                                     Label="Remember me"
+                                     Name="Input.RememberMe"
+                                     Color="Color.Primary"
+                                     Dense="true" />
+                        
+                    </div>
 
-                    @* ButtonType.Submit is critical here to trigger the form POST *@
                     <MudButton ButtonType="ButtonType.Submit"
                                Variant="Variant.Filled"
-                               Color="Color.Primary"
+                               Disabled="@_isProcessing"
                                Size="Size.Large"
                                FullWidth="true"
-                               Class="mt-2">
-                        Log in
+                               Style="border-radius: 12px; height: 52px; background-color: #7a0102; color: white; font-weight: bold;">
+                        @if (_isProcessing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Authenticating...</span>
+                        }
+                        else
+                        {
+                            <span>Sign In</span>
+                        }
                     </MudButton>
                 </div>
             </EditForm>
-        </MudCardContent>
-    </MudCard>
-</MudContainer>
+        </MudPaper>
+    </MudContainer>
+</div>
+
+<style>
+    .login-page-wrapper {
+        /* Make sure this image exists in wwwroot/images/ */
+        background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('images/mis-banner.png');
+        background-size: cover;
+        background-position: center;
+        height: 100vh;
+        width: 100vw;
+        position: fixed;
+        top: 0;
+        left: 0;
+    }
+
+    .glass-card {
+        /* Transparent white background */
+        background: rgba(255, 255, 255, 0.35) !important;
+        /* The Blur Effect */
+        backdrop-filter: blur(15px) saturate(160%);
+        -webkit-backdrop-filter: blur(15px) saturate(160%);
+        /* Glass border and shadow */
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        border-radius: 24px !important;
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.2) !important;
+        width: 100%;
+        max-width: 420px;
+    }
+
+    /* Style the text fields to look better on glass */
+    .glass-input .mud-input-outlined-border {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    /* para maging blue */
+    .glass-input.mud-input-focus .mud-input-outlined-border {
+        border-color: #0e1824 !important;
+        border-width: 2px !important;
+    }
+    /* color ng label  */
+    .glass-input.mud-input-focus .mud-label {
+        color: #0e1824 !important;
+    }
+    /* no overlapping! */
+    .glass-input .mud-input-label-outlined.mud-input-label-animated {
+       
+    }
+
+    /* para mag stay yung label sa taas-- hala naol */
+    .mud-input-outlined-border {
+        transition: border-color 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+    }
+    .glass-input .mud-label {
+        font-weight: 500;
+        color: #333 !important;
+    }
+  
+
+    /* 1. Force the background to stay transparent even when focused or filled */
+    ::deep .mud-input-slot {
+        background-color: transparent !important;
+    }
+
+    /* 2. Remove the Browser's Autofill background (Chrome/Edge/Safari) */
+    ::deep input:-webkit-autofill,
+    ::deep input:-webkit-autofill:hover, 
+    ::deep input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+        transition: background-color 5000s ease-in-out 0s;
+        /* Matches your text color */
+        -webkit-text-fill-color: #0e1824 !important; 
+    }
+
+    /* 3. Ensure the MudTextField wrapper doesn't add a background */
+    ::deep .mud-input-control {
+        background-color: transparent !important;
+    }
+</style>
 
 @code {
     private string? errorMessage;
+    private bool _isProcessing = false;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -99,6 +187,9 @@
 
     public async Task LoginUser()
     {
+        _isProcessing = true;
+        errorMessage = null;
+
         var user = await UserManager.Users
             .FirstOrDefaultAsync(u => u.EmployeeId == Input.EmployeeId);
 
@@ -125,6 +216,7 @@
         {
             errorMessage = "Invalid login attempt.";
         }
+        _isProcessing = false;
     }
 
     private sealed class InputModel

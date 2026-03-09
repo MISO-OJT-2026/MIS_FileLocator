@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inherits LayoutComponentBase
 
+
 <MudThemeProvider  Theme="@_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -9,33 +10,27 @@
 
 <MudLayout>
 
-    <MudAppBar Elevation="1" Color="Color.Primary">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       Edge="Edge.Start"
-                       OnClick="ToggleDrawer" />
-
-        <MudText Typo="Typo.h6" Class="ml-2">
-            MIS FILE LOCATOR
-        </MudText>
-
-        <MudSpacer />
-    </MudAppBar>
+ 
 
     <MudDrawer @bind-Open="_drawerOpen"
-               Variant="DrawerVariant.Responsive"
-               Breakpoint="Breakpoint.Md"
-               Elevation="1">
+               Variant="DrawerVariant.Mini"
+               OpenMiniOnHover="false"
+               Elevation="0"
+               Class="no-scrollbar"
+               @onclick = "ToggleDrawer"
+               Style="cursor: pointer overflow-x=hidden;background-color= #7a0102; ">
 
-        <NavMenu />
+        <NavMenu SideBarOpen="_drawerOpen" />
 
     </MudDrawer>
 
-    <MudMainContent Class="pt-16 px-6 pb-6">
+    <MudMainContent Class="pt-4 px-6 pb-6">
         @Body
     </MudMainContent>
 
 </MudLayout>
+
+
 
 @code {
     private bool _drawerOpen = true;
@@ -49,11 +44,34 @@
         {
             PaletteLight = new PaletteLight()
             {
-            Primary = "#800000",
-            Secondary = "ffd700",
+            Primary = "#7a0102", // Your Red  D62828
+            Secondary = "#0e1824", // Your Blue
+            ActionDefault = "#0e1824",
+            TextSecondary = "rgba(14, 24, 36, 0.70)",
+            Background = "#FFF3E0", // Your Warm Cream
+            AppbarBackground = "#0e1824",
+            AppbarText = "#ffffff",
+            DrawerBackground = "#7a0102", // Keep white for a clean look
+            DrawerIcon = "#FFFFFF",
+            DrawerText = "#FFFFFF",
+            Surface = "#FFFFFF",
+            
+            },
 
-                Background = "#F5F6FA",
-                AppbarBackground = "#4F46E5",
+            LayoutProperties= new LayoutProperties()
+            {
+                DefaultBorderRadius = "16px",
+                DrawerWidthLeft = "280px",
+                DrawerMiniWidthLeft = "80px"
+            
+        },
+
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Inter", "Roboto", "Helvetica", "Arial", "sans-serif" }
             }
+        }
         };
 }

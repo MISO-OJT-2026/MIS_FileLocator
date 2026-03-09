@@ -1,72 +1,165 @@
-﻿@implements IDisposable
+﻿@using System.Security.Claims
+@implements IDisposable
 @inject NavigationManager NavigationManager
+@inject ICurrentUserService _currentUserService
+@inject AuthenticationStateProvider AuthStateProvider
 
-<MudNavMenu>
-    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
-        Dashboard
-    </MudNavLink>
+<MudNavMenu Class="pa-4">
+    @if (SideBarOpen)
+    {
+        
+        <div @onclick:stopPropagation="true"
+             style="display: flex; flex-direction: column; height: calc(100vh - 32px);">
+            @* 32px accounts for NavMenu padding *@
 
-    <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">
-        Profile
-    </MudNavLink>
+            @* --- TOP SECTION --- *@
+            <div class="d-flex flex-column align-center py-4">
+                <MudAvatar Color="Color.Secondary" Style="background-color: rgba(255,255,255,0.2); color: white; height:70px; width:70px;" Class="mb-3">
+                    @_currentUserInitials
+                </MudAvatar>
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: white;">@_currentUserName</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.7);">@_currentUserRole</MudText>
+            </div>
 
-    <AuthorizeView Roles="Admin">
-        <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">
-            User Management
-        </MudNavLink>
-    </AuthorizeView>
+            @* --- MIDDLE SECTION (Links) --- *@
+            <div style="flex-grow: 1; overflow-y: auto;class= links-container no-scrollbar">
+                @* This container grows and allows scrolling if items are many *@
+                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">GENERAL</MudText>
+                <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
 
-    <AuthorizeView Roles="Admin">
-        <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">
-           Transaction Logs
-        </MudNavLink>
-    </AuthorizeView>
+                <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
+                    <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
+                    <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
+                    <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
+                </MudNavGroup>
 
-    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2" @bind-Expanded="_storageExpanded">
-        <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
-        <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
-        <MudNavLink Href="/storages/folders">Folders</MudNavLink>
-    </MudNavGroup>
+                <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
+                    <MudNavLink Href="/documents">All Documents</MudNavLink>
+                    <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
+                </MudNavGroup>
 
-    <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description" @bind-Expanded="_documentsExpanded">
-        <MudNavLink Href="/documents">All Documents</MudNavLink>
-        <MudNavLink Href="/documents/disposed">Disposed</MudNavLink>
-    </MudNavGroup>
+                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">ADMIN & TOOLS</MudText>
 
-    <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">
-        Forms
-    </MudNavLink>
+                <AuthorizeView Roles="Admin">
+                    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
+                </AuthorizeView>
 
-    <MudDivider Class="my-2" />
+                <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
+                <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
+            </div>
 
-    @* Secure POST Logout Form built with MudBlazor styling *@
-    <AuthorizeView>
-        <Authorized>
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Text"
-                           StartIcon="@Icons.Material.Filled.Logout"
-                           FullWidth="true"
-                           Style="justify-content: flex-start; padding-left: 20px; color: var(--mud-palette-text-primary); text-transform: none; font-weight: 400;">
-                    Logout
-                </MudButton>
-            </form>
-        </Authorized>
-        <NotAuthorized>
-            <MudNavLink Href="Account/Login" Icon="@Icons.Material.Filled.Login">
-                Login
-            </MudNavLink>
-        </NotAuthorized>
-    </AuthorizeView>
+            @* --- BOTTOM SECTION --- *@
+            <div class="mt-auto pt-4">
+                @* mt-auto pushes this to the bottom *@
+                <AuthorizeView>
+                    <Authorized>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Text"
+                                       StartIcon="@Icons.Material.Filled.Logout"
+                                       FullWidth="true"
+                                       Style="justify-content: flex-start; text-transform: none; color: white;">
+                                Logout
+                            </MudButton>
+                        </form>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* 2. MINI STATE: No stopPropagation here so clicking it RE-OPENS the bar *@
+        <div class="d-flex flex-column align-center py-6 gap-6">
+            <MudIcon Icon="@Icons.Material.Filled.SdCard" Size="Size.Large" Style="color: white;" />
+
+            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+
+        </div>
+    }
 </MudNavMenu>
 
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    
+    .no-scrollbar {
+        -ms-overflow-style: none; 
+        scrollbar-width: none; 
+    }
+
+  
+    .links-container {
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+    /* Ensure the drawer stays red and links look good */
+    .mud-nav-link {
+        color: white !important;
+    }
+
+    .mud-nav-link-icon {
+        color: white !important;
+    }
+
+    a{
+        text-decoration:none;
+    }
+</style>
+
 @code {
+    [Parameter] public bool SideBarOpen { get; set; }
+
+    [Parameter] public EventCallback OnToggleSideBar { get; set; }
+    private async Task ToggleSideBar()
+    {
+        await OnToggleSideBar.InvokeAsync();
+    }
+
     private bool _storageExpanded = false;
     private bool _documentsExpanded = false;
     private string? currentUrl;
+    private string _currentUserInitials = "";
+    private string _currentUserRole = "";
+    private string _currentUserName ="";
 
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserName = await _currentUserService.GetCurrentFullNameAsync();
+
+        if (!string.IsNullOrWhiteSpace(_currentUserName))
+        {
+            var names = _currentUserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            _currentUserInitials = names.Length >= 2
+                ? $"{names[0][0]}{names[1][0]}".ToUpper()
+                : _currentUserName.Substring(0, Math.Min(2, _currentUserName.Length)).ToUpper();
+        }
+
+       
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            // Look for the "Role" c
+            var roleClaim = user.FindFirst(c => c.Type == ClaimTypes.Role);
+
+            //by default staff sya
+            _currentUserRole = roleClaim != null ? roleClaim.Value : "Staff";
+        }
+    }
+    
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -83,4 +176,6 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
+
+    
 }

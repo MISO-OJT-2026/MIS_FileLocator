@@ -16,16 +16,10 @@
     </ToolBarContent>
     <Columns>
         <PropertyColumn Property="x => x.PerformedAt" Title="Date & Time" Format="MMM dd, yyyy hh:mm tt" />
-        <PropertyColumn Property="x => x.FullName" Title="User" />
+        <PropertyColumn Property="x => x.FullName" Title="Full Name" />
         <PropertyColumn Property="x => x.EventName" Title="Action" />
         <PropertyColumn Property="x => x.Description" Title="Details" />
-        <TemplateColumn Title="Status">
-            <CellTemplate>
-                <MudChip Size="Size.Small" Color="@GetStatusColor(context.Item.Status)">
-                    @context.Item.Status
-                </MudChip>
-            </CellTemplate>
-        </TemplateColumn>
+     
     </Columns>
     <PagerContent>
         <MudDataGridPager T="TransactionLog" />
