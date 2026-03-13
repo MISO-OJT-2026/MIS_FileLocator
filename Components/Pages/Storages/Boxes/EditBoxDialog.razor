@@ -1,0 +1,86 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="_editBox" OnValidSubmit="SaveUpdates">
+            <DataAnnotationsValidator />
+
+            @* MOVE LOGIC: Dropdown to change the parent Cabinet *@
+            <MudSelect T="int" Label="Current Cabinet" @bind-Value="_editBox.FillingCabinetId"
+                       Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" HelperText="Change this to move the box to another cabinet" Class="mb-3">
+                @foreach (var cab in _activeCabinets)
+                {
+                    <MudSelectItem Value="@cab.Id">@cab.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="_editBox.Name" Label="Box Name" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_editBox.Description" Label="Description" Variant="Variant.Outlined" Lines="3" />
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUpdates">Save Changes</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public FileBoxes BoxToEdit { get; set; } = default!;
+
+    private FileBoxes _editBox = new();
+    private List<FillingCabinet> _activeCabinets = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Copy values to temporary holder
+        _editBox.Id = BoxToEdit.Id;
+        _editBox.Name = BoxToEdit.Name;
+        _editBox.Description = BoxToEdit.Description;
+        _editBox.FillingCabinetId = BoxToEdit.FillingCabinetId;
+
+        // Load cabinets so user can "Move" the box if they want
+        _activeCabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
+    }
+
+    private async Task SaveUpdates()
+    {
+        var realBox = await _context.FileBoxes.FindAsync(_editBox.Id);
+        if (realBox == null) return;
+
+        // Check if cabinet changed (This is a "Move" event)
+        bool isMoving = realBox.FillingCabinetId != _editBox.FillingCabinetId;
+
+        realBox.Name = _editBox.Name;
+        realBox.Description = _editBox.Description;
+        realBox.FillingCabinetId = _editBox.FillingCabinetId;
+
+        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+        var log = new TransactionLog
+        {
+            FullName = currentAdmin,
+            EventName = isMoving ? "Box Moved" : "Box Updated",
+            Description = isMoving
+                ? $"Moved box '{realBox.Name}' to Cabinet ID {realBox.FillingCabinetId}."
+                : $"Updated details for box '{realBox.Name}'.",
+            Status = "Success",
+            PerformedAt = DateTime.UtcNow.AddHours(8)
+        };
+
+        _context.TransactionLogs.Add(log);
+        await _context.SaveChangesAsync();
+
+        Snackbar.Add("Box updated successfully!", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

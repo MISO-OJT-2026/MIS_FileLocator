@@ -1,5 +1,212 @@
-﻿<h3>Boxes</h3>
+﻿@page "/storages/boxes"
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+
+@using MIS_FileLocator.Components.Pages.Storages
+
+@inject ApplicationDbContext _context
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ICurrentUserService _currentUserService
+@inject IJSRuntime JSRuntime
+
+<MudText Typo="Typo.h4" Class="mb-4">Storage Boxes</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" SliderColor="Color.Secondary">
+
+    <MudTabPanel Text="Active Boxes" Icon="@Icons.Material.Filled.Inventory">
+
+        <MudDataGrid T="FileBoxes"
+                     Items="@_boxes.Where(b => !b.IsArchived)"
+                     Context="box"
+                     Filterable="true"
+                     QuickFilter="@_quickFilter">
+
+            <ToolBarContent>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenAddDialog">
+                    Add Box
+                </MudButton>
+
+                <MudSpacer />
+
+                <MudTextField @bind-Value="_searchString"
+                              Placeholder="Search boxes..."
+                              Adornment="Adornment.Start"
+                              Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            </ToolBarContent>
+
+            <Columns>
+
+                <PropertyColumn Property="x => x.Name" Title="Box Name" />
+
+                <TemplateColumn Title="Cabinet">
+                    <CellTemplate Context="box">
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Text">
+                            @(box.Item.FillingCabinet?.Name ?? "Unassigned")
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Contents">
+                    <CellTemplate Context="box">
+                        <MudText Typo="Typo.body2">
+                            @(box.Item.Folders?.Count ?? 0) Folders
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Actions">
+                    <CellTemplate  Context="box">
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Search"
+                                       Color="Color.Info"
+                                       OnClick="@(() => OpenBoxExplorer(box.Item))" />
+
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Warning"
+                                       OnClick="@(() => OpenEditDialog(box.Item))" />
+
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@Icons.Material.Filled.Archive"
+                                       Color="Color.Error"
+                                       OnClick="@(() => ConfirmArchive(box.Item))" />
+                    </CellTemplate>
+                </TemplateColumn>
+
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager T="FileBoxes" />
+            </PagerContent>
+
+        </MudDataGrid>
+
+    </MudTabPanel>
+
+
+    <MudTabPanel Text="Archived Boxes" Icon="@Icons.Material.Filled.Archive">
+
+        <MudDataGrid T="FileBoxes"
+                     Items="@_boxes.Where(b => b.IsArchived)"
+                     Context="archivedBox">
+
+            <Columns>
+
+                <PropertyColumn Property="x => x.Name" Title="Box Name" />
+
+                <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
+
+                <PropertyColumn Property="x => x.ArchivedAt"
+                                Title="Date Archived"
+                                Format="MMM dd, yyyy" />
+
+                <TemplateColumn Title="Actions">
+                    <CellTemplate Context="archivedBox">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.Restore"
+                                   OnClick="@(() => UnarchiveBox(archivedBox.Item))">
+                            Restore
+                        </MudButton>
+                    </CellTemplate>
+                </TemplateColumn>
+
+            </Columns>
+
+        </MudDataGrid>
+
+    </MudTabPanel>
+
+</MudTabs>
 
 @code {
+    private List<FileBoxes> _boxes = new();
+    private string _searchString = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoxes();
+    }
+
+    private async Task LoadBoxes()
+    {
+        _boxes = await _context.FileBoxes
+            .Include(b => b.FillingCabinet)
+            .Include(b => b.Folders)
+            .ToListAsync();
+    }
+
+    private Func<FileBoxes, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        if (x.FillingCabinet?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        return false;
+    };
+
+    private async Task OpenAddDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddBoxDialog>("Add New Box", options);
+        if (!(await dialog.Result).Canceled) await LoadBoxes();
+    }
+
+    private async Task OpenEditDialog(FileBoxes box)
+    {
+        var parameters = new DialogParameters { ["BoxToEdit"] = box };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<EditBoxDialog>("Edit / Move Box", parameters, options);
+        if (!(await dialog.Result).Canceled) await LoadBoxes();
+    }
+
+    private async Task OpenBoxExplorer(FileBoxes box)
+    {
+        var parameters = new DialogParameters { ["SelectedBox"] = box };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await DialogService.ShowAsync<BoxExplorerDialog>($"Viewing {box.Name}", parameters, options);
+    }
+
+    private async Task ConfirmArchive(FileBoxes box)
+    {
+        if (box.Folders?.Any(f => !f.IsArchived) == true)
+        {
+            Snackbar.Add($"Cannot archive '{box.Name}'. Move or archive its folders first!", Severity.Error);
+            return;
+        }
+
+        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Archive '{box.Name}'?", yesText: "Archive", cancelText: "Cancel");
+        if (result == true)
+        {
+            var admin = await _currentUserService.GetCurrentFullNameAsync();
+            box.IsArchived = true;
+            box.ArchivedAt = DateTime.UtcNow.AddHours(8);
+            box.ArchivedBy = admin;
+
+            _context.FileBoxes.Update(box);
+            await _context.SaveChangesAsync();
+            await LoadBoxes();
+            Snackbar.Add("Box archived.", Severity.Success);
+        }
+    }
+
+    private async Task UnarchiveBox(FileBoxes box)
+    {
+        box.IsArchived = false;
+        box.ArchivedAt = null;
+        box.ArchivedBy = null;
+
+        _context.FileBoxes.Update(box);
+        await _context.SaveChangesAsync();
+        await LoadBoxes();
+        Snackbar.Add("Box restored to active status.", Severity.Success);
+    }
 }

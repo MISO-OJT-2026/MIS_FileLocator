@@ -1,0 +1,36 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Models
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Contents of @SelectedBox.Name</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (SelectedBox.Folders == null || !SelectedBox.Folders.Any())
+        {
+            <MudAlert Severity="Severity.Info">This box is currently empty.</MudAlert>
+        }
+        else
+        {
+            <MudList T="string">
+                @foreach (var folder in SelectedBox.Folders.Where(f => !f.IsArchived))
+                {
+                    <MudListItem Text="@folder.Name"
+                                 Icon="@Icons.Material.Filled.FolderOpen"
+                                 SecondaryText="@folder.Description" />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public FileBoxes SelectedBox { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+}

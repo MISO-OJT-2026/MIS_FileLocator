@@ -36,7 +36,7 @@
 
     // Our empty bucket for the new data
     private FillingCabinet _newCabinet = new();
-    
+
 
 
     private async Task SaveCabinet()
@@ -47,27 +47,55 @@
             Snackbar.Add("Cabinet name is required.", Severity.Error);
             return;
         }
-        //add in databaseeee
+        // Check if the cabinet name already exists
+        var existingActive = await _context.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && !c.IsArchived);
+        
+        if(existingActive)
+        {
+            Snackbar.Add("A cabinet with this name already exists. Please choose a different name.", Severity.Error);
+            return;
+        }
+        // check archived din 
+        var existingArchived = await _context.FillingCabinets.FirstOrDefaultAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && c.IsArchived);
         _context.FillingCabinets.Add(_newCabinet);
 
         //get admin o r editor 
         var curentAdmin = await _currentUserService.GetCurrentFullNameAsync();
 
-        var log = new TransactionLog
+        if (existingArchived != null)
+        {
+            // ask if change name or restore 
+            Snackbar.Add("A cabinet with this name exists in the Archives. Please restore it or use a different name.", Severity.Info);
+            return;
+        }
+        try
+        {
+            // Add to database
+            _context.FillingCabinets.Add(_newCabinet);
+
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+            var log = new TransactionLog
             {
-                FullName = curentAdmin,
+                FullName = currentAdmin,
                 EventName = "Cabinet Created",
-                Description = $"Added a new physical cabinet named '{_newCabinet.Name}' to the system.",
+                Description = $"Added a new physical cabinet named '{_newCabinet.Name}'.",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             };
 
-        _context.TransactionLogs.Add(log);
+            _context.TransactionLogs.Add(log);
 
+            await _context.SaveChangesAsync();
 
-        //save cabinet and log
-        await _context.SaveChangesAsync();
-        MudDialog.Close(DialogResult.Ok(true));
+            Snackbar.Add("Cabinet created successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
         }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving cabinet: {ex.Message}", Severity.Error);
+        }
+    }
+
     private void Cancel() => MudDialog.Cancel();
 }
