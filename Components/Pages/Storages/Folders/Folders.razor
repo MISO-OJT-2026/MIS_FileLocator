@@ -234,7 +234,15 @@
             try
             {
                 var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-
+                
+                var locationInfo = await _context.Folders
+        .Where(f => f.Id == folder.Id)
+        .Select(f => new
+        {
+            BoxName = f.FileBox.Name,
+            CabinetName = f.FileBox.FillingCabinet.Name
+        })
+        .FirstOrDefaultAsync();
          
                 folder.IsArchived = false;
                 folder.ArchivedAt = null;
@@ -245,7 +253,7 @@
                 {
                     FullName = currentAdmin,
                     EventName = "Folder Restored",
-                    Description = $"Restored folder '{folder.Name}' back to active status.",
+                    Description = $"Restored folder '{folder.Name}' back to active status in {locationInfo?.CabinetName} > {locationInfo?.BoxName}.",
                     Status = "Success",
                     PerformedAt = DateTime.UtcNow.AddHours(8)
                 };

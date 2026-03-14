@@ -237,14 +237,54 @@
 
     private async Task UnarchiveBox(FileBoxes box)
     {
-        box.IsArchived = false;
-        box.ArchivedAt = null;
-        box.ArchivedBy = null;
+        // 1. Show Confirmation Dialog
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Restore Box",
+            $"Are you sure you want to restore '{box.Name}' to active status?",
+            yesText: "Restore",
+            cancelText: "Cancel"
+        );
 
-        _context.FileBoxes.Update(box);
-        await _context.SaveChangesAsync();
-        await LoadBoxes();
-        Snackbar.Add("Box restored to active status.", Severity.Success);
+        if (result == true)
+        {
+            try
+            {
+                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+                var cabinetName = await _context.FileBoxes
+                .Where(b => b.Id == box.Id)
+                .Select(b => b.FillingCabinet.Name)
+                .FirstOrDefaultAsync();
+
+                // 2. Reset Archive Metadata
+                box.IsArchived = false;
+                box.ArchivedAt = null;
+                box.ArchivedBy = null;
+
+                // 3. Create Transaction Log entry
+                var log = new TransactionLog
+                {
+                    FullName = currentAdmin,
+                    EventName = "Box Restored",
+                    Description = $"Restored box '{box.Name}' back to active status in Cabinet: {cabinetName ?? "Unassigned"}.",
+                    Status = "Success",
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
+                };
+
+                // 4. Update Database context
+                _context.FileBoxes.Update(box);
+                _context.TransactionLogs.Add(log);
+                await _context.SaveChangesAsync();
+
+                // 5. Refresh UI and Notify User
+                Snackbar.Add($"Box '{box.Name}' has been restored successfully.", Severity.Success);
+                await LoadBoxes(); // This will move the item from the Archived tab to Active tab
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error restoring box: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private async Task ExportToCSV(bool exportArchived)
