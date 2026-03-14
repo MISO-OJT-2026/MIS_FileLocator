@@ -1,0 +1,180 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+@inject ApplicationDbContext _context
+
+<MudDialog MaxWidth="MaxWidth.Small" FullWidth="true">
+    <DialogContent>
+        <MudPaper Class="pa-4" Elevation="0">
+            <MudStack Spacing="3">
+
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Size="Size.Medium" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Create New Folder</MudText>
+                </MudStack>
+
+                <EditForm Model="_newFolder" OnValidSubmit="SaveFolder">
+                    <DataAnnotationsValidator />
+
+                    @* Select which BOX this folder belongs to *@
+                    <MudSelect T="int"
+                               Label="Assign to Storage Box"
+                               @bind-Value="_newFolder.FileBoxId"
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter"
+                               Required="true"
+                               Class="mb-3"
+                               HelperText="Folders must be stored inside an active box">
+
+                        @foreach (var box in _activeBoxes)
+                        {
+                            @* Showing Cabinet Name in parenthesis for better clarity *@
+                            <MudSelectItem Value="@box.Id">
+                                @($"{box.Name} (Cabinet: {box.FillingCabinet?.Name ?? "N/A"})")
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="_newFolder.Name"
+                                  Label="Folder Name / Label"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-3"
+                                  Placeholder="e.g., Personnel Files 2024"
+                                  HelperText="Enter a unique name for this folder within the box" />
+
+                    <MudTextField @bind-Value="_newFolder.Description"
+                                  Label="Description (Optional)"
+                                  Variant="Variant.Outlined"
+                                  Lines="3" />
+                </EditForm>
+
+            </MudStack>
+        </MudPaper>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            Cancel
+        </MudButton>
+
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="SaveFolder"
+                   StartIcon="@Icons.Material.Filled.Save">
+            Save Folder
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private Folder _newFolder = new();
+    private List<FileBoxes> _activeBoxes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load active boxes and include their parent cabinets so we can show them in the dropdown
+        _activeBoxes = await _context.FileBoxes
+            .Include(b => b.FillingCabinet)
+            .Where(b => !b.IsArchived)
+            .OrderBy(b => b.Name)
+            .ToListAsync();
+    }
+
+    private async Task SaveFolder()
+    {
+        
+        if (_newFolder.FileBoxId == 0)
+        {
+            Snackbar.Add("Please select a storage box.", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newFolder.Name))
+        {
+            Snackbar.Add("Folder name is required.", Severity.Warning);
+            return;
+        }
+
+        // Check if duplicate names sa same boxxx 
+		var normalizedName = _newFolder.Name.Trim().ToLower();
+
+        var nameExists = await _context.Folders.AnyAsync(f =>
+            f.Name.ToLower() == normalizedName &&
+            f.FileBoxId == _newFolder.FileBoxId &&
+            !f.IsArchived);
+
+        var currentCabinetId = await _context.FileBoxes
+            .Where(b => b.Id == _newFolder.FileBoxId)
+            .Select(b => b.FillingCabinetId)
+            .FirstOrDefaultAsync();
+
+        // 2. Check if ANY box in that cabinet already has this folder name
+        var nameExistsInCabinet = await _context.Folders
+            .AnyAsync(f => f.Name.ToLower() == normalizedName &&
+                           f.FileBox.FillingCabinetId == currentCabinetId &&
+                           !f.IsArchived);
+
+        if (nameExistsInCabinet)
+        {
+            Snackbar.Add("A folder with this name already exists in the selected box.", Severity.Error);
+            return;
+        }
+
+        //Check if an archived 
+        var existingArchived = await _context.Folders
+            .FirstOrDefaultAsync(f => f.Name.ToLower() == _newFolder.Name.ToLower() &&
+                                     f.FileBoxId == _newFolder.FileBoxId &&
+                                     f.IsArchived);
+
+        if (existingArchived != null)
+        {
+            Snackbar.Add("This folder name exists in the Archives. Restore it or use a different name.", Severity.Info);
+            return;
+        }
+
+        try
+        {
+            
+            var parentBox = await _context.FileBoxes
+                .Where(b => b.Id == _newFolder.FileBoxId)
+                .Select(b => b.Name)
+                .FirstOrDefaultAsync();
+
+            _context.Folders.Add(_newFolder);
+
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+            var log = new TransactionLog
+            {
+                FullName = currentAdmin,
+                EventName = "Folder Created",
+                Description = $"Created folder '{_newFolder.Name}' inside Box '{parentBox}'.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            };
+
+            _context.TransactionLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            Snackbar.Add("Folder created successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

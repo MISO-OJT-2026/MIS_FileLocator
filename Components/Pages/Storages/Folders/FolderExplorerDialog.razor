@@ -1,0 +1,70 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Models
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Contents of Folder: @SelectedFolder.Name</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @* Filter out deleted or archived documents *@
+        @if (SelectedFolder.Documents == null || !SelectedFolder.Documents.Any(d => !d.IsDeleted))
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">
+                This folder does not contain any active documents.
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="string" Clickable="false">
+                @foreach (var doc in SelectedFolder.Documents.Where(d => !d.IsDeleted))
+                {
+                    <MudListItem Icon="@Icons.Material.Filled.Description">
+                        <ChildContent>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body1">@doc.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Filed on: @doc.FiledAt.ToString("MMM dd, yyyy") | Year: @(doc.Year?.ToString() ?? "N/A")
+                                    </MudText>
+                                </MudStack>
+
+                                @* Displaying your model's Confidentiality Level *@
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Variant="Variant.Text"
+                                         Color="@GetConfidentialityColor(doc.ConfidentialityLevel?.Name)">
+                                    @(doc.ConfidentialityLevel?.Name ?? "General")
+                                </MudChip>
+                            </MudStack>
+                        </ChildContent>
+                    </MudListItem>
+                    <MudDivider DividerType="DividerType.Inset" />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Default">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Folder SelectedFolder { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+
+    // Helper to make the Confidentiality Levels look professional
+    private Color GetConfidentialityColor(string? level) => level?.ToLower() switch
+    {
+        "highly confidential" => Color.Error,
+        "confidential" => Color.Warning,
+        "restricted" => Color.Info,
+        _ => Color.Default
+    };
+}

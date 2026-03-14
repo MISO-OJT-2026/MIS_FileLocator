@@ -63,13 +63,16 @@
         realBox.Description = _editBox.Description;
         realBox.FillingCabinetId = _editBox.FillingCabinetId;
 
+        var cabinetName = await _context.FillingCabinets.Where(c => c.Id == _editBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
+       
+
         var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
         var log = new TransactionLog
         {
             FullName = currentAdmin,
             EventName = isMoving ? "Box Moved" : "Box Updated",
             Description = isMoving
-                ? $"Moved box '{realBox.Name}' to Cabinet ID {realBox.FillingCabinetId}."
+                ? $"Moved box '{realBox.Name}' to Cabinet  '{cabinetName}'."
                 : $"Updated details for box '{realBox.Name}'.",
             Status = "Success",
             PerformedAt = DateTime.UtcNow.AddHours(8)

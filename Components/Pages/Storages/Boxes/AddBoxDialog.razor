@@ -109,9 +109,18 @@
             Snackbar.Add("A box with this name already exists in the selected cabinet.", Severity.Error);
             return;
         }
+        //check box archivedddd
+        var existingArchived = await _context.FileBoxes.FirstOrDefaultAsync(c => c.Name.ToLower() == _newBox.Name.ToLower() && c.IsArchived); _context.FileBoxes.Add(_newBox);
+
+        if(existingArchived != null)
+        {
+            Snackbar.Add("A box with this name exists in the Archives. Please restore it or use a different name.", Severity.Info);
+            return;
+        }
 
         try
         {
+            var parentCabinet = await _context.FillingCabinets.Where(c => c.Id == _newBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
             _context.FileBoxes.Add(_newBox);
 
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
@@ -120,7 +129,7 @@
             {
                 FullName = currentAdmin,
                 EventName = "Box Created",
-                Description = $"Created box '{_newBox.Name}' in Cabinet ID {_newBox.FillingCabinetId}.",
+                Description = $"Created box '{_newBox.Name}' in Cabinet ' {parentCabinet}'.",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             };

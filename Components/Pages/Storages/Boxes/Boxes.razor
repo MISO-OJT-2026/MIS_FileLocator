@@ -27,14 +27,23 @@
                      QuickFilter="@_quickFilter">
 
             <ToolBarContent>
+                <MudStack Row ="true" Spacing ="2" AlignItems ="AlignItems.Center">
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary"
                            StartIcon="@Icons.Material.Filled.Add"
                            OnClick="OpenAddDialog">
                     Add Box
                 </MudButton>
-
+                    <MudTooltip Text="Export Active to CSV" Placement="Placement.Top">
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Success"
+                                       Icon="@Icons.Material.Filled.Print"
+                                       OnClick="@(() => ExportToCSV(false))"
+                                       Class="mr-2" />
+                    </MudTooltip>
+                </MudStack>
                 <MudSpacer />
 
+            
                 <MudTextField @bind-Value="_searchString"
                               Placeholder="Search boxes..."
                               Adornment="Adornment.Start"
@@ -45,6 +54,7 @@
             <Columns>
 
                 <PropertyColumn Property="x => x.Name" Title="Box Name" />
+                <PropertyColumn Property="x => x.Description" Title="Description" />
 
                 <TemplateColumn Title="Cabinet">
                     <CellTemplate Context="box">
@@ -56,18 +66,18 @@
 
                 <TemplateColumn Title="Contents">
                     <CellTemplate Context="box">
-                        <MudText Typo="Typo.body2">
-                            @(box.Item.Folders?.Count ?? 0) Folders
-                        </MudText>
+                        <MudButton Variant="Variant.Text"
+                                   StartIcon="@Icons.Material.Filled.Inventory"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OpenBoxExplorer(box.Item))">
+                            @(box.Item.Folders?.Count(f => !f.IsArchived) ?? 0) Folders
+                        </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
 
                 <TemplateColumn Title="Actions">
                     <CellTemplate  Context="box">
-                        <MudIconButton Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Search"
-                                       Color="Color.Info"
-                                       OnClick="@(() => OpenBoxExplorer(box.Item))" />
 
                         <MudIconButton Size="Size.Small"
                                        Icon="@Icons.Material.Filled.Edit"
@@ -98,10 +108,33 @@
                      Items="@_boxes.Where(b => b.IsArchived)"
                      Context="archivedBox">
 
+            <ToolBarContent>
+
+                <MudTooltip Text="Export Archived to CSV" Placement="Placement.Top">
+                    <MudIconButton Variant="Variant.Outlined"
+                                   Color="Color.Success"
+                                   Icon="@Icons.Material.Filled.Print"
+                                   OnClick="@(() => ExportToCSV(true))"
+                                   Class="mr-2" />
+                </MudTooltip>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search archived cabinets..." Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
+
+            </ToolBarContent>
             <Columns>
 
                 <PropertyColumn Property="x => x.Name" Title="Box Name" />
-
+                <TemplateColumn Title="Assigned Cabinet">
+                    <CellTemplate Context="archivedBox">
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Small" Color="Color.Info" />
+                            <MudText Typo="Typo.body2">
+                                @(archivedBox.Item.FillingCabinet?.Name ?? "Unassigned/General Storage")
+                            </MudText>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
                 <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
 
                 <PropertyColumn Property="x => x.ArchivedAt"
@@ -151,6 +184,8 @@
         if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
         if (x.FillingCabinet?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
         return false;
+        if (x.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        return false;
     };
 
     private async Task OpenAddDialog()
@@ -171,8 +206,10 @@
     private async Task OpenBoxExplorer(FileBoxes box)
     {
         var parameters = new DialogParameters { ["SelectedBox"] = box };
+
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        await DialogService.ShowAsync<BoxExplorerDialog>($"Viewing {box.Name}", parameters, options);
+
+        await DialogService.ShowAsync<BoxExplorerDialog>($"Contents of  {box.Name}", parameters, options);
     }
 
     private async Task ConfirmArchive(FileBoxes box)
@@ -183,7 +220,7 @@
             return;
         }
 
-        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Archive '{box.Name}'?", yesText: "Archive", cancelText: "Cancel");
+        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are you sure you want to archive '{box.Name}'? You won't be able to add new folders to it while it is archived." , yesText: "Archive", cancelText: "Cancel");
         if (result == true)
         {
             var admin = await _currentUserService.GetCurrentFullNameAsync();
@@ -209,4 +246,26 @@
         await LoadBoxes();
         Snackbar.Add("Box restored to active status.", Severity.Success);
     }
+
+    private async Task ExportToCSV(bool exportArchived)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Bpx Name, Cabinet, Description, Status,Date, Archived, Archive By");
+
+        var boxesToExport = _boxes.Where(c => c.IsArchived == exportArchived).ToList();
+
+        foreach(var box in boxesToExport)
+        {
+            var cabinetName = box.FillingCabinet != null ? box.FillingCabinet.Name : "Unassigned";
+            var status = box.IsArchived ? "Archived" : "Active";
+            var archivedDate = box.ArchivedAt.HasValue ? box.ArchivedAt.Value.ToString("yyyy-MM-dd") : "";
+            var archivedBy = box.ArchivedBy ?? "";
+            builder.AppendLine($"\"{box.Name}\",\"{cabinetName}\",\"{box.Description}\",\"{status}\",\"{archivedDate}\",\"{archivedBy}\"");
+        }
+
+        string fileName = exportArchived ? $"Archived_Boxes_{DateTime.Now:yyyyMMdd}.csv" : $"Active_Boxes_{DateTime.Now:yyyyMMdd}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, builder.ToString
+       ());
+
+}
 }

@@ -1,0 +1,107 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="_editFolder" OnValidSubmit="SaveUpdates">
+            <DataAnnotationsValidator />
+
+            @* MOVE LOGIC: Dropdown to change the parent Box *@
+            <MudSelect T="int"
+                       Label="Current Storage Box"
+                       @bind-Value="_editFolder.FileBoxId"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       HelperText="Change this to move the folder to another box"
+                       Class="mb-3">
+                @foreach (var box in _activeBoxes)
+                {
+                    <MudSelectItem Value="@box.Id">
+                        @($"{box.Name} (Cabinet: {box.FillingCabinet?.Name ?? "N/A"})")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="_editFolder.Name" Label="Folder Name" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_editFolder.Description" Label="Description" Variant="Variant.Outlined" Lines="3" />
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUpdates">Save Changes</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Folder FolderToEdit { get; set; } = default!;
+
+    private Folder _editFolder = new();
+    private List<FileBoxes> _activeBoxes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Copy values to temporary holder to prevent "Live Editing" background data
+        _editFolder.Id = FolderToEdit.Id;
+        _editFolder.Name = FolderToEdit.Name;
+        _editFolder.Description = FolderToEdit.Description;
+        _editFolder.FileBoxId = FolderToEdit.FileBoxId;
+
+        // Load boxes with their cabinets for the dropdown
+        _activeBoxes = await _context.FileBoxes
+            .Include(b => b.FillingCabinet)
+            .Where(b => !b.IsArchived)
+            .OrderBy(b => b.Name)
+            .ToListAsync();
+    }
+
+    private async Task SaveUpdates()
+    {
+        // Load the tracked entity
+        var realFolder = await _context.Folders.FindAsync(_editFolder.Id);
+        if (realFolder == null) return;
+
+        // Check if box changed (This is a "Move" event)
+        bool isMoving = realFolder.FileBoxId != _editFolder.FileBoxId;
+
+        realFolder.Name = _editFolder.Name;
+        realFolder.Description = _editFolder.Description;
+        realFolder.FileBoxId = _editFolder.FileBoxId;
+
+        // Get parent Box name for the log
+        var boxName = await _context.FileBoxes
+            .Where(b => b.Id == _editFolder.FileBoxId)
+            .Select(b => b.Name)
+            .FirstOrDefaultAsync();
+
+        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+        var log = new TransactionLog
+        {
+            FullName = currentAdmin,
+            EventName = isMoving ? "Folder Moved" : "Folder Updated",
+            Description = isMoving
+                ? $"Moved folder '{realFolder.Name}' to Box '{boxName}'."
+                : $"Updated details for folder '{realFolder.Name}'.",
+            Status = "Success",
+            PerformedAt = DateTime.UtcNow.AddHours(8)
+        };
+
+        _context.TransactionLogs.Add(log);
+
+        // EF automatically handles the Update for realFolder because it is tracked
+        await _context.SaveChangesAsync();
+
+        Snackbar.Add("Folder updated successfully!", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

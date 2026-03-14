@@ -14,10 +14,11 @@
         else
         {
             <MudList T="string">
-                @foreach (var box in SelectedCabinet.FileBox)
+                @foreach (var box in SelectedCabinet.FileBox. Where (b => !b.IsArchived))
                 {
-                    <MudListItem Text="@($"Box {box.Id}")"
-                                 Icon="@Icons.Material.Filled.Inventory2" />
+                    <MudListItem Text="@($"Box {box.Name}")"
+                                 Icon="@Icons.Material.Filled.Inventory2"
+                                 SecondaryText="@box.Description" />
                 }
             </MudList>
         }
