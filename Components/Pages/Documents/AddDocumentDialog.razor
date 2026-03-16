@@ -1,0 +1,197 @@
+﻿@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.NoteAdd" Class="mr-3 mb-n1" />
+            File New Document
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            @* Row 1: Physical Location Cascading Selects *@
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged"
+                           Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var cab in _cabinets)
+                    {
+                        <MudSelectItem Value="@((int?)cab.Id)">@cab.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Box" ValueChanged="OnBoxChanged"
+                           Disabled="@(!_boxes.Any())" Placeholder="Choose Box" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var box in _boxes)
+                    {
+                        <MudSelectItem Value="@((int?)box.Id)">@box.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int" Label="Folder" @bind-Value="_newDoc.FolderId"
+                           Disabled="@(!_folders.Any())" Placeholder="Choose Folder" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var folder in _folders)
+                    {
+                        <MudSelectItem Value="@folder.Id">@folder.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Row 2: Document Info *@
+            <MudItem xs="12" md="8">
+                <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Document Year" Value="_newDoc.Year" ValueChanged="OnYearChanged" Variant="Variant.Outlined">
+                    @foreach (var y in _yearOptions)
+                    {
+                        <MudSelectItem Value="@y">@y</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Row 3: Security *@
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" Label="Confidentiality Level" @bind-Value="_newDoc.ConfidentialityLevelId" Variant="Variant.Outlined" Required="true">
+                    <MudSelectItem Value="0" Disabled="true">Select Security Level</MudSelectItem>
+                    @foreach (var level in _levels)
+                    {
+                        <MudSelectItem Value="@level.Id">@level.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Row 4: Retention & Disposal Logic *@
+            <MudItem xs="12" md="3">
+                <MudSelect T="int" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="OnDisposalYearsChanged" Variant="Variant.Outlined">
+                    @for (int i = 1; i <= 10; i++)
+                    {
+                        
+                        var years = i;
+
+                        
+                        <MudSelectItem Value="@years">@years Years</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save Document</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    private Documents _newDoc = new();
+
+    private List<FillingCabinet> _cabinets = new();
+    private List<FileBoxes> _boxes = new();
+    private List<Folder> _folders = new();
+    private List<ConfidentialityLevel> _levels = new();
+    private List<int> _yearOptions = new();
+    private int _disposalYears = 2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
+        _levels = await _context.ConfidentialityLevels.ToListAsync();
+
+        int currentYear = DateTime.Now.Year;
+        _yearOptions = Enumerable.Range(currentYear - 20, 30).ToList();
+
+        _newDoc.Year = currentYear;
+        OnDisposalYearsChanged();
+    }
+
+    private async Task OnCabinetChanged(int? id)
+    {
+        if (id == null) return;
+        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+        _folders.Clear();
+        _newDoc.FolderId = 0;
+    }
+
+    private async Task OnBoxChanged(int? id)
+    {
+        if (id == null) return;
+        _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
+        _newDoc.FolderId = 0;
+    }
+
+    private void OnYearChanged(int? newYear)
+    {
+        _newDoc.Year = newYear;
+        OnDisposalYearsChanged();
+    }
+
+    private void OnDisposalYearsChanged()
+    {
+        if (_newDoc.Year.HasValue)
+        {
+            _newDoc.DateOfDisposal = new DateTime(_newDoc.Year.Value, 1, 1).AddYears(_disposalYears);
+        }
+    }
+
+    private async Task Save()
+    {
+        // 1. Validation to prevent SQL Foreign Key Errors
+        if (_newDoc.FolderId == 0 || string.IsNullOrEmpty(_newDoc.Title) || _newDoc.ConfidentialityLevelId == 0)
+        {
+            Snackbar.Add("Please complete all fields, including Folder and Confidentiality!", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+
+            // 2. Set Automated Metadata
+            _newDoc.CreatedBy = user;
+            _newDoc.FiledBy = user;
+            _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
+
+            // 3. Fetch location info for the Transaction Log
+            var location = await _context.Folders
+                .Where(f => f.Id == _newDoc.FolderId)
+                .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
+                .FirstOrDefaultAsync();
+
+            _context.Documents.Add(_newDoc);
+
+            // 4. Record the Transaction Log
+            var log = new TransactionLog
+            {
+                FullName = user,
+                EventName = "Document Created",
+                Description = $"Filed document '{_newDoc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            };
+            _context.TransactionLogs.Add(log);
+
+            await _context.SaveChangesAsync();
+
+            Snackbar.Add("Document filed and action logged!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error: " + (ex.InnerException?.Message ?? ex.Message), Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

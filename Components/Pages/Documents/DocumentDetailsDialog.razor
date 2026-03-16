@@ -1,0 +1,81 @@
+﻿@using FileLocator.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @* --- EMPHASIZED LOCATION HEADER --- *@
+        <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Icon="@Icons.Material.Filled.LocationOn" Class="mb-6 py-4">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.caption" Style="text-transform: uppercase; letter-spacing: 1px;">Physical Storage Location</MudText>
+                <MudText Typo="Typo.h5">
+                    <b>@SelectedDoc.Folder?.FileBox?.FillingCabinet?.Name</b>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                    @SelectedDoc.Folder?.FileBox?.Name
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                    @SelectedDoc.Folder?.Name
+                </MudText>
+            </MudStack>
+        </MudAlert>
+
+        <MudGrid>
+            @* Left Side: Main Info *@
+            <MudItem xs="12" md="7">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT TITLE</MudText>
+                <MudText Typo="Typo.h4" Class="mb-4">@SelectedDoc.Title</MudText>
+
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">DESCRIPTION</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">@(string.IsNullOrEmpty(SelectedDoc.Description) ? "No description provided." : SelectedDoc.Description)</MudText>
+
+                <MudDivider Class="my-4" />
+
+                <MudStack Row="true" Spacing="4">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">YEAR</MudText>
+                        <MudText Typo="Typo.h6">@SelectedDoc.Year</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">CONFIDENTIALITY</MudText>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning">@SelectedDoc.ConfidentialityLevel?.Name</MudChip>
+                    </div>
+                </MudStack>
+            </MudItem>
+
+            @* Right Side: Status & Metadata *@
+            <MudItem xs="12" md="5">
+                <MudPaper Outlined="true" Class="pa-4 bg-light">
+                    <MudText Typo="Typo.button" Class="mb-2 d-block">Inventory Status</MudText>
+
+                    @if (SelectedDoc.IsBorrowed)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Icon="@Icons.Material.Filled.Outbound" Class="mb-2">
+                            Borrowed by <b>@SelectedDoc.CurrentBorrower</b>
+                        </MudAlert>
+                        <MudText Typo="Typo.caption">Due: @SelectedDoc.ExpectedReturnDate?.ToString("MMM dd, yyyy")</MudText>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
+                            Available in Folder
+                        </MudAlert>
+                    }
+
+                    <MudDivider Class="my-4" />
+
+                    <MudText Typo="Typo.caption" Class="d-block"><b>Filed At:</b> @SelectedDoc.FiledAt.ToString("MMM dd, yyyy hh:mm tt")</MudText>
+                    <MudText Typo="Typo.caption" Class="d-block"><b>Filed By:</b> @SelectedDoc.FiledBy</MudText>
+                    <MudText Typo="Typo.caption" Class="d-block"><b>Retention Policy:</b> Disposal on @SelectedDoc.DateOfDisposal?.ToString("yyyy")</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Documents SelectedDoc { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+}

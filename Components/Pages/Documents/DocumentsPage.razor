@@ -1,0 +1,153 @@
+﻿@page "/documentsPage"
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+
+
+<MudText Typo="Typo.h5" Class="mb-4">Document Inventory</MudText>
+
+<MudDataGrid T="Documents"
+             Items="@_allDocuments.Where(d => !d.IsDeleted && !d.IsDisposal)"
+             Filterable="true"
+             QuickFilter="@_quickFilter"
+             Hideable="true"
+RowClick = "OnRowClicked">
+    <ToolBarContent>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenAddDialog())">
+                File New Document
+            </MudButton>
+            <MudTooltip Text="Print Inventory">
+                <MudIconButton Icon="@Icons.Material.Filled.Print" Color="Color.Success" Variant="Variant.Outlined" OnClick="ExportToCSV" />
+            </MudTooltip>
+        </MudStack>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by Title, Year, or Folder..." Adornment="Adornment.Start"
+                      Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search" Style="max-width: 400px;" />
+    </ToolBarContent>
+
+    <Columns>
+        <PropertyColumn Property="x => x.Title" Title="Document Title" />
+        <PropertyColumn Property="x => x.Year" Title="Year" Sortable="true" />
+
+      
+        <TemplateColumn Title="Physical Location">
+            <CellTemplate>
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2"><b>Folder:</b> @context.Item.Folder?.Name</MudText>
+                    <MudText Typo="Typo.caption">@($"{context.Item.Folder?.FileBox?.FillingCabinet?.Name} > {context.Item.Folder?.FileBox?.Name}")</MudText>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+
+        
+        <TemplateColumn Title="Status">
+            <CellTemplate >
+                @if (context.Item.IsBorrowed)
+                {
+                    <MudTooltip Text="@($"Borrowed by: {context.Item.CurrentBorrower}")">
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Outbound">Borrowed</MudChip>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">Available</MudChip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        @* Confidentiality Column *@
+        <TemplateColumn Title="Security">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                         Color="@GetConfidentialityColor(context.Item.ConfidentialityLevel?.Name)">
+                    @context.Item.ConfidentialityLevel?.Name
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Actions">
+            <CellTemplate Context="doc">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => OpenEditDialog(doc.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => ConfirmDelete(doc.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<Documents> _allDocuments = new();
+    private string _searchString = "";
+
+    protected override async Task OnInitializedAsync() => await LoadDocuments();
+
+    private async Task LoadDocuments() =>
+        // We need to 'Include' the whole path so we can show where the file is!
+        _allDocuments = await _context.Documents
+            .Include(d => d.ConfidentialityLevel)
+            .Include(d => d.Folder)
+                .ThenInclude(f => f.FileBox)
+                    .ThenInclude(b => b.FillingCabinet)
+            .ToListAsync();
+
+    private Func<Documents, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        if (x.Year?.ToString().Contains(_searchString) == true) return true;
+        if (x.Folder?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        return false;
+    };
+
+    private Color GetConfidentialityColor(string? name) => name?.ToLower() switch
+    {
+        "highly confidential" => Color.Error,
+        "confidential" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private async Task OpenAddDialog(Documents doc = null )
+    {
+        var docToProcess = doc ?? new Documents();
+
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddDocumentDialog>("File New Document", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDocuments(); // Refresh the grid
+        }
+
+    }
+    private async Task OpenEditDialog(Documents doc)
+    {
+
+
+        var parameters = new DialogParameters<EditDocumentDialog> { { x => x.DocumentToEdit, doc } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<EditDocumentDialog>("Edit Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) await LoadDocuments();
+    }
+    private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
+    {
+        var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth  = true, CloseButton = true};
+
+        await DialogService.ShowAsync<DocumentDetailsDialog>("Document Overview", parameters, options);
+    }
+    private async Task ConfirmDelete(Documents doc) {  }
+    private async Task ExportToCSV() {  }
+}
