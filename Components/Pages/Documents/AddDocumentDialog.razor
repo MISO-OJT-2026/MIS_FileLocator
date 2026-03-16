@@ -184,7 +184,7 @@
 
             await _context.SaveChangesAsync();
 
-            Snackbar.Add("Document filed and action logged!", Severity.Success);
+            Snackbar.Add("Document filed successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
