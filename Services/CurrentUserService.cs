@@ -52,5 +52,23 @@ namespace FileLocator.Services
 
             return "System";
         }
+        public async Task<string> GetCurrentUserIdAsync()
+        {
+            var userState = await _authStateProvider.GetAuthenticationStateAsync();
+            var user = userState.User;
+
+            if (user.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                // This retrieves the GUID/ID of the user from their claims
+                return user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            }
+
+            return null;
+        }
+
+
+
+
     }
+
 }

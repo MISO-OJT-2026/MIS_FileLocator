@@ -1,0 +1,17 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+
+<AuthorizeView Roles="Admin,Editor">
+    <Authorized>
+        
+        <Dashboard />
+    </Authorized>
+    <NotAuthorized>
+        
+        <DocumentsPage />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+  
+}

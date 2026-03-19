@@ -1,0 +1,117 @@
+﻿@page "/barrowed"
+
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ICurrentUserService _currentUserService
+
+
+<MudText Typo="Typo.h5" Class="mb-4">Borrowed Inventory Tracking</MudText>
+
+<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="true" Hover="true" RowClick ="OnRowClicked" >
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Currently Out</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
+                      Adornment="Adornment.Start" Immediate="true"
+                      AdornmentIcon="@Icons.Material.Filled.Search" />
+    </ToolBarContent>
+    <Columns>
+        @* Overdue Indication Column *@
+        <TemplateColumn Title="Alert" Size="Size.Small">
+            <CellTemplate>
+                @if (context.Item.ExpectedReturnDate.HasValue && context.Item.ExpectedReturnDate.Value < DateTime.Today)
+                {
+                    <MudTooltip Text="Overdue!">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x.Title" Title="Document" />
+        <PropertyColumn Property="x => x.CurrentBorrower" Title="Borrower" />
+
+        <TemplateColumn Title="Borrow Date">
+            <CellTemplate>
+                @context.Item.BorrowedAt?.ToString("MMM dd, yyyy")
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Due Date">
+            <CellTemplate>
+                <MudText Color="@(GetDueDateColor(context.Item.ExpectedReturnDate))" Typo="Typo.body2">
+                    @context.Item.ExpectedReturnDate?.ToString("MMM dd, yyyy")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x.BorrowRemarks" Title="Remarks" />
+
+        <TemplateColumn Title="Actions">
+            <CellTemplate>
+                <MudButton Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           Color="Color.Info"
+                           OnClick="@(() => ManageBorrow(context.Item))">
+                    Manage/Return
+                </MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<Documents> _borrowedDocs = new();
+    private string _searchString = "";
+
+    protected override async Task OnInitializedAsync() => await LoadBorrowed();
+
+    private async Task LoadBorrowed()
+    {
+        _borrowedDocs = await _context.Documents
+        .Include(d => d.ConfidentialityLevel)
+        .Include(d => d.Folder) 
+        .ThenInclude(f => f.FileBox)
+        .ThenInclude(b => b.FillingCabinet)
+            .Where(d => d.IsBorrowed && !d.IsDeleted)
+            .OrderBy(d => d.ExpectedReturnDate)
+            .ToListAsync();
+    }
+
+    private Color GetDueDateColor(DateTime? dueDate)
+    {
+        if (!dueDate.HasValue) return Color.Default;
+        return dueDate.Value < DateTime.Today ? Color.Error : Color.Default;
+    }
+
+    private async Task ManageBorrow(Documents doc)
+    {
+        var parameters = new DialogParameters<EditDocumentDialog> { { x => x.DocumentToEdit, doc } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<EditDocumentDialog>("Update Borrowing Status", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadBorrowed();
+        }
+    }
+
+    private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
+    {
+        var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+
+        await DialogService.ShowAsync<DocumentDetailsDialog>("Document Overview", parameters, options);
+    }
+}

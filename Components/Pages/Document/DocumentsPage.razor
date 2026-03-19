@@ -9,6 +9,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
+@inject ICurrentUserService _currentUserService 
 
 
 <MudText Typo="Typo.h5" Class="mb-4">Document Inventory</MudText>
@@ -75,8 +76,16 @@ RowClick = "OnRowClicked">
 
         <TemplateColumn Title="Actions">
             <CellTemplate Context="doc">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => OpenEditDialog(doc.Item))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => ConfirmDelete(doc.Item))" />
+                <div @onclick:stopPropagation="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Warning"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(doc.Item))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(() => ConfirmDelete(doc.Item))" />
+                </div>
             </CellTemplate>
         </TemplateColumn>
     </Columns>
@@ -141,6 +150,60 @@ RowClick = "OnRowClicked">
 
         if (!result.Canceled) await LoadDocuments();
     }
+    private async Task ConfirmDelete(Documents doc)
+    {
+        bool? result = await DialogService.ShowMessageBoxAsync(
+        "Delete Confirmation", 
+        $"Are you sure you want to delete '{doc.Title}'?", 
+        yesText:"Delete", cancelText:"Cancel"
+        );
+
+        if (result == true)
+        {
+            try
+            {
+                // location of the document 
+
+                var location = await _context.Folders
+                .Where(f => f.Id == doc.FolderId)
+                .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
+                .FirstOrDefaultAsync();
+
+
+                doc.IsDeleted = true;
+                _context.Documents.Update(doc);
+
+                var user = await _currentUserService.GetCurrentFullNameAsync();
+
+
+                var log = new TransactionLog
+                {
+                    FullName= user,
+                    EventName= "Document Deleted", 
+                    Description = $"Delete Document '{doc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}.",
+                    Status= "Success",
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
+
+                };
+
+                _context.TransactionLogs.Add(log);
+
+                // 4. Save both changes in one transaction
+                await _context.SaveChangesAsync();
+
+                Snackbar.Add("Document moved to trash.", Severity.Success);
+
+                // 5. Refresh the list
+                await LoadDocuments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error during deletion: {ex.Message}", Severity.Error);
+            }
+        }
+
+
+    }
     private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
     {
         var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };
@@ -148,6 +211,9 @@ RowClick = "OnRowClicked">
 
         await DialogService.ShowAsync<DocumentDetailsDialog>("Document Overview", parameters, options);
     }
-    private async Task ConfirmDelete(Documents doc) {  }
-    private async Task ExportToCSV() {  }
+
+    private async Task ExportToCSV()
+    {
+        
+    }
 }

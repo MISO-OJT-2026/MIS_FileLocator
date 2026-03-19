@@ -16,7 +16,7 @@
     </TitleContent>
     <DialogContent>
         <MudGrid Spacing="2">
-            @* Row 1: Physical Location Cascading Selects *@
+            @*  Physical Location Cascading Selects *@
             <MudItem xs="12" md="4">
                 <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged"
                            Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
@@ -45,20 +45,20 @@
                 </MudSelect>
             </MudItem>
 
-            @* Row 2: Document Info *@
+            @* Document Info *@
             <MudItem xs="12" md="8">
                 <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" md="4">
-                <MudSelect T="int?" Label="Document Year" Value="_newDoc.Year" ValueChanged="OnYearChanged" Variant="Variant.Outlined">
+                <MudSelect T="int?" Label="Document Year" Value="_newDoc.Year" ValueChanged="OnYearChanged" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
                     @foreach (var y in _yearOptions)
                     {
-                        <MudSelectItem Value="@y">@y</MudSelectItem>
+                        <MudSelectItem T= "int?" Value="@y">@y</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
 
-            @* Row 3: Security *@
+            @* Security *@
             <MudItem xs="12" md="6">
                 <MudSelect T="int" Label="Confidentiality Level" @bind-Value="_newDoc.ConfidentialityLevelId" Variant="Variant.Outlined" Required="true">
                     <MudSelectItem Value="0" Disabled="true">Select Security Level</MudSelectItem>
@@ -69,7 +69,7 @@
                 </MudSelect>
             </MudItem>
 
-            @* Row 4: Retention & Disposal Logic *@
+            @*Retention & Disposal Logic *@
             <MudItem xs="12" md="3">
                 <MudSelect T="int" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="OnDisposalYearsChanged" Variant="Variant.Outlined">
                     @for (int i = 1; i <= 10; i++)
@@ -83,7 +83,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" />
+                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" DateFormat ="yyyy" OpenTo="OpenTo.Year" FixMonth="1" FixDay="1" />
             </MudItem>
         </MudGrid>
     </DialogContent>
@@ -110,7 +110,12 @@
         _levels = await _context.ConfidentialityLevels.ToListAsync();
 
         int currentYear = DateTime.Now.Year;
-        _yearOptions = Enumerable.Range(currentYear - 20, 30).ToList();
+        int startYear = currentYear - 3;
+        int maxYear = currentYear + 1;
+       
+
+        int count =(maxYear - startYear) +1 ; // =5
+        _yearOptions = Enumerable.Range(startYear,count).Reverse().ToList();
 
         _newDoc.Year = currentYear;
         OnDisposalYearsChanged();
@@ -118,17 +123,23 @@
 
     private async Task OnCabinetChanged(int? id)
     {
-        if (id == null) return;
-        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+        _boxes.Clear();
         _folders.Clear();
         _newDoc.FolderId = 0;
+
+        if (id == null) return;
+        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+
     }
 
     private async Task OnBoxChanged(int? id)
     {
+        _folders.Clear();
+        _newDoc.FolderId = 0;
+
         if (id == null) return;
         _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
-        _newDoc.FolderId = 0;
+       
     }
 
     private void OnYearChanged(int? newYear)
@@ -158,12 +169,12 @@
         {
             var user = await _currentUserService.GetCurrentFullNameAsync();
 
-            // 2. Set Automated Metadata
+            //  Set Automated Metadata
             _newDoc.CreatedBy = user;
             _newDoc.FiledBy = user;
             _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
 
-            // 3. Fetch location info for the Transaction Log
+           
             var location = await _context.Folders
                 .Where(f => f.Id == _newDoc.FolderId)
                 .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
@@ -171,7 +182,7 @@
 
             _context.Documents.Add(_newDoc);
 
-            // 4. Record the Transaction Log
+            
             var log = new TransactionLog
             {
                 FullName = user,

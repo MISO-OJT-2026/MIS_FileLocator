@@ -34,6 +34,11 @@ namespace MIS_FileLocator.Data
             {
                 return Task.FromResult("System Migration");
             }
+
+            public Task<string> GetCurrentUserIdAsync()
+            {
+                return Task.FromResult("System Migration");
+            }
         }
     }
 }

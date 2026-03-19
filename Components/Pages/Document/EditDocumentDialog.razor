@@ -33,7 +33,7 @@
                 </MudStack>
             </MudTabPanel>
 
-            @* TAB 2: Borrowing Logic *@
+            @* Borrowing Logic *@
             <MudTabPanel Text="Borrowing" Icon="@Icons.Material.Filled.Outbound">
                 <MudStack Spacing="3" Class="mt-4">
                     <MudAlert Severity="@(_editDoc.IsBorrowed? Severity.Error: Severity.Success)" Variant="Variant.Outlined">
@@ -51,10 +51,9 @@
                 </MudStack>
             </MudTabPanel>
 
-            @* TAB 3: History/Audit *@
+            @*  History cause why nottt *@
             <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History">
                 <MudStack Spacing="2" Class="mt-4">
-                    <MudText Typo="Typo.body2"><b>Physically Filed By:</b> @DocumentToEdit.FiledBy</MudText>
                     <MudText Typo="Typo.body2"><b>System Created By:</b> @DocumentToEdit.CreatedBy</MudText>
                     <MudText Typo="Typo.body2"><b>Date Filed:</b> @DocumentToEdit.FiledAt.ToString("MMM dd, yyyy")</MudText>
                     @if (!string.IsNullOrEmpty(DocumentToEdit.UpdatedBy))

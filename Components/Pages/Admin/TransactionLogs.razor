@@ -1,4 +1,5 @@
 ﻿@page "/transaction-logs"
+@attribute [Authorize (Roles= "Admin")]
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using Microsoft.EntityFrameworkCore

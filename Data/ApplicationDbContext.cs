@@ -73,10 +73,36 @@ namespace MIS_FileLocator.Data
        // LIKE A TRIGGER
          public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            // Grab the logged-in user's name
-            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
+            // for deletion- doc 
 
-            // Get all the entries that are being Added, Modified, or Deleted
+      
+            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
+            var currentUserId = await currentUserService.GetCurrentUserIdAsync();
+
+
+
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                 if(entry.Entity is Documents doc)
+
+                    if (entry.State == EntityState.Added)
+                    {
+                        doc.FiledBy = currentUsername;
+                        doc.FiledAt = DateTime.UtcNow.AddHours(8);
+                    }
+                    else if (entry.State == EntityState.Modified)
+                    {
+                        var isDeletedProperty = entry.Property("IsDeleted");
+                        if (doc.IsDeleted && isDeletedProperty.IsModified)
+                        {
+                            doc.DeletedAt = DateTime.UtcNow.AddHours(8);
+
+                            doc.DeletedByUserId = currentUserId;
+                        }
+                    }
+            
+        }
+            
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added ||
                             e.State == EntityState.Modified ||
@@ -85,10 +111,10 @@ namespace MIS_FileLocator.Data
 
             var auditLogs = new List<AuditTrails>();
 
-            //RUN LOOP THROUGH CHANGES
+           
             foreach (var entry in entries)
             {
-                // Skip our tracking tables to prevent an infinite loop!
+                
                 if (entry.Entity is AuditTrails || entry.Entity is TransactionLog)
                     continue;
 
@@ -100,18 +126,18 @@ namespace MIS_FileLocator.Data
                     FullName = currentUsername 
                 };
 
-                // Get the ID of the specific record being changed
+                
                 var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
                 auditTrail.RecordId = primaryKey?.CurrentValue?.ToString() ?? "Unknown";
 
-                // Capture what the data looked like BEFORE the change
+               
                 if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
                 {
                     var oldValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.OriginalValue);
                     auditTrail.OldValues = JsonSerializer.Serialize(oldValues);
                 }
 
-                // Capture what the data looks like AFTER the change
+                
                 if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
                 {
                     var newValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
@@ -126,7 +152,7 @@ namespace MIS_FileLocator.Data
                 await AuditTrails.AddRangeAsync(auditLogs, cancellationToken);
             }
 
-            //RUN SQL QUERIES
+            
             return await base.SaveChangesAsync(cancellationToken);
         }
     }
