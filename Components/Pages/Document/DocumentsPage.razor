@@ -1,15 +1,20 @@
 ﻿@page "/documentsPage"
+@attribute [Authorize]
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using FileLocator.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Text
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject ICurrentUserService _currentUserService 
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IRoleService RoleService 
 
 
 <MudText Typo="Typo.h5" Class="mb-4">Document Inventory</MudText>
@@ -22,9 +27,13 @@
 RowClick = "OnRowClicked">
     <ToolBarContent>
         <MudStack Row="true" Spacing="2">
+    @* Add Document button - Admin and Editor only *@
+        @if (RoleService.CanAddEditDocuments(_currentUserRole))
+        {
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenAddDialog())">
                 File New Document
             </MudButton>
+        }
             <MudTooltip Text="Print Inventory">
                 <MudIconButton Icon="@Icons.Material.Filled.Print" Color="Color.Success" Variant="Variant.Outlined" OnClick="ExportToCSV" />
             </MudTooltip>
@@ -74,20 +83,24 @@ RowClick = "OnRowClicked">
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn Title="Actions">
-            <CellTemplate Context="doc">
-                <div @onclick:stopPropagation="true">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                   Color="Color.Warning"
-                                   Size="Size.Small"
-                                   OnClick="@(() => OpenEditDialog(doc.Item))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                   Color="Color.Error"
-                                   Size="Size.Small"
-                                   OnClick="@(() => ConfirmDelete(doc.Item))" />
-                </div>
-            </CellTemplate>
-        </TemplateColumn>
+        @* Actions column - Admin and Editor only *@
+        @if (RoleService.CanAddEditDocuments(_currentUserRole))
+        {
+            <TemplateColumn Title="Actions">
+                <CellTemplate Context="doc">
+                    <div @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       OnClick="@(() => OpenEditDialog(doc.Item))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ConfirmDelete(doc.Item))" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        }
     </Columns>
     <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
 </MudDataGrid>
@@ -95,8 +108,25 @@ RowClick = "OnRowClicked">
 @code {
     private List<Documents> _allDocuments = new();
     private string _searchString = "";
+    private string _currentUserRole = "";
 
-    protected override async Task OnInitializedAsync() => await LoadDocuments();
+    protected override async Task OnInitializedAsync() 
+    {
+        await LoadDocuments();
+        await LoadCurrentUserRole();
+    }
+
+    private async Task LoadCurrentUserRole()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var roleClaim = user.FindFirst(c => c.Type == ClaimTypes.Role);
+            _currentUserRole = roleClaim != null ? roleClaim.Value : "Staff";
+        }
+    }
 
     private async Task LoadDocuments() =>
         // We need to 'Include' the whole path so we can show where the file is!

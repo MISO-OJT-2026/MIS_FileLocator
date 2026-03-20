@@ -62,6 +62,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
@@ -103,6 +104,6 @@ app.UseAntiforgery();
 app.MapRazorComponents<MIS_FileLocator.Components.App>()
     .AddInteractiveServerRenderMode();
 
-//app.MapAdditionalIdentityEndpoints();
+app.MapAdditionalIdentityEndpoints();
 
 app.Run();

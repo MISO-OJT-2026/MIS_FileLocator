@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @inject ICurrentUserService _currentUserService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IRoleService RoleService
 
 <MudNavMenu Class="pa-4">
     @if (SideBarOpen)
@@ -25,51 +26,83 @@
             <div style="flex-grow: 1; overflow-y: auto;class= links-container no-scrollbar">
                 @* This container grows and allows scrolling if items are many *@
                 <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">GENERAL</MudText>
-                <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                
+                @* Dashboard - Admin and Editor only *@
+                @if (RoleService.CanAccessDashboard(_currentUserRole))
+                {
+                    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                }
+                
+                @* Profile - All roles can access *@
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
 
-                <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
-                    <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
-                    <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
-                    <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
-                </MudNavGroup>
+                @* Storage - Admin and Editor only *@
+                @if (RoleService.CanAccessStorage(_currentUserRole))
+                {
+                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
+                        <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
+                        <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
+                        <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
+                    </MudNavGroup>
 
-                <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
-                    <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
-                    <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
-                    <MudNavLink Href="/barrowed">Barrowed Documents</MudNavLink>
-                    <MudNavLink Href="/recyclebin">Recycle Bin  Documents</MudNavLink>
-                </MudNavGroup>
+                    <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
+                        <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
+                        <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
+                        <MudNavLink Href="/barrowed">Barrowed Documents</MudNavLink>
+                        <MudNavLink Href="/recyclebin">Recycle Bin  Documents</MudNavLink>
+                    </MudNavGroup>
+                }
+                
+                @* Documents for Viewer - Read-only access *@
+                @if (_currentUserRole == "Viewer")
+                {
+                    <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
+                        <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
+                        <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
+                    </MudNavGroup>
+                }
 
                 <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">ADMIN & TOOLS</MudText>
 
-                <AuthorizeView Roles="Admin">
+                @* User Management - Admin only *@
+                @if (RoleService.CanAccessUserManagement(_currentUserRole))
+                {
                     <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
-                </AuthorizeView>
+                }
 
-                <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
-                <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
+                @* Forms and Transaction Logs - Admin and Editor only *@
+                @if (RoleService.CanAccessForms(_currentUserRole))
+                {
+                    <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
+                    <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
+                }
             </div>
 
             @* --- BOTTOM SECTION --- *@
             <div class="mt-auto pt-4">
-                @* mt-auto pushes this to the bottom *@
-                <AuthorizeView>
-                    <Authorized>
-                        <form action="Account/Logout" method="post">
-                            <AntiforgeryToken />
-                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                            <MudButton ButtonType="ButtonType.Submit"
-                                       Variant="Variant.Text"
-                                       StartIcon="@Icons.Material.Filled.Logout"
-                                       FullWidth="true"
-                                       Style="justify-content: flex-start; text-transform: none; color: white;">
-                                Logout
-                            </MudButton>
-                        </form>
-                    </Authorized>
-                </AuthorizeView>
-            </div>
+    <AuthorizeView>
+        <Authorized>
+            @* IMPORTANT: We must use a <form> with method="post" 
+               because the /Account/Logout endpoint is a 'MapPost' 
+            *@
+            <form action="Account/Logout" method="post">
+                @* This token is required by ASP.NET Core for security *@
+                <AntiforgeryToken />
+
+                @* returnUrl tells the app where to go after logging out *@
+                <input type="hidden" name="returnUrl" value="" />
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Text"
+                           StartIcon="@Icons.Material.Filled.Logout"
+                           FullWidth="true"
+                           Style="justify-content: flex-start; text-transform: none; color: white;">
+                    Logout
+                </MudButton>
+            </form>
+        </Authorized>
+    </AuthorizeView>
+</div>
         </div>
     }
     else
