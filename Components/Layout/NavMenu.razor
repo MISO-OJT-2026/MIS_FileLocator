@@ -11,9 +11,9 @@
         
         <div @onclick:stopPropagation="true"
              style="display: flex; flex-direction: column; height: calc(100vh - 32px);">
-            @* 32px accounts for NavMenu padding *@
+            
 
-            @* --- TOP SECTION --- *@
+            
             <div class="d-flex flex-column align-center py-4">
                 <MudAvatar Color="Color.Secondary" Style="background-color: rgba(255,255,255,0.2); color: white; height:70px; width:70px;" Class="mb-3">
                     @_currentUserInitials
@@ -22,21 +22,21 @@
                 <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.7);">@_currentUserRole</MudText>
             </div>
 
-            @* --- MIDDLE SECTION (Links) --- *@
+            
             <div style="flex-grow: 1; overflow-y: auto;class= links-container no-scrollbar">
-                @* This container grows and allows scrolling if items are many *@
+                
                 <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">GENERAL</MudText>
                 
-                @* Dashboard - Admin and Editor only *@
+               
                 @if (RoleService.CanAccessDashboard(_currentUserRole))
                 {
                     <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
                 }
                 
-                @* Profile - All roles can access *@
+              
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
 
-                @* Storage - Admin and Editor only *@
+                
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
                     <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
@@ -49,11 +49,11 @@
                         <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
                         <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
                         <MudNavLink Href="/barrowed">Barrowed Documents</MudNavLink>
-                        <MudNavLink Href="/recyclebin">Recycle Bin  Documents</MudNavLink>
+                        <MudNavLink Href="/recyclebin">Recycle Bin </MudNavLink>
                     </MudNavGroup>
                 }
                 
-                @* Documents for Viewer - Read-only access *@
+               
                 @if (_currentUserRole == "Viewer")
                 {
                     <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
@@ -64,13 +64,13 @@
 
                 <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">ADMIN & TOOLS</MudText>
 
-                @* User Management - Admin only *@
+                
                 @if (RoleService.CanAccessUserManagement(_currentUserRole))
                 {
                     <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
                 }
 
-                @* Forms and Transaction Logs - Admin and Editor only *@
+               
                 @if (RoleService.CanAccessForms(_currentUserRole))
                 {
                     <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
@@ -78,18 +78,16 @@
                 }
             </div>
 
-            @* --- BOTTOM SECTION --- *@
+           
             <div class="mt-auto pt-4">
     <AuthorizeView>
         <Authorized>
-            @* IMPORTANT: We must use a <form> with method="post" 
-               because the /Account/Logout endpoint is a 'MapPost' 
-            *@
+           
             <form action="Account/Logout" method="post">
-                @* This token is required by ASP.NET Core for security *@
+               
                 <AntiforgeryToken />
 
-                @* returnUrl tells the app where to go after logging out *@
+                
                 <input type="hidden" name="returnUrl" value="" />
 
                 <MudButton ButtonType="ButtonType.Submit"

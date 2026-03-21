@@ -59,7 +59,7 @@ namespace FileLocator.Services
 
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                // This retrieves the GUID/ID of the user from their claims
+                
                 return user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             }
 

@@ -1,5 +1,177 @@
-﻿<h3>FormsRepository</h3>
+﻿@page "/forms"
+@using FileLocator.Models
+@using FileLocator.Services
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+
+
+@inject NavigationManager Nav
+@inject ApplicationDbContext _context
+@inject IDialogService DialogService
+@inject IJSRuntime jSRunTime 
+@inject ICurrentUserService _currentUserService
+
+<MudText Typo="Typo.h5" Class="mb-4">University Form Repository</MudText>
+
+<MudPaper Elevation="0" Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        <MudTextField @bind-Value="_searchString" Placeholder="Search form name or number..."
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddFormDialog">
+            Add New Form
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Elevation="1">
+    <MudList T="FormTemplate" Clickable="true" Color="Color.Primary">
+        @if (!GroupedForms.Any())
+        {
+            <MudListItem>
+                <MudText Typo="Typo.body2" Align="Align.Center">No forms found matching your search.</MudText>
+            </MudListItem>
+        }
+
+        @foreach (var group in GroupedForms)
+        {
+            <MudListSubheader>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary"><b>@group.Key.ToUpper()</b></MudText>
+            </MudListSubheader>
+
+            @foreach (var form in group)
+            {
+                <MudListItem OnClick="@(() => OpenLink(form.PdfUrl))">
+                    <div class="d-flex align-center justify-space-between w-100">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Error" Class="mr-4" />
+                            <div>
+                                <MudText Typo="Typo.body1">@form.FormName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@form.FormNumber</MudText>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-center">
+                            <MudTooltip Text="Open Form">
+                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" />
+                            </MudTooltip>
+
+                            @* Admin Actions *@
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight">
+                                <MudMenuItem Icon="@Icons.Material.Filled.Edit"  OnClick="@(() => OpenEditDialog(form))">Edit Info</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => ConfirmArchive(form))" >Archive</MudMenuItem>
+                            </MudMenu>
+                        </div>
+                    </div>
+                </MudListItem>
+                <MudDivider DividerType="DividerType.Inset" />
+            }
+        }
+    </MudList>
+</MudPaper>
 
 @code {
+    private string _searchString = "";
+    private List<FormTemplate> _allForms = new();
 
+    private IEnumerable<IGrouping<string, FormTemplate>> GroupedForms => _allForms
+        .Where(x => string.IsNullOrWhiteSpace(_searchString)
+                 || (x.FormName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+                 || (x.FormNumber?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false))
+        .OrderBy(x => x.FormName)
+        .GroupBy(x => x.Category ?? "Uncategorized");
+
+    protected override async Task OnInitializedAsync() => await LoadForms();
+
+    private async Task LoadForms()
+    {
+        _allForms = await _context.FormTemplates
+            .Where(f => !f.IsArchived)
+            .ToListAsync();
+    }
+
+    private async Task OpenAddFormDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddFormDialog>("Add New University Form");
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadForms();
+    }
+
+    // --- FIX 2: Missing OpenLink with Logging ---
+    private async Task OpenLink(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+
+        // Find the form name for the log (Optional but better for OJT)
+        var formName = _allForms.FirstOrDefault(f => f.PdfUrl == url)?.FormName ?? "Unknown Form";
+
+        try
+        {
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+
+            _context.TransactionLogs.Add(new TransactionLog
+            {
+                FullName = user,
+                EventName = "Form Accessed",
+                Description = $"User opened/downloaded: {formName}",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+
+            await _context.SaveChangesAsync();
+
+            // Using jSRunTime (lowercase 'j' to match your @inject)
+            await jSRunTime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception)
+        {
+            // Fallback: Still open the link even if logging fails
+            await jSRunTime.InvokeVoidAsync("open", url, "_blank");
+        }
+    }
+
+    // --- FIX 3: Corrected DialogParameters Syntax ---
+    private async Task OpenEditDialog(FormTemplate form)
+    {
+        var parameters = new DialogParameters<EditFormDialog>();
+        parameters.Add(x => x.FormToEdit, form); // Using .Add() is safer for some versions
+
+        var dialog = await DialogService.ShowAsync<EditFormDialog>("Edit Form Information", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) await LoadForms();
+    }
+
+    private async Task ConfirmArchive(FormTemplate form)
+    {
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Archive Form",
+            $"Are you sure you want to remove '{form.FormName}'?",
+            yesText: "Archive", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            form.IsArchived = true;
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+
+            _context.TransactionLogs.Add(new TransactionLog
+            {
+                FullName = user,
+                EventName = "Form Archived",
+                Description = $"Archived form: {form.FormName}",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+
+            await _context.SaveChangesAsync();
+            await LoadForms();
+        }
+    
+
+    
+    
+}
 }

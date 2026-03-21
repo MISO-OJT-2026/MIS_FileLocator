@@ -1,7 +1,161 @@
 ﻿@page "/profile"
-@using MudBlazor
-@attribute [Authorize]
+@using Microsoft.AspNetCore.Identity
+@using MIS_FileLocator.Data
+@using Microsoft.EntityFrameworkCore
+@using FileLocator.Models
+
+@inject ApplicationDbContext _context
+@inject UserManager<ApplicationUser> UserManager
+@inject ICurrentUserService _currentUserService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-10">
+    @if (_user == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto d-block" />
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            @* --- IDENTITY CARD --- *@
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-6 text-center d-flex flex-column align-center" Elevation="3" Style="height: 100%; border-top: 6px solid #800000;">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Style="height:100px; width:100px; font-size:2rem;">
+                        @GetInitials(_user.FullName)
+                    </MudAvatar>
+
+                    <MudText Typo="Typo.h6" Class="mt-4">@_user.FullName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.UserName</MudText>
+
+                    @* Displaying the Role we fetched from UserManager *@
+                    <MudChip T="string" Color="Color.Info" Variant="Variant.Text" Size="Size.Small" Icon="@Icons.Material.Filled.Badge" Class="mt-2">
+                        @_userRole
+                    </MudChip>
+                </MudPaper>
+            </MudItem>
+
+            @* --- DETAILS TABLE --- *@
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="3">
+                    <MudCardHeader>
+                        <CardHeaderContent><MudText Typo="Typo.h6">Employee Profile</MudText></CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudSimpleTable Elevation="0">
+                            <tbody>
+                                <tr>
+                                    <td><b>Employee ID</b></td>
+                                    
+                                    <td><MudText Color="Color.Primary"><b>@_user.EmployeeId</b></MudText></td>
+                                </tr>
+                                <tr>
+                                    <td><b>Username</b></td>
+                                    <td>@_user.UserName</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Full Name</b></td>
+                                    <td>@_user.FullName</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Department</b></td>
+                                    <td>@_user.Department</td>
+                                </tr>
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem>
+                <MudPaper Class="pa-4 mt-6 d-flex align-center justify-space-between"
+                          Elevation="2"
+                          Style="border-left: 6px solid #ff9800;">
+                    @* Orange accent for security *@
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Class="mr-3" />
+                        <div>
+                            <MudText Typo="Typo.body1"><b>Account Security</b></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Update your system password using your Employee ID.
+                            </MudText>
+                        </div>
+                    </div>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.VpnKey"
+                               OnClick="OpenChangePasswordDialog">
+                        Change Password
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
 
 @code {
+    private ApplicationUser? _user;
+    private string _userRole = "Loading...";
 
+    private async Task OpenChangePasswordDialog()
+    {
+        
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            BackdropClick = false,
+        };
+
+        var dialog = await DialogService.ShowAsync<ChangePasswordDialog>("Security Verification", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Optional: You can refresh data or just show a success snackbar
+            Snackbar.Add("Profile security updated.", Severity.Success);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            
+            var userId = await _currentUserService.GetCurrentUserIdAsync();
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+               
+                _user = await _context.Users.FirstOrDefaultAsync( u => u.Id == userId);
+
+                if (_user != null)
+                {
+                    
+                    var roles = await UserManager.GetRolesAsync(_user);
+                    _userRole = roles.FirstOrDefault() ?? "Authorized User";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error accessing security service: " + ex.Message, Severity.Error);
+        }
+
+       
+        if (_user == null)
+        {
+            Snackbar.Add("Profile not found. Please try logging out and back in.", Severity.Warning);
+        }
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "U";
+        var parts = name.Split(' ');
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[parts.Length - 1][0]}".ToUpper()
+            : $"{parts[0][0]}".ToUpper();
+    }
 }

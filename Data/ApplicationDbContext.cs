@@ -22,6 +22,8 @@ namespace MIS_FileLocator.Data
 
         public DbSet<TransactionLog> TransactionLogs { get; set; }
 
+        public DbSet<FormTemplate> FormTemplates { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

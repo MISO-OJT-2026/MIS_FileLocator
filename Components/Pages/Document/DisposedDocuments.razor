@@ -1,5 +1,256 @@
 ﻿@page "/disposed"
 
-@code {
+@using MIS_FileLocator.Models
+@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Text
 
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
+@inject IJSRuntime JSRuntime
+
+<MudText Typo="Typo.h5" Class="mb-4">Disposal Management</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+  
+    <MudTabPanel Text="Pending Disposal" Icon="@Icons.Material.Filled.HourglassEmpty">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Class="mt-6">
+            The following documents have reached or exceeded their retention period and are ready for official disposal.
+        </MudAlert>
+
+        <MudDataGrid T="Documents"
+                     Items="@_pendingDisposal"
+                     MultiSelection="true"
+                     @bind-SelectedItems="_selectedItems"
+                     Hover="true"
+                     Filterable="true">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Eligible for Disposal</MudText>
+                <MudSpacer />
+                <MudTooltip Text="Export Pending Disposal">
+                <MudIconButton Variant="Variant.Outlined" 
+               Color="Color.Success" 
+               Icon="@Icons.Material.Filled.Print" 
+               OnClick="ExportPendingToCSV"
+               Disabled="@(!_pendingDisposal.Any())"
+               Class="ml-2"/>
+                </MudTooltip>
+   
+                @if (_selectedItems.Any())
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               OnClick="ProcessOfficialDisposal"
+                               Class="ml-4">
+                        Dispose Officialy (@_selectedItems.Count)
+                    </MudButton>
+                }
+            </ToolBarContent>
+            <Columns>
+                <SelectColumn T="Documents" />
+                <PropertyColumn Property="x => x.Title" Title="Document" />
+                <PropertyColumn Property="x => x.Year" Title="Year" />
+                <TemplateColumn Title="Scheduled Date">
+                    <CellTemplate>
+                        @context.Item.DateOfDisposal?.ToString("MMM dd, yyyy")
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Location">
+                    <CellTemplate>
+                        <MudText Typo="Typo.caption">
+                            @($"{context.Item.Folder?.FileBox?.FillingCabinet?.Name} -> {context.Item.Folder?.FileBox?.Name} -> {context.Item.Folder?.Name}")
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
+        </MudDataGrid>
+    </MudTabPanel>
+
+
+    @* --- PANEL 2: DISPOSAL HISTORY --- *@
+    <MudTabPanel Text="Disposal History" Icon="@Icons.Material.Filled.History">
+        <MudStack Spacing="4" Class="mt-6">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                This is a permanent record of documents that have been physically destroyed or removed from the inventory.
+            </MudAlert>
+
+            <MudDataGrid T="Documents" Items="@_disposedHistory" Filterable="true" Hover="true">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Official Disposal Record</MudText>
+                    <MudSpacer />
+                    <MudTooltip Text="Export Disposal History">
+                    <MudIconButton Variant ="Variant.Outlined"
+							   Color="Color.Success"
+							   Icon="@Icons.Material.Filled.Print"
+							   OnClick="ExportToCSV"
+							   Disabled = "@(!_disposedHistory.Any())"/>
+
+                    </MudTooltip>
+						
+
+                </ToolBarContent>
+                <Columns>
+                    <PropertyColumn Property="x => x.Title" Title="Document Title" />
+                    <TemplateColumn Title="Date Disposed">
+                        <CellTemplate>
+                            
+                            <MudText Typo="Typo.body2" Color="Color.Error">
+                                <b>@context.Item.DateOfDisposal?.ToString("MMM dd, yyyy")</b>
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Year" Title="Original Year" />
+                    <PropertyColumn Property="x => x.UpdatedBy" Title="Handled By" />
+
+                   
+                    <TemplateColumn Title="Former Location">
+                        <CellTemplate>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @context.Item.Folder?.FileBox?.FillingCabinet?.Name > @context.Item.Folder?.FileBox?.Name > @context.Item.Folder?.Name  
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="Documents" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudStack>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Documents> _disposedHistory = new();
+    private List<Documents> _pendingDisposal = new();
+    private HashSet<Documents> _selectedItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+    private async Task LoadData()
+    {
+        _pendingDisposal = await _context.Documents
+            .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+            .Where(d => !d.IsDisposal && !d.IsDeleted && d.DateOfDisposal <= DateTime.Now)
+            .ToListAsync();
+
+        // Load History (Already officially disposed)
+        _disposedHistory = await _context.Documents
+            .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+            .Where(d => d.IsDisposal && !d.IsDeleted)
+            .OrderByDescending(d => d.DateOfDisposal)
+            .ToListAsync();
+	}
+
+    private async Task LoadPendingDisposal()
+    {
+        _pendingDisposal = await _context.Documents
+            .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+            .Where(d => !d.IsDisposal && !d.IsDeleted && d.DateOfDisposal <= DateTime.Now)
+            .ToListAsync();
+    }
+
+    private async Task ProcessOfficialDisposal()
+    {
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Confirm Official Disposal",
+            $"Are you sure you want to officially dispose of {_selectedItems.Count} documents? This action marks them as physically removed/destroyed.",
+            yesText: "Confirm Disposal",
+            cancelText: "Cancel"
+        );
+
+        if (result == true)
+        {
+            try
+            {
+                var user = await _currentUserService.GetCurrentFullNameAsync();
+                var now = DateTime.UtcNow.AddHours(8);
+
+                foreach (var doc in _selectedItems)
+                {
+
+                    doc.IsDisposal = true;
+                    doc.DateOfDisposal = now; 
+                    doc.UpdatedBy = user;
+
+
+                    _context.TransactionLogs.Add(new TransactionLog
+                    {
+                        FullName = user,
+                        EventName = "Document Disposed",
+                        Description = $"Officially disposed document '{doc.Title}' " + $"from {doc.Folder?.FileBox?.FillingCabinet.Name} > "+ $"{ doc.Folder?.FileBox?.Name} >{doc.Folder.Name}. ",
+                        PerformedAt = now
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                Snackbar.Add($"{_selectedItems.Count} documents have been officially disposed.", Severity.Success);
+                _selectedItems.Clear();
+                await LoadPendingDisposal();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error during disposal: " + ex.Message, Severity.Error);
+            }
+        }
+    }
+
+    private async Task LoadDisposedHistory()
+    {
+        _disposedHistory = await _context.Documents
+            .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+            .Where(d => d.IsDisposal)
+            .ToListAsync();
+	}
+
+    //EXPORT TO CVS 
+    private async Task ExportToCSV()
+    {
+        var csvBuilder = new StringBuilder();
+        csvBuilder.AppendLine("Document Title,Year,Date Disposed,Handled By,Former Location");
+
+        foreach (var doc in _disposedHistory)
+        {
+            var location = $"{doc.Folder?.FileBox?.FillingCabinet?.Name} > {doc.Folder?.FileBox?.Name}";
+            csvBuilder.AppendLine($"\"{doc.Title}\",{doc.Year},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")},{doc.UpdatedBy},\"{location}\"");
+        }
+
+        var fileName = $"Disposal_Report_{DateTime.Now:yyyyMMdd}.csv";
+
+        // MATCH THE STRUCTURE: Only 2 arguments, and send the String (ToString)
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvBuilder.ToString());
+
+        Snackbar.Add("Exported successfully!", Severity.Success);
+    }
+
+    // EXPORT PENDING LIST
+    private async Task ExportPendingToCSV()
+    {
+        var csvBuilder = new StringBuilder();
+        csvBuilder.AppendLine("Cabinet,Box,Folder,Document Title,Year,Scheduled Disposal Date");
+
+        foreach (var doc in _pendingDisposal)
+        {
+            var cab = doc.Folder?.FileBox?.FillingCabinet?.Name ?? "N/A";
+            var box = doc.Folder?.FileBox?.Name ?? "N/A";
+            var folder = doc.Folder?.Name ?? "N/A";
+
+            csvBuilder.AppendLine($"\"{cab}\",\"{box}\",\"{folder}\",\"{doc.Title}\",{doc.Year},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")}");
+        }
+
+        var fileName = $"Pending_Disposal_List_{DateTime.Now:yyyyMMdd}.csv";
+
+        // MATCH THE STRUCTURE: Only 2 arguments
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvBuilder.ToString());
+
+        Snackbar.Add("Pick list exported!", Severity.Success);
+    }
 }
+

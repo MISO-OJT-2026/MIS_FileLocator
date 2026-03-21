@@ -96,13 +96,13 @@
                 <PropertyColumn Property="x => x.Name" Title="Cabinet Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />
 
-                @* Your brand new columns! *@
+               
                 <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
                 <PropertyColumn Property="x => x.ArchivedAt" Title="Date Archived" Format="MMM dd, yyyy" />
 
                 <TemplateColumn Title="Actions">
                     <CellTemplate>
-                        @* An optional Unarchive button so you can reverse mistakes! *@
+                        
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success"
                                    StartIcon="@Icons.Material.Filled.Restore"
                                    OnClick="@(() => UnarchiveCabinet(context.Item))">
@@ -153,10 +153,10 @@
 
     private async Task ArchiveCabinet(FillingCabinet cabinet)
     {
-        // Check if the cabinet has  boxes 
+        
         if (cabinet.FileBox != null && cabinet.FileBox.Count > 0)
         {
-            // Throw an error message and stop the process!
+          
             Snackbar.Add($"Cannot archive '{cabinet.Name}'. You must empty or move all boxes first!", Severity.Error);
             return;
         }
@@ -213,7 +213,7 @@
     }
     private async Task UnarchiveCabinet(FillingCabinet cabinet)
     {
-        //c
+     
         bool? result = await DialogService.ShowMessageBoxAsync(
             "Restore Cabinet",
             $"Restore '{cabinet.Name}' to active status?",
@@ -247,19 +247,19 @@
         }
     }
 
-    // Placeholders
+    
     private async Task OpenAddDialog()
     {
 
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
 
-        // open AddCabinetDialog component
+       
         var dialog = await DialogService.ShowAsync<AddCabinetDialog>("Add New Cabinet", options);
 
-        // Wait here until the user closes the dialog
+        
         var result = await dialog.Result;
 
-        //  If they clicked "Save" (and not "Cancel"), refresh our table!
+       
         if (!result.Canceled)
         {
             await LoadCabinets();
@@ -291,7 +291,7 @@
 
     private async Task OpenCabinetExplorer(FillingCabinet cabinet)
     {
-        // Change DialogParameters<CabinetExplorerDialog> to just DialogParameters
+        
         var parameters = new DialogParameters
     {
         { "SelectedCabinet", cabinet }
@@ -320,7 +320,7 @@
             builder.AppendLine($"\"{cab.Name}\",\"{cab.Description}\",\"{status}\",\"{dateArchived}\",\"{archivedBy}\"");
         }
 
-        // Give them different file names so you don't get confused!
+        
         string fileName = exportArchived ? "Archived_Cabinets_{DateTime.Now:yyyyMMdd.csv" : "Active_Cabinets_{DateTime.Now:yyyyMMdd.csv";
         await JSRuntime.InvokeVoidAsync("downloadFile", fileName, builder.ToString());
     }
