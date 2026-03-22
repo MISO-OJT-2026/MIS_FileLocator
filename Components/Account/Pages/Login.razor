@@ -1,4 +1,4 @@
-﻿@attribute [AllowAnonymous]
+@attribute [AllowAnonymous]
 @page "/Account/Login"
 
 @layout MIS_FileLocator.Components.Layout.AuthLayout
@@ -24,7 +24,7 @@
 
             <div class="d-flex flex-column align-center mb-6">
               
-                <MudText Typo="Typo.h4" Style="font-weight: 800; color: #7a0102; letter-spacing: 1px;">LOG IN</MudText>
+                <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0e1824; letter-spacing: 1px;">LOG IN</MudText>
                 <MudText Typo="Typo.body2" Style="color: #555;" Align="Align.Center">Access the MIS File Locator System</MudText>
             </div>
 
@@ -63,7 +63,7 @@
                                Disabled="@_isProcessing"
                                Size="Size.Large"
                                FullWidth="true"
-                               Style="border-radius: 12px; height: 52px; background-color: #7a0102; color: white; font-weight: bold;">
+                               Style="border-radius: 12px; height: 52px; font-weight: bold; background-color: #0e1824; color: white;">
                         @if (_isProcessing)
                         {
                             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />

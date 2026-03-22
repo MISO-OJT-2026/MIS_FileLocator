@@ -15,8 +15,7 @@
                OpenMiniOnHover="true"
                Elevation="0"
                Class="app-shell-drawer no-scrollbar"
-               @onclick="ToggleDrawer"
-               Style="cursor: pointer; overflow-x: hidden;">
+               Style="overflow-x: hidden;">
 
         <NavMenu SideBarOpen="_drawerOpen" />
 
@@ -33,23 +32,18 @@
 @code {
     private bool _drawerOpen = true;
 
-    private void ToggleDrawer()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-
     private MudTheme _theme = new()
         {
             PaletteLight = new PaletteLight()
             {
-            Primary = "#7a0102",
-            Secondary = "#0e1824",
+            Primary = "#0e1824",
+            Secondary = "#b42318",
             ActionDefault = "#0e1824",
             TextSecondary = "rgba(14, 24, 36, 0.68)",
             Background = "#faf8f5",
             AppbarBackground = "#0e1824",
             AppbarText = "#ffffff",
-            DrawerBackground = "#7a0102",
+            DrawerBackground = "#0e1824",
             DrawerIcon = "#FFFFFF",
             DrawerText = "#FFFFFF",
             Surface = "#fffdf8",

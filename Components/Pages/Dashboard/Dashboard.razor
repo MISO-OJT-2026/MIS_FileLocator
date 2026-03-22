@@ -16,219 +16,198 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject ICurrentUserService CurrentUser
 
-<MudStack Spacing="2" Class="dashboard-root dashboard-stack-tight">
+<MudStack Spacing="4" Class="pa-4">
     @if (_loading)
     {
-        <MudPaper Class="pa-8 d-flex justify-center dashboard-panel-elevated" Elevation="0">
-            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+        <MudPaper Class="pa-12 d-flex justify-center" Elevation="0">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
         </MudPaper>
     }
     else
     {
-        <MudPaper Elevation="0" Class="dashboard-hero pa-6 pa-sm-7 mb-1">
-            <MudText Typo="Typo.caption" Class="dashboard-hero-date mb-2">@DateTime.Now.ToString("ddd, MMM d", CultureInfo.CurrentCulture)</MudText>
-            <MudText Typo="Typo.h4" Class="dashboard-hero-greeting mb-1">Hello, @_greetingName</MudText>
+        @* Hero Section *@
+        <MudPaper Elevation="0" Class="dashboard-hero pa-8 rounded-xl">
+            <MudText Typo="Typo.caption" Class="dashboard-hero-date">@DateTime.Now.ToString("ddd, MMM d")</MudText>
+            <MudText Typo="Typo.h4" Class="dashboard-hero-greeting">Hello, @_greetingName</MudText>
             <MudText Typo="Typo.body1" Class="dashboard-hero-tagline">What would you like to do today?</MudText>
         </MudPaper>
 
-        <MudGrid Spacing="2" Class="dashboard-mud-tight">
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="#7a8f7a" Hint="" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Filing boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#d4b56a" Hint="" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="#9b8fc9" Hint="" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Active documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#5d8f6a" Hint="" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Pending disposal" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#c97b6b" Hint="" />
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#6b8fa3" Hint="" />
-            </MudItem>
+        @* Stat Tiles - Increased Spacing to 4 to fix the "too close" feeling *@
+        <MudGrid Spacing="3">
+        @* Row 1 *@
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="#1a3a52" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Filing boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#b42318" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="#98C1D9" Foreground="#293241" />
+        </MudItem>
 
+        @* Row 2 *@
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Active documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#52796F" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Pending disposal" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#9b2c2c" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#0e1824" />
+        </MudItem>
+
+            @* Line Chart - Disposal Trend *@
             <MudItem xs="12" lg="8">
-                <MudPaper Elevation="0" Class="dashboard-panel-elevated dashboard-panel-inner h-100">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;">Disposal trend</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">Official disposals by year (last 6 years)</MudText>
-                    @if (_disposalTrendMax == 0 && _disposalTrend.All(p => p.Count == 0))
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No disposals in this range yet.</MudText>
-                    }
-                    else
-                    {
-                        <div class="dashboard-line-chart-wrap">
-                            <svg class="dashboard-line-chart" viewBox="0 0 640 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Disposal trend line chart">
-                                <defs>
-                                    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#7a0102;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#0e1824;stop-opacity:1" />
-                                    </linearGradient>
-                                </defs>
-                                <polyline class="dashboard-line-chart-grid" fill="none" stroke="rgba(14,24,36,0.06)" stroke-width="1" points="40,160 600,160" />
-                                @foreach (var gy in GetTrendGridY())
-                                {
-                                    <polyline fill="none" stroke="rgba(14,24,36,0.05)" stroke-width="1" points="@($"40,{gy} 600,{gy}")" />
-                                }
-                                <polyline fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="@GetTrendLinePoints()" />
-                                @foreach (var pt in GetTrendPointsDetail())
-                                {
-                                    var cx = pt.X.ToString(CultureInfo.InvariantCulture);
-                                    var cy = pt.Y.ToString(CultureInfo.InvariantCulture);
-                                    var tip = $"{pt.Label}: {pt.Count} disposal" + (pt.Count == 1 ? "" : "s");
-                                    <g class="dashboard-chart-point" style="cursor: pointer;">
-                                        <title>@tip</title>
-                                        <circle cx="@cx" cy="@cy" r="14" fill="transparent" />
-                                        <circle cx="@cx" cy="@cy" r="5" fill="#fff" stroke="#7a0102" stroke-width="2" class="dashboard-chart-point-dot" />
-                                    </g>
-                                }
-                            </svg>
-                            <div class="dashboard-line-labels">
-                                @foreach (var p in _disposalTrend)
-                                {
-                                    var labelTip = $"{p.Label}: {p.Count} disposal" + (p.Count == 1 ? "" : "s");
-                                    <MudTooltip Text="@labelTip" Placement="Placement.Top" Arrow="true">
-                                        <span class="dashboard-line-label-chip">@p.Label</span>
-                                    </MudTooltip>
-                                }
-                            </div>
-                        </div>
-                    }
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" lg="4">
-                <MudPaper Elevation="0" Class="dashboard-panel-elevated dashboard-panel-inner h-100">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;">Top 5</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">By recorded actions</MudText>
-                    @if (!_topContributors.Any())
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No data yet.</MudText>
-                    }
-                    else
-                    {
-                        <MudStack Spacing="1" Class="mt-1">
-                            @foreach (var c in _topContributors)
-                            {
-                                <div class="dashboard-top-row">
-                                    <MudAvatar Size="Size.Small" Class="dashboard-top-avatar">@GetInitials(c.Name)</MudAvatar>
-                                    <MudText Typo="Typo.body2" Class="dashboard-top-name text-truncate">@c.Name</MudText>
-                                    <MudText Typo="Typo.caption" Class="dashboard-top-count">@c.Count.ToString("N0")</MudText>
-                                </div>
-                            }
+                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h6">Disposal Trend</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Official disposals by year (last 6 years)</MudText>
                         </MudStack>
-                    }
+                    </MudStack>
+                    <div class="dashboard-line-chart-wrap">
+                        <svg class="dashboard-line-chart" viewBox="0 0 640 200">
+                            <defs>
+                                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#1a3a52;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#b42318;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <title>@GetTrendChartSummaryTooltip()</title>
+                            <polyline fill="none" stroke="url(#lineGrad)" stroke-width="3" points="@GetTrendLinePoints()" />
+                            @foreach (var pt in GetTrendPointsDetail())
+                            {
+                                <circle cx="@pt.X" cy="@pt.Y" r="5" fill="white" stroke="#0e1824" stroke-width="2">
+                                    <title>@GetTrendPointTooltip(pt.Label, pt.Count)</title>
+                                </circle>
+                            }
+                        </svg>
+                        <div class="dashboard-line-labels">
+                            @foreach (var p in _disposalTrend)
+                            {
+                                <span>@p.Label</span>
+                            }
+                        </div>
+                    </div>
                 </MudPaper>
             </MudItem>
 
+            @* Top 5 Contributors *@
+            <MudItem xs="12" lg="4">
+                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                    <MudText Typo="Typo.h6" Class="mb-4">Top 5 Contributors</MudText>
+                    <MudStack Spacing="2">
+                        @foreach (var c in _topContributors)
+                        {
+                            <div class="d-flex align-center gap-3 py-2 border-b last-child-no-border">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">@GetInitials(c.Name)</MudAvatar>
+                                <MudText Typo="Typo.body2" Style="font-weight: 600;">@c.Name</MudText>
+                                <MudSpacer />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@c.Count actions</MudText>
+                            </div>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            @* Progress Bar - Disposal Pipeline *@
             <MudItem xs="12" md="6">
-                <MudPaper Elevation="0" Class="dashboard-panel-elevated dashboard-panel-inner dashboard-progress-card h-100">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3" Wrap="Wrap.Wrap">
-                        <div>
-                            <MudText Typo="Typo.subtitle2" Style="font-weight:700;">Disposal pipeline</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed vs total scheduled for the year</MudText>
-                        </div>
-                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Class="dashboard-year-select" Margin="Margin.Dense">
+                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h6">Disposal Pipeline</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed vs Total scheduled</MudText>
+                        </MudStack>
+                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px;">
                             @foreach (var y in _yearChoices)
                             {
                                 <MudSelectItem Value="y">@y</MudSelectItem>
                             }
                         </MudSelect>
                     </MudStack>
-                    <div class="dashboard-progress-wrapper"
-                         title="@GetPipelineTooltipText()"
-                         role="img"
-                         aria-label="@GetPipelineTooltipText()">
-                        <div class="dashboard-progress-track">
-                            <div class="dashboard-progress-fill" style="@GetPipelineFillStyle()"></div>
+
+                    <div class="mt-6">
+                        <MudTooltip Text="@GetPipelineTooltipText()">
+                            <div class="dashboard-progress-hit" tabindex="0">
+                                <MudProgressLinear Color="Color.Primary" Value="@GetPipelinePercent()" Size="Size.Large" Class="rounded-pill my-2" />
+                            </div>
+                        </MudTooltip>
+                        <div class="d-flex justify-space-between mt-2">
+                            <MudText Typo="Typo.caption" Style="font-weight:700;">@_disposedInSelectedYear Disposed</MudText>
+                            <MudText Typo="Typo.caption">Total: @_totalPipelineYear</MudText>
                         </div>
                     </div>
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-2">
-                        <MudText Typo="Typo.caption" Style="font-weight:600;">@_disposedInSelectedYear disposed</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_totalPipelineYear total</MudText>
-                    </MudStack>
-                </MudPaper>
-            </MudItem>
 
-            <MudItem xs="12" md="6">
-                <MudPaper Elevation="0" Class="dashboard-panel-elevated dashboard-panel-inner h-100">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight:700;">Recent</MudText>
-                        <MudLink Href="/transaction-logs" Typo="Typo.caption" Color="Color.Primary">Log</MudLink>
-                    </MudStack>
-                    @if (!_activityFeed.Any())
+                    <MudDivider Class="my-5" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Year @_selectedDisposalYear snapshot</MudText>
+                    <MudGrid Spacing="2" Class="dashboard-pipeline-stats">
+                        <MudItem xs="4">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.06);">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 800;">@_disposedInSelectedYear</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(180, 35, 24, 0.08);">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Awaiting</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 800;">@_pendingForSelectedYear</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.06);">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Outstanding</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 800;">@_outstandingPipeline</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (_pendingDocumentsYear.Count > 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Nothing yet.</MudText>
-                    }
-                    else
-                    {
-                        <div class="dashboard-activity-feed mt-2">
-                            @foreach (var log in _activityFeed)
+                        <MudText Typo="Typo.subtitle2" Class="mt-5 mb-2">Next due for disposal</MudText>
+                        <MudStack Spacing="1" Class="dashboard-pipeline-queue">
+                            @foreach (var doc in _pendingDocumentsYear.Take(5))
                             {
-                                var line = GetActivityDisplay(log);
-                                <div class="activity-feed-row">
-                                    <div style="min-width:0;">
-                                        <span class="activity-name">@line.Name</span>
-                                        @if (line.Title != null)
-                                        {
-                                            <span class="activity-phrase"> @line.Phrase </span>
-                                            <span class="activity-target">@line.Title</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="activity-phrase"> — @line.Fallback</span>
-                                        }
-                                    </div>
-                                    <time class="activity-time">@log.PerformedAt.ToLocalTime().ToString("MMM d · h:mm tt")</time>
+                                var due = doc.DateOfDisposal?.ToLocalTime().ToString("MMM d, yyyy") ?? "—";
+                                <div class="d-flex justify-space-between align-center py-2 px-2 rounded-lg" style="background: rgba(14, 24, 36, 0.04);">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 600; max-width: 70%;" Class="text-truncate">@doc.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space: nowrap;">@due</MudText>
                                 </div>
                             }
-                        </div>
+                        </MudStack>
+                    }
+                    else if (_totalPipelineYear > 0 && _pendingForSelectedYear == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4">No documents are past due for disposal in this year.</MudText>
                     }
                 </MudPaper>
             </MudItem>
 
-            <MudItem xs="12">
-                <MudPaper Elevation="0" Class="dashboard-panel-elevated dashboard-panel-inner">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap" Class="mb-2">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight:700;">Pending disposal (@_selectedDisposalYear)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_pendingDocumentsYear.Count item(s)</MudText>
+            @* Recent Activity - Fixed spacing issues *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
+                        <MudText Typo="Typo.h6">Recent Activity</MudText>
+                        <MudLink Href="/transaction-logs" Typo="Typo.caption">View Log</MudLink>
                     </MudStack>
-                    @if (!_pendingDocumentsYear.Any())
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No pending items for this year.</MudText>
-                    }
-                    else
-                    {
-                        <div class="dashboard-pending-scroll">
-                            <MudSimpleTable Hover="true" Dense="true" Class="rounded-lg" Style="font-size:0.8125rem;">
-                                <thead>
-                                    <tr>
-                                        <th>Document</th>
-                                        <th>Year</th>
-                                        <th class="d-none d-sm-table-cell">Location</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var doc in _pendingDocumentsYear)
+                    <div class="dashboard-activity-feed">
+                        @foreach (var log in _activityFeed)
+                        {
+                            var line = GetActivityDisplay(log);
+                            <div class="activity-feed-row py-2 d-flex justify-space-between align-start border-b">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    @* Gap fixes the word clashing *@
+                                    <MudText Typo="Typo.body2" Style="font-weight: 700;">@line.Name</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@line.Phrase</MudText>
+                                    @if (!string.IsNullOrEmpty(line.Title))
                                     {
-                                        <tr>
-                                            <td><MudText Typo="Typo.body2" Class="text-truncate" Style="max-width:min(280px,50vw);">@doc.Title</MudText></td>
-                                            <td><MudText Typo="Typo.caption" Style="font-weight:600;">@doc.DateOfDisposal?.Year</MudText></td>
-                                            <td class="d-none d-sm-table-cell">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                    @(doc.Folder?.FileBox?.FillingCabinet?.Name ?? "—") › @(doc.Folder?.FileBox?.Name ?? "—")
-                                                </MudText>
-                                            </td>
-                                        </tr>
+                                        <MudText Typo="Typo.body2" Style="font-weight: 600;">"@line.Title"</MudText>
                                     }
-                                </tbody>
-                            </MudSimpleTable>
-                        </div>
-                    }
+                                </div>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;">@log.PerformedAt.ToLocalTime().ToString("h:mm tt")</MudText>
+                            </div>
+                        }
+                    </div>
                 </MudPaper>
             </MudItem>
         </MudGrid>
@@ -366,6 +345,8 @@
             .ToListAsync();
     }
 
+    private int _outstandingPipeline => Math.Max(0, _totalPipelineYear - _disposedInSelectedYear);
+
     private double GetPipelinePercent()
     {
         if (_totalPipelineYear <= 0) return 0;
@@ -375,16 +356,17 @@
     private string GetPipelineTooltipText()
     {
         var pct = GetPipelinePercent();
-        return $"{_disposedInSelectedYear:N0} disposed of {_totalPipelineYear:N0} scheduled in {_selectedDisposalYear} ({pct:F0}% complete)";
+        return $"{_disposedInSelectedYear:N0} disposed of {_totalPipelineYear:N0} scheduled in {_selectedDisposalYear} ({pct:F0}% complete). {_pendingForSelectedYear:N0} awaiting action.";
     }
 
-    private string GetPipelineFillStyle()
+    private string GetTrendPointTooltip(string label, int count)
+        => $"{label}: {count} official disposal(s)";
+
+    private string GetTrendChartSummaryTooltip()
     {
-        var p = GetPipelinePercent();
-        var w = p.ToString("F2", CultureInfo.InvariantCulture);
-        if (_disposedInSelectedYear > 0 && _totalPipelineYear > 0)
-            return $"width: {w}%; min-width: 10px;";
-        return $"width: {w}%;";
+        if (_disposalTrend.Count == 0) return "No trend data";
+        var total = _disposalTrend.Sum(p => p.Count);
+        return $"Disposal trend (last 6 years): {total:N0} total disposals shown on chart. Hover points for each year.";
     }
 
     private string GetTrendLinePoints()

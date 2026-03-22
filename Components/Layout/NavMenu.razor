@@ -5,7 +5,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IRoleService RoleService
 
-<MudNavMenu Class="pa-4">
+<MudNavMenu Class="nav-shell-menu">
     @if (SideBarOpen)
     {
         
@@ -14,8 +14,8 @@
             
 
             
-            <div class="d-flex flex-column align-center py-4">
-                <MudAvatar Style="background-color: #fff4e6 !important; color: #7a0102 !important; font-weight: 700; height:70px; width:70px; border: 1px solid rgba(255,255,255,0.5);" Class="mb-3">
+            <div class="d-flex flex-column align-center py-4 px-4">
+                <MudAvatar Style="background-color: rgba(255,255,255,0.92) !important; color: #0e1824 !important; font-weight: 700; height:70px; width:70px; border: 1px solid rgba(255,255,255,0.35);" Class="mb-3">
                     @_currentUserInitials
                 </MudAvatar>
                 <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: white;">@_currentUserName</MudText>
@@ -79,7 +79,7 @@
             </div>
 
            
-            <div class="mt-auto pt-4">
+            <div class="mt-auto pt-4 px-2">
     <AuthorizeView>
         <Authorized>
            
@@ -105,22 +105,29 @@
     }
     else
     {
-        @* 2. MINI STATE: No stopPropagation here so clicking it RE-OPENS the bar *@
-        <div class="d-flex flex-column align-center py-6 gap-6">
-            <MudIcon Icon="@Icons.Material.Filled.SdCard" Size="Size.Large" Style="color: white;" />
+       
+    
+        @* MINI STATE: Standardized background and padding *@
+            <div class="mini-sidebar-container">
+                <div class="d-flex flex-column align-center py-6 gap-6">
+                    <MudIcon Icon="@Icons.Material.Filled.SdCard" Size="Size.Large" Style="color: white; margin-bottom: 20px;" />
 
-            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" Style="color: white; opacity: 0.5;" />
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Style="color: white; opacity: 0.5;" />
-            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Style="color: white; opacity: 0.5;" />
-            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Style="color: white; opacity: 0.5;" />
-            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Style="color: white; opacity: 0.5;" />
-            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Style="color: white; opacity: 0.5;" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Dashboard" Color="Color.Inherit" Class="mini-nav-icon" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Color="Color.Inherit" Class="mini-nav-icon" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Description" Color="Color.Inherit" Class="mini-nav-icon" />
+                    <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Inherit" Class="mini-nav-icon" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Assignment" Color="Color.Inherit" Class="mini-nav-icon" />
 
-        </div>
+                    <div class="mt-auto">
+                        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Class="mini-nav-icon" />
+                    </div>
+                </div>
+            </div>
     }
 </MudNavMenu>
 
 <style>
+
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
@@ -134,40 +141,6 @@
         flex-grow: 1;
         overflow-y: auto;
         overflow-x: hidden;
-    }
-
-    .links-container {
-        flex-grow: 1;
-    }
-
-    .mud-nav-link {
-        color: rgba(255, 255, 255, 0.95) !important;
-        border-radius: 0 12px 12px 0;
-        margin-right: 8px;
-        transition: background 0.2s ease, border-color 0.2s ease;
-    }
-
-    .mud-nav-link:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .mud-nav-link.active,
-    .mud-nav-link.mud-nav-link-active {
-        background: linear-gradient(90deg, rgba(14, 24, 36, 0.45) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
-        border-left: 3px solid #0e1824;
-        font-weight: 600;
-    }
-
-    .mud-nav-link-icon {
-        color: rgba(255, 255, 255, 0.95) !important;
-    }
-
-    .mud-nav-group .mud-nav-link {
-        margin-left: 4px;
-    }
-
-    .mud-nav-group .mud-expand-panel .mud-nav-link {
-        border-left: none;
     }
 
     a {
