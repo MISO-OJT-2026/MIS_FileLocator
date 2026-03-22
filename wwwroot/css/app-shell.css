@@ -1,0 +1,28 @@
+/* App shell: drawer + main content */
+
+.app-shell-drawer.mud-drawer {
+    background: linear-gradient(165deg, #5c0102 0%, #7a0102 45%, #8a1520 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 4px 0 24px rgba(14, 24, 36, 0.12);
+}
+
+.app-shell-drawer.mud-drawer .mud-nav-link {
+    border-radius: 10px;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-shell-drawer.mud-drawer .mud-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.app-shell-drawer.mud-drawer .mud-nav-link:active,
+.app-shell-drawer.mud-drawer .mud-nav-link.mud-nav-link-active {
+    background-color: rgba(0, 0, 0, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.app-shell-main {
+    background: linear-gradient(180deg, #faf8f5 0%, #f5f2ec 100%);
+    min-height: 100%;
+}

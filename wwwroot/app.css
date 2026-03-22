@@ -1,5 +1,12 @@
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #faf8f5;
+    min-height: 100%;
+}
+
+#app {
+    min-height: 100vh;
+    background-color: #faf8f5;
 }
 
 a, .btn-link {
@@ -57,4 +64,36 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* —— MIS FileLocator shell: primary red + secondary blue —— */
+.app-shell-drawer.mud-drawer,
+.mud-drawer.app-shell-drawer {
+    background: linear-gradient(175deg, #921018 0%, #7a0102 42%, #5c0c14 78%, #1a2836 100%) !important;
+    border-right: 1px solid rgba(14, 24, 36, 0.45);
+    box-shadow: 6px 0 32px rgba(14, 24, 36, 0.14);
+}
+
+.app-shell-drawer .mud-drawer-content {
+    background: transparent !important;
+}
+
+.app-shell-main {
+    background: linear-gradient(180deg, #fdfcfa 0%, #faf6f0 35%, #f3efe8 100%) !important;
+    flex: 1 1 auto;
+    min-height: 100vh;
+}
+
+.mud-layout {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #fdfcfa 0%, #faf6f0 40%, #f0ebe4 100%);
+}
+
+/* Nav group headers on gradient drawer */
+.app-shell-drawer .mud-nav-group > .mud-nav-group-toggle {
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.app-shell-drawer .mud-expand-panel-header {
+    color: rgba(255, 255, 255, 0.92) !important;
 }

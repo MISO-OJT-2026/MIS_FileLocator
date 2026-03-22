@@ -1,30 +1,28 @@
-﻿@using MudBlazor
+@using MudBlazor
 @using Microsoft.AspNetCore.Authorization
 @inherits LayoutComponentBase
 
 
-<MudThemeProvider  Theme="@_theme" />
+<MudThemeProvider Theme="@_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudPopoverProvider />
 
 <MudLayout>
 
- 
-
     <MudDrawer @bind-Open="_drawerOpen"
                Variant="DrawerVariant.Mini"
                OpenMiniOnHover="true"
                Elevation="0"
-               Class="no-scrollbar"
-               @onclick = "ToggleDrawer"
-               Style="cursor: pointer overflow-x=hidden;background-color= #7a0102; ">
+               Class="app-shell-drawer no-scrollbar"
+               @onclick="ToggleDrawer"
+               Style="cursor: pointer; overflow-x: hidden;">
 
         <NavMenu SideBarOpen="_drawerOpen" />
 
     </MudDrawer>
 
-    <MudMainContent Class="pt-4 px-6 pb-6">
+    <MudMainContent Class="pt-5 px-8 pb-10 app-shell-main">
         @Body
     </MudMainContent>
 
@@ -44,27 +42,25 @@
         {
             PaletteLight = new PaletteLight()
             {
-            Primary = "#7a0102", // Your Red  D62828
-            Secondary = "#0e1824", // Your Blue
+            Primary = "#7a0102",
+            Secondary = "#0e1824",
             ActionDefault = "#0e1824",
-            TextSecondary = "rgba(14, 24, 36, 0.70)",
-            Background = "#FFF3E0", // Your Warm Cream
+            TextSecondary = "rgba(14, 24, 36, 0.68)",
+            Background = "#faf8f5",
             AppbarBackground = "#0e1824",
             AppbarText = "#ffffff",
-            DrawerBackground = "#7a0102", // Keep white for a clean look
+            DrawerBackground = "#7a0102",
             DrawerIcon = "#FFFFFF",
             DrawerText = "#FFFFFF",
-            Surface = "#FFFFFF",
-            
+            Surface = "#fffdf8",
             },
 
-            LayoutProperties= new LayoutProperties()
+            LayoutProperties = new LayoutProperties()
             {
-                DefaultBorderRadius = "16px",
+                DefaultBorderRadius = "14px",
                 DrawerWidthLeft = "280px",
                 DrawerMiniWidthLeft = "80px"
-            
-        },
+            },
 
         Typography = new Typography()
         {

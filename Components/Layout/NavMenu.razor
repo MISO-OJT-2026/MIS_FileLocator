@@ -1,4 +1,4 @@
-﻿@using System.Security.Claims
+@using System.Security.Claims
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject ICurrentUserService _currentUserService
@@ -15,7 +15,7 @@
 
             
             <div class="d-flex flex-column align-center py-4">
-                <MudAvatar Color="Color.Secondary" Style="background-color: rgba(255,255,255,0.2); color: white; height:70px; width:70px;" Class="mb-3">
+                <MudAvatar Style="background-color: #fff4e6 !important; color: #7a0102 !important; font-weight: 700; height:70px; width:70px; border: 1px solid rgba(255,255,255,0.5);" Class="mb-3">
                     @_currentUserInitials
                 </MudAvatar>
                 <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: white;">@_currentUserName</MudText>
@@ -23,7 +23,7 @@
             </div>
 
             
-            <div style="flex-grow: 1; overflow-y: auto;class= links-container no-scrollbar">
+            <div class="links-container no-scrollbar nav-menu-scroll">
                 
                 <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">GENERAL</MudText>
                 
@@ -125,28 +125,53 @@
         display: none;
     }
 
-    
     .no-scrollbar {
-        -ms-overflow-style: none; 
-        scrollbar-width: none; 
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
-  
-    .links-container {
+    .nav-menu-scroll {
         flex-grow: 1;
         overflow-y: auto;
+        overflow-x: hidden;
     }
-    /* Ensure the drawer stays red and links look good */
+
+    .links-container {
+        flex-grow: 1;
+    }
+
     .mud-nav-link {
-        color: white !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 0 12px 12px 0;
+        margin-right: 8px;
+        transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .mud-nav-link:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .mud-nav-link.active,
+    .mud-nav-link.mud-nav-link-active {
+        background: linear-gradient(90deg, rgba(14, 24, 36, 0.45) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+        border-left: 3px solid #0e1824;
+        font-weight: 600;
     }
 
     .mud-nav-link-icon {
-        color: white !important;
+        color: rgba(255, 255, 255, 0.95) !important;
     }
 
-    a{
-        text-decoration:none;
+    .mud-nav-group .mud-nav-link {
+        margin-left: 4px;
+    }
+
+    .mud-nav-group .mud-expand-panel .mud-nav-link {
+        border-left: none;
+    }
+
+    a {
+        text-decoration: none;
     }
 </style>
 

@@ -1,0 +1,37 @@
+@using MudBlazor
+@inject NavigationManager Nav
+
+<MudPaper Elevation="0"
+          Class="storage-solid-tile pa-4"
+          Style="@TileStyle"
+          @onclick="Go"
+          role="button">
+    <MudStack Spacing="2">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+            <MudText Typo="Typo.overline" Class="storage-solid-tile-label">@Title</MudText>
+            <MudIcon Icon="@Icon" Class="storage-solid-tile-icon" Size="Size.Large" />
+        </MudStack>
+        <MudText Typo="Typo.h3" Class="storage-solid-tile-value">@Value</MudText>
+        @if (!string.IsNullOrWhiteSpace(Hint))
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudText Typo="Typo.caption" Class="storage-solid-tile-hint">@Hint</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="storage-solid-tile-hint" />
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter, EditorRequired] public string Icon { get; set; } = "";
+    [Parameter, EditorRequired] public string Href { get; set; } = "/";
+    [Parameter, EditorRequired] public string Background { get; set; } = "#8d9b84";
+    [Parameter] public string Foreground { get; set; } = "#ffffff";
+    [Parameter] public string Hint { get; set; } = "View";
+
+    private string TileStyle => $"background:{Background};color:{Foreground};";
+
+    private void Go() => Nav.NavigateTo(Href);
+}
