@@ -17,13 +17,17 @@
 @inject IdentityRedirectManager RedirectManager
 
 <div class="login-page-wrapper">
-    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="height: 100vh;">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="height: 100vh; padding-top: 8vh;">
 
         @* We use MudPaper with Elevation 0 to let our custom glass CSS handle the look *@
-        <MudPaper Elevation="0" Class="glass-card pa-10">
+        <MudPaper Elevation="0" Class="glass-card pa-8">
 
-            <div class="d-flex flex-column align-center mb-6">
-              
+            <div class="d-flex flex-column align-center mb-2">
+                <MudImage Src="images/MIS-LOGO.png"
+                          Alt="MIS Logo"
+                          Elevation="0"
+                          Class="mt-0 mb-2"
+                          Style="width: 130px; height: auto;" />
                 <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0e1824; letter-spacing: 1px;">LOG IN</MudText>
                 <MudText Typo="Typo.body2" Style="color: #555;" Align="Align.Center">Access the MIS File Locator System</MudText>
             </div>
@@ -36,7 +40,7 @@
             <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
 
-                <div class="d-flex flex-column gap-5">
+                <div class="d-flex flex-column gap-2">
                     <MudTextField @bind-Value="Input.EmployeeId"
                                   For="@(() => Input.EmployeeId)"
                                   Label="Employee ID"
@@ -44,7 +48,7 @@
                                   Name="Input.EmployeeId"
                                   Required="true"
                                   ShrinkLabel= "true"
-                                  Class="glass-input mb-4" />
+                                  Class="glass-input mb-1" />
 
                     <MudTextField @bind-Value="Input.Password"
                                   For="@(() => Input.Password)"
@@ -54,9 +58,18 @@
                                   Name="Input.Password"
                                   Required="true"
                                   ShrinkLabel="true"
-                                  Class="glass-input mb-4" />
+                                  Class="glass-input mb-1" />
 
-                    
+                    <div class="d-flex align-center justify-space-between mt-n2 mb-2">
+                        <MudCheckBox @bind-Value="Input.RememberMe"
+                                     Label="Remember Me"
+                                     
+                                     Color="Color.Primary"
+                                     Dense="true"
+                                     Class="glass-checkbox mt-4 mb-4" />
+
+                        
+                    </div>
 
                     <MudButton ButtonType="ButtonType.Submit"
                                Variant="Variant.Filled"
@@ -82,7 +95,7 @@
 
 <style>
     .login-page-wrapper {
-        /* Make sure this image exists in wwwroot/images/ */
+       
         background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('images/LOGBG.png');
         background-size: cover;
         background-position: center;
@@ -92,40 +105,49 @@
         top: 0;
         left: 0;
     }
+    .glass-checkbox .mud-button-root{
+        color: #0e1824 !important;
+    }
 
+    .glass-checkbox .mud-checkbox-label {
+        color: #333 !important;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
     .glass-card {
-        /* Transparent white background */
+       
         background: rgba(255, 255, 255, 0.35) !important;
-        /* The Blur Effect */
+       
         backdrop-filter: blur(15px) saturate(160%);
         -webkit-backdrop-filter: blur(15px) saturate(160%);
-        /* Glass border and shadow */
+        
         border: 1px solid rgba(255, 255, 255, 0.4) !important;
         border-radius: 24px !important;
         box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.2) !important;
         width: 100%;
-        max-width: 420px;
+        max-width: 400px;
+        padding: 24px !important;
     }
 
-    /* Style the text fields to look better on glass */
+   
     .glass-input .mud-input-outlined-border {
         background-color: rgba(255, 255, 255, 0.2);
     }
-    /* para maging blue */
+   
     .glass-input.mud-input-focus .mud-input-outlined-border {
         border-color: #0e1824 !important;
         border-width: 2px !important;
     }
-    /* color ng label  */
+    
     .glass-input.mud-input-focus .mud-label {
         color: #0e1824 !important;
     }
-    /* no overlapping! */
+    
     .glass-input .mud-input-label-outlined.mud-input-label-animated {
        
     }
 
-    /* para mag stay yung label sa taas-- hala naol */
+    
     .mud-input-outlined-border {
         transition: border-color 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
     }
@@ -135,22 +157,20 @@
     }
   
 
-    /* 1. Force the background to stay transparent even when focused or filled */
+    
     ::deep .mud-input-slot {
         background-color: transparent !important;
     }
 
-    /* 2. Remove the Browser's Autofill background (Chrome/Edge/Safari) */
     ::deep input:-webkit-autofill,
-    ::deep input:-webkit-autofill:hover, 
+    ::deep input:-webkit-autofill:hover,
     ::deep input:-webkit-autofill:focus {
         -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
-        transition: background-color 5000s ease-in-out 0s;
-        /* Matches your text color */
+        transition: background-color 5000s ease-in-out 0s; 
         -webkit-text-fill-color: #0e1824 !important; 
-    }
+   
 
-    /* 3. Ensure the MudTextField wrapper doesn't add a background */
+   
     ::deep .mud-input-control {
         background-color: transparent !important;
     }

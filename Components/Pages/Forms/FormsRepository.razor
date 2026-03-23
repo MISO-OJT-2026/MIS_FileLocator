@@ -11,6 +11,7 @@
 @inject IDialogService DialogService
 @inject IJSRuntime jSRunTime 
 @inject ICurrentUserService _currentUserService
+@inject ISnackbar Snackbar
 
 <MudText Typo="Typo.h5" Class="mb-4">University Form Repository</MudText>
 
@@ -62,7 +63,7 @@
                             @* Admin Actions *@
                             <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight">
                                 <MudMenuItem Icon="@Icons.Material.Filled.Edit"  OnClick="@(() => OpenEditDialog(form))">Edit Info</MudMenuItem>
-                                <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => ConfirmArchive(form))" >Archive</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => ConfirmArchive(form))" >Remove</MudMenuItem>
                             </MudMenu>
                         </div>
                     </div>
@@ -150,7 +151,7 @@
         bool? result = await DialogService.ShowMessageBoxAsync(
             "Archive Form",
             $"Are you sure you want to remove '{form.FormName}'?",
-            yesText: "Archive", cancelText: "Cancel");
+            yesText: "Remove", cancelText: "Cancel");
 
         if (result == true)
         {
@@ -160,13 +161,14 @@
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
-                EventName = "Form Archived",
-                Description = $"Archived form: {form.FormName}",
+                EventName = "Form Remove",
+                Description = $"Removed form: {form.FormName}",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
+            Snackbar.Add("Form removed.", Severity.Success);
             await LoadForms();
         }
     

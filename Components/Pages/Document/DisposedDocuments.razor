@@ -247,10 +247,10 @@
 
         var fileName = $"Pending_Disposal_List_{DateTime.Now:yyyyMMdd}.csv";
 
-        // MATCH THE STRUCTURE: Only 2 arguments
+        
         await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvBuilder.ToString());
 
-        Snackbar.Add("Pick list exported!", Severity.Success);
+        
     }
 }
 
