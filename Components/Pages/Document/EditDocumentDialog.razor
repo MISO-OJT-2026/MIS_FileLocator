@@ -45,7 +45,8 @@
                     @if (_editDoc.IsBorrowed)
                     {
                         <MudTextField @bind-Value="_editDoc.CurrentBorrower" Label="Borrower Name" Variant="Variant.Outlined" Required="true" />
-                        <MudDatePicker Label="Expected Return Date" @bind-Date="_editDoc.ExpectedReturnDate" Variant="Variant.Outlined" />
+                        <MudDatePicker Label="Expected Return Date" @bind-Date="_editDoc.ExpectedReturnDate" Variant="Variant.Outlined" 
+                        PickerVariant="PickerVariant.Dialog"/>
                         <MudTextField @bind-Value="_editDoc.BorrowRemarks" Label="Borrow Remarks" Variant="Variant.Outlined" />
                     }
                 </MudStack>

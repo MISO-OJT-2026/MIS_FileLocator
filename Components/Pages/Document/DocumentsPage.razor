@@ -173,7 +173,13 @@ RowClick = "OnRowClicked">
 
 
         var parameters = new DialogParameters<EditDocumentDialog> { { x => x.DocumentToEdit, doc } };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            };
 
         var dialog = await DialogService.ShowAsync<EditDocumentDialog>("Edit Document", parameters, options);
         var result = await dialog.Result;

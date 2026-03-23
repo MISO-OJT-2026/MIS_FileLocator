@@ -143,6 +143,24 @@
         overflow-x: hidden;
     }
 
+    /* Force the group headers to play nice with the glass links */
+    .nav-shell-menu .mud-nav-group-toggle {
+        margin-top: 4px;
+        margin-bottom: 4px;
+    }
+
+    /* Ensure NavGroup arrows stay white */
+    ::deep .mud-nav-group-caret-icon {
+        color: white !important;
+    }
+
+    /* Padding adjustment to give the glass room to breathe */
+    .mud-nav-link {
+        margin-right: 8px !important;
+        margin-left: 0 !important;
+        border-radius: 0 20px 20px 0 !important; /* Rounded glass edge */
+    }
+
     a {
         text-decoration: none;
     }

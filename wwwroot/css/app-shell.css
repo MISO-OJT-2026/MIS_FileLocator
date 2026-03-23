@@ -1,34 +1,93 @@
-/* App shell: drawer + main content (loads after app.css; keep midnight, no red gradient) */
+/* ============================================================
+   1. THE CONTENT AREA
+   Removing the white background so the glass effect is visible.
+   ============================================================ */
+.app-shell-main {
+    /* Background is now controlled by the Theme (#f0f2f5) */
+    min-height: 100vh;
+    padding: 2rem !important;
+}
 
+/* ============================================================
+   2. THE GLASS PANEL (DASHBOARD ONLY)
+   Only elements with this class will be glass.
+   ============================================================ */
+.glass-midnight {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 12px 40px -10px rgba(14, 24, 36, 0.12) !important;
+    border-radius: 20px !important;
+    transition: all 0.3s ease-in-out;
+}
+
+    .glass-midnight:hover {
+        background: rgba(255, 255, 255, 0.6) !important;
+        transform: translateY(-4px);
+    }
+
+/* ============================================================
+   3. NAVIGATION BAR (Glass Links)
+   ============================================================ */
 .app-shell-drawer.mud-drawer {
-    background: linear-gradient(180deg, #152a3d 0%, #0e1824 45%, #0a121c 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 4px 0 24px rgba(14, 24, 36, 0.1);
+    background: linear-gradient(180deg, #152a3d 0%, #0e1824 42%, #0a121c 100%) !important;
 }
 
-.app-shell-drawer.mud-drawer .mud-nav-link {
-    border-radius: 0;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    .app-shell-drawer.mud-drawer .mud-drawer-content {
+        background-color: transparent !important;
+    }
+
+.app-shell-drawer .mud-nav-link {
+    border-radius: 0 20px 20px 0 !important;
+    margin-right: 8px;
+    border-left: 4px solid transparent !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.app-shell-drawer.mud-drawer .mud-nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    .app-shell-drawer .mud-nav-link:hover,
+    .app-shell-drawer .mud-nav-link.mud-nav-link-active {
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10px) !important;
+        color: #ffffff !important;
+        transform: translateX(4px);
+        border-left: 4px solid #5eb5f7 !important;
+    }
+
+    /* Ensure Nav Icons stay visible */
+    .app-shell-drawer .mud-nav-link .mud-icon-root,
+    .app-shell-drawer .mud-nav-link-text {
+        color: #ffffff !important;
+    }
+
+/* Caret/Arrow color fix */
+::deep .mud-nav-group-caret-icon {
+    color: white !important;
 }
 
-.app-shell-drawer.mud-drawer .mud-nav-link:active,
-.app-shell-drawer.mud-drawer .mud-nav-link.mud-nav-link-active {
-    background-color: rgba(255, 255, 255, 0.1);
+/* Hide Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
 
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Custom Progress Bar Styling */
+.custom-progress-bar {
+    height: 14px !important;
+    border-radius: 10px !important;
+    background-color: rgba(14, 24, 36, 0.05) !important;
+}
+
+/* ============================================================
+   5. MOBILE OPTIMIZATION
+   ============================================================ */
 @media (max-width: 768px) {
     .app-shell-drawer.mud-drawer {
-        background: #0e1824;
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
-        box-shadow: 2px 0 12px rgba(14, 24, 36, 0.08);
+        background: #0e1824 !important;
+        box-shadow: 2px 0 12px rgba(14, 24, 36, 0.1);
     }
-}
-
-.app-shell-main {
-    background: linear-gradient(180deg, #faf8f5 0%, #f5f2ec 100%);
-    min-height: 100%;
 }

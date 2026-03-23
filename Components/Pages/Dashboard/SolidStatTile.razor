@@ -1,32 +1,50 @@
 @using MudBlazor
 @inject NavigationManager Nav
 
-<MudPaper Elevation="2"
-          Class="pa-6 rounded-xl storage-solid-tile"
+<MudPaper Elevation="4"
+          Class="pa-6 rounded-xl storage-solid-tile hover-scale"
           Style="@TileStyle"
           @onclick="Go">
+    <div class="tile-shine"></div> @* Premium glass-like highlight *@
     <MudStack>
         <div class="d-flex justify-space-between align-center">
-            <MudText Typo="Typo.overline" Style="font-weight:700; opacity: 0.8;">@Title</MudText>
-            <MudIcon Icon="@Icon" Size="Size.Medium" Style="opacity: 0.5;" />
+            <MudText Typo="Typo.overline" Style="font-weight:700; opacity: 0.8; letter-spacing: 1px;">@Title</MudText>
+            <MudIcon Icon="@Icon" Size="Size.Medium" Style="opacity: 0.6;" />
         </div>
         <MudSpacer />
-        <MudText Typo="Typo.h3" Style="font-weight: 800;">@Value</MudText>
-        <div class="d-flex align-center mt-2" style="opacity: 0.7;">
-            <MudText Typo="Typo.caption">View details</MudText>
-            <MudIcon Icon="@Icons.Material.Filled.ArrowRightAlt" Size="Size.Small" />
+        <MudText Typo="Typo.h3" Style="font-weight: 900; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.15));">@Value</MudText>
+        <div class="d-flex align-center mt-2" style="opacity: 0.8;">
+            <MudText Typo="Typo.caption" Style="font-weight: 600;">View details</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowRightAlt" Size="Size.Small" Class="ml-1" />
         </div>
     </MudStack>
 </MudPaper>
+
 <style>
+    .storage-solid-tile {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .tile-shine {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
     .hover-scale {
-        transition: transform 0.2s ease-in-out;
-        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
         .hover-scale:hover {
-            transform: translateY(-4px);
-            filter: brightness(1.1);
+            transform: scale(1.03); /* Soft scale pop */
+            filter: brightness(1.15); /* Soft sheen increase */
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2) !important;
         }
 </style>
 @code {

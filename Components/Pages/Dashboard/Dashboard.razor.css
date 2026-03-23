@@ -1,3 +1,39 @@
+.glass-section {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(15px) saturate(130%);
+    -webkit-backdrop-filter: blur(15px) saturate(130%);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 8px 32px 0 rgba(14, 24, 36, 0.08) !important;
+}
+
+/* Make the Progress Bar stand out on Glass */
+.custom-progress {
+    height: 12px !important;
+    border-radius: 10px;
+    background-color: rgba(14, 24, 36, 0.08) !important; /* Track color */
+}
+
+/* Smooth hover for the glass panels */
+.glass-section:hover {
+    background: rgba(255, 255, 255, 0.6) !important;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+.glass-panel {
+    background: rgba(255, 255, 255, 0.4) !important; /* Semi-transparent white */
+    backdrop-filter: blur(12px) saturate(180%); /* Frosted blur */
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important; /* Catching the light on the edges */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important; /* Soft depth */
+}
+
+/* Glass effect for the Hero section */
+.glass-hero {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
 .dashboard-hero {
     background-color: #faf9f7;
     background-image: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)), linear-gradient(rgba(14, 24, 36, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(14, 24, 36, 0.04) 1px, transparent 1px);
@@ -6,9 +42,20 @@
 
 /* Trend Chart Styles */
 .dashboard-line-chart-wrap {
-    margin-top: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 10px;
 }
 
+.dashboard-activity-feed::-webkit-scrollbar {
+    width: 4px;
+}
+
+.dashboard-activity-feed::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
 .dashboard-line-chart {
     width: 100%;
     height: auto;
@@ -21,6 +68,14 @@
     font-size: 0.75rem;
     color: gray;
 }
+.rounded-xl {
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+    .rounded-xl:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.08) !important;
+    }
 
 /* Clean Activity Feed */
 .activity-feed-row {

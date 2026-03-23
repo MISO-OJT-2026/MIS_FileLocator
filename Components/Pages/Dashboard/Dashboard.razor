@@ -19,49 +19,46 @@
 <MudStack Spacing="4" Class="pa-4">
     @if (_loading)
     {
-        <MudPaper Class="pa-12 d-flex justify-center" Elevation="0">
+        <MudPaper Class="pa-12 d-flex justify-center" Elevation="0" Style="background:transparent">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
         </MudPaper>
     }
     else
     {
-        @* Hero Section *@
-        <MudPaper Elevation="0" Class="dashboard-hero pa-8 rounded-xl">
+        @* Hero Section - Frosted Glass *@
+        <MudPaper Elevation="0" Class="pa-8 rounded-xl glass-midnight">
             <MudText Typo="Typo.caption" Class="dashboard-hero-date">@DateTime.Now.ToString("ddd, MMM d")</MudText>
-            <MudText Typo="Typo.h4" Class="dashboard-hero-greeting">Hello, @_greetingName</MudText>
+            <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0e1824;">Hello, @_greetingName</MudText>
             <MudText Typo="Typo.body1" Class="dashboard-hero-tagline">What would you like to do today?</MudText>
         </MudPaper>
 
-        @* Stat Tiles - Increased Spacing to 4 to fix the "too close" feeling *@
         <MudGrid Spacing="3">
-        @* Row 1 *@
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="#1a3a52" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Filing boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#b42318" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="#98C1D9" Foreground="#293241" />
-        </MudItem>
+            @* Stat Tiles: Solid Gradients for visual weight *@
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="linear-gradient(135deg, #1a3a52 0%, #2a5a7a 100%)" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Filing boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="linear-gradient(135deg, #b42318 0%, #e3362a 100%)" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="linear-gradient(135deg, #7b6ab3 0%, #9b8fc9 100%)" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Active documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="linear-gradient(135deg, #3a6351 0%, #52796f 100%)" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Pending disposal" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="linear-gradient(135deg, #7d1c1c 0%, #9b2c2c 100%)" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="linear-gradient(135deg, #0e1824 0%, #1c2e44 100%)" />
+            </MudItem>
 
-        @* Row 2 *@
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Active documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#52796F" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Pending disposal" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#9b2c2c" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#0e1824" />
-        </MudItem>
-
-            @* Line Chart - Disposal Trend *@
+            @* Disposal Trend - Glass Panel *@
             <MudItem xs="12" lg="8">
-                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h6">Disposal Trend</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Disposal Trend</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Official disposals by year (last 6 years)</MudText>
                         </MudStack>
                     </MudStack>
@@ -74,7 +71,7 @@
                                 </linearGradient>
                             </defs>
                             <title>@GetTrendChartSummaryTooltip()</title>
-                            <polyline fill="none" stroke="url(#lineGrad)" stroke-width="3" points="@GetTrendLinePoints()" />
+                            <polyline fill="none" stroke="url(#lineGrad)" stroke-width="4" stroke-linecap="round" points="@GetTrendLinePoints()" />
                             @foreach (var pt in GetTrendPointsDetail())
                             {
                                 <circle cx="@pt.X" cy="@pt.Y" r="5" fill="white" stroke="#0e1824" stroke-width="2">
@@ -92,10 +89,10 @@
                 </MudPaper>
             </MudItem>
 
-            @* Top 5 Contributors *@
+            @* Top 5 Contributors - Glass Panel *@
             <MudItem xs="12" lg="4">
-                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
-                    <MudText Typo="Typo.h6" Class="mb-4">Top 5 Contributors</MudText>
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 700; color: #0e1824;">Top 5 Contributors</MudText>
                     <MudStack Spacing="2">
                         @foreach (var c in _topContributors)
                         {
@@ -110,15 +107,12 @@
                 </MudPaper>
             </MudItem>
 
-            @* Progress Bar - Disposal Pipeline *@
+            @* Disposal Pipeline - Glass Panel *@
             <MudItem xs="12" md="6">
-                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.h6">Disposal Pipeline</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed vs Total scheduled</MudText>
-                        </MudStack>
-                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px;">
+                        <MudText Typo="Typo.h6" Style="font-weight:700; color: #0e1824;">Disposal Pipeline</MudText>
+                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px; background: rgba(255,255,255,0.5);">
                             @foreach (var y in _yearChoices)
                             {
                                 <MudSelectItem Value="y">@y</MudSelectItem>
@@ -126,24 +120,24 @@
                         </MudSelect>
                     </MudStack>
 
-                    <div class="mt-6">
+                    <div class="mt-8">
                         <MudTooltip Text="@GetPipelineTooltipText()">
-                            <div class="dashboard-progress-hit" tabindex="0">
-                                <MudProgressLinear Color="Color.Primary" Value="@GetPipelinePercent()" Size="Size.Large" Class="rounded-pill my-2" />
+                            <div class="py-2">
+                                <MudProgressLinear Color="Color.Primary" Value="@GetPipelinePercent()" Class="custom-progress-bar" />
                             </div>
                         </MudTooltip>
-                        <div class="d-flex justify-space-between mt-2">
+                        <div class="d-flex justify-space-between mt-1">
                             <MudText Typo="Typo.caption" Style="font-weight:700;">@_disposedInSelectedYear Disposed</MudText>
-                            <MudText Typo="Typo.caption">Total: @_totalPipelineYear</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Total: @_totalPipelineYear</MudText>
                         </div>
                     </div>
 
-                    <MudDivider Class="my-5" />
+                    <MudDivider Class="my-5" Style="background: rgba(0,0,0,0.05)" />
 
-                    <MudText Typo="Typo.subtitle2" Class="mb-3">Year @_selectedDisposalYear snapshot</MudText>
-                    <MudGrid Spacing="2" Class="dashboard-pipeline-stats">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="font-weight:700">Year @_selectedDisposalYear snapshot</MudText>
+                    <MudGrid Spacing="2">
                         <MudItem xs="4">
-                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.06);">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.05);">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed</MudText>
                                 <MudText Typo="Typo.h6" Style="font-weight: 800;">@_disposedInSelectedYear</MudText>
                             </MudPaper>
@@ -151,43 +145,24 @@
                         <MudItem xs="4">
                             <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(180, 35, 24, 0.08);">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Awaiting</MudText>
-                                <MudText Typo="Typo.h6" Style="font-weight: 800;">@_pendingForSelectedYear</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 800; color: #b42318;">@_pendingForSelectedYear</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="4">
-                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.06);">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.05);">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Outstanding</MudText>
                                 <MudText Typo="Typo.h6" Style="font-weight: 800;">@_outstandingPipeline</MudText>
                             </MudPaper>
                         </MudItem>
                     </MudGrid>
-
-                    @if (_pendingDocumentsYear.Count > 0)
-                    {
-                        <MudText Typo="Typo.subtitle2" Class="mt-5 mb-2">Next due for disposal</MudText>
-                        <MudStack Spacing="1" Class="dashboard-pipeline-queue">
-                            @foreach (var doc in _pendingDocumentsYear.Take(5))
-                            {
-                                var due = doc.DateOfDisposal?.ToLocalTime().ToString("MMM d, yyyy") ?? "—";
-                                <div class="d-flex justify-space-between align-center py-2 px-2 rounded-lg" style="background: rgba(14, 24, 36, 0.04);">
-                                    <MudText Typo="Typo.body2" Style="font-weight: 600; max-width: 70%;" Class="text-truncate">@doc.Title</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space: nowrap;">@due</MudText>
-                                </div>
-                            }
-                        </MudStack>
-                    }
-                    else if (_totalPipelineYear > 0 && _pendingForSelectedYear == 0)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4">No documents are past due for disposal in this year.</MudText>
-                    }
                 </MudPaper>
             </MudItem>
 
-            @* Recent Activity - Fixed spacing issues *@
+            @* Recent Activity - Glass Panel *@
             <MudItem xs="12" md="6">
-                <MudPaper Elevation="2" Class="pa-6 rounded-xl h-100">
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
-                        <MudText Typo="Typo.h6">Recent Activity</MudText>
+                        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Recent Activity</MudText>
                         <MudLink Href="/transaction-logs" Typo="Typo.caption">View Log</MudLink>
                     </MudStack>
                     <div class="dashboard-activity-feed">
@@ -195,8 +170,8 @@
                         {
                             var line = GetActivityDisplay(log);
                             <div class="activity-feed-row py-2 d-flex justify-space-between align-start border-b">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    @* Gap fixes the word clashing *@
+                                <div class="d-flex gap-2 flex-wrap align-center">
+                                    @* GAP-2 FIXES CLUMPING *@
                                     <MudText Typo="Typo.body2" Style="font-weight: 700;">@line.Name</MudText>
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@line.Phrase</MudText>
                                     @if (!string.IsNullOrEmpty(line.Title))
@@ -213,6 +188,7 @@
         </MudGrid>
     }
 </MudStack>
+
 
 @code {
     private bool _loading = true;
