@@ -96,6 +96,7 @@
     border-radius: 999px;
 }
 
+
 /* Responsive tweaks */
 @media (max-width: 600px) {
     .dashboard-hero {

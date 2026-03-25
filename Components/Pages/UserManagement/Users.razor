@@ -39,8 +39,21 @@
             <MudTd DataLabel="Role">
                 <MudChip T="string" Color="@GetRoleColor(context.Role)" Size="Size.Small">@context.Role</MudChip>
             </MudTd>
+            @* Inside RowTemplate of Users.razor *@
             <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context.Id))" />
+                <MudStack Row="true">
+                    <MudTooltip Text="Reset Password">
+                        <MudIconButton Icon="@Icons.Material.Filled.VpnKey"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       OnClick="@(() => OpenResetPasswordDialog(context.Id, context.FullName))" />
+                    </MudTooltip>
+
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(() => DeleteUser(context.Id))" />
+                </MudStack>
             </MudTd>
         </RowTemplate>
         <PagerContent>
@@ -186,5 +199,20 @@
         {
             await LoadUsersAsync();
         }
+    }
+
+    //Reset Password 
+    private async Task OpenResetPasswordDialog(string userId, string fullName)
+    {
+        var parameters = new DialogParameters<ResetPasswordDialog>
+    {
+        { x => x.UserId, userId },
+        { x => x.UserFullName, fullName }
+    };
+
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>("Reset User Password", parameters, options);
+        await dialog.Result;
     }
 }  

@@ -18,11 +18,47 @@
         transform: translateY(-4px);
         box-shadow: 0 20px 40px -10px rgba(14, 24, 36, 0.15) !important;
     }
-.custom-progress-bar {
-    height: 14px !important;
-    border-radius: 10px !important;
-    background-color: rgba(14, 24, 36, 0.1) !important; /* The track */
+.custom-progress-container {
+    padding: 10px 0;
+    overflow: visible !important;
+    
 }
+
+
+.mud-progress-linear.custom-progress-bar {
+    height: 16px !important; /* Make it thick so we can't miss it */
+    background-color: rgba(0, 0, 0, 0.1) !important; /* Visible track */
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+}
+.custom-progress-bar.mud-progress-linear {
+    height: 16px !important;
+    border-radius: 20px !important;
+    /* Glass track background */
+    background: rgba(14, 24, 36, 0.05) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(14, 24, 36, 0.1) !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden !important; /* Clips the bar edges for roundness */
+}
+
+.custom-progress-bar .mud-progress-linear-bar {
+    background: linear-gradient(90deg, #0e1824 0%, #2a5a7a 50%, #5eb5f7 100%) !important;
+    height: 16px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 0 12px rgba(94, 181, 247, 0.3) !important;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important; 
+}
+
+    
+.custom-progress-bar .mud-progress-linear-inner {
+    background-color: transparent !important;
+    height: 20px !important;
+}
+
+
 
 .app-shell-drawer.mud-drawer .mud-drawer-content {
     background-color: transparent !important;
@@ -71,12 +107,7 @@
 }
 
 
-        
-    
-
-
-
-
+   
 .app-shell-main {
     background-color: #f0f4f8 !important;
 
@@ -93,7 +124,36 @@
 .app-shell-drawer .mud-nav-group.mud-expanded > .mud-nav-group-toggle .mud-nav-group-caret-icon {
     color: #ffffff !important;
 }
+/*VIEW LOG BUTTON */
+/* --- Modern Glass "View Log" Button --- */
+.glass-view-log {
+    background: rgba(255, 255, 255, 0.15) !important;
+    /* 2. Add the blur (This is the "Glass" part) */
+    backdrop-filter: blur(12px) saturate(170%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(170%) !important;
+    /* 3. Add a thin, bright border to define the edge */
+    border: 1px solid #0e1824 !important;
+    padding: 8px 20px !important;
+    border-radius: 50px !important; /* Full pill shape */
+    color: #0e1824 !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+   
+    transition: all 0.3s ease !important;
+}
 
+    .glass-view-log:hover {
+        /* Slightly more opaque on hover so it feels reactive */
+        background: #0e1824;
+        color: #ffffff;
+        box-shadow: 0 8px 20px rgba(94, 181, 247, 0.3) !important; /* Ocean Blue Glow */
+        transform: translateY(-2px);
+    }
+    /* Safe Z-index for tooltips or popping out */
+    .glass-view-log:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 10px rgba(94, 181, 247, 0.2) !important;
+    }
 
 /* --- 3. MOBILE OPTIMIZATION --- */
 @media (max-width: 768px) {

@@ -26,7 +26,7 @@
         <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => !c.IsArchived)" Filterable="true" QuickFilter="@_quickFilter">
             <ToolBarContent>
                 <MudStack Row="true" Spacing ="2" AlignItems= "AlignItems.Center">
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
                     Add Cabinet
                 </MudButton>
 

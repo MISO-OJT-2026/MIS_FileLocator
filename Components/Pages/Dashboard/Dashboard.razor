@@ -111,7 +111,7 @@
             <MudItem xs="12" md="6">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.h6" Style="font-weight:700; color: #0e1824;">Disposal Pipeline</MudText>
+                        <MudText Typo="Typo.h6" Style="font-weight:700; color: #0e1824;">Disposal Progress</MudText>
                         <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px; background: rgba(255,255,255,0.5);">
                             @foreach (var y in _yearChoices)
                             {
@@ -119,18 +119,33 @@
                             }
                         </MudSelect>
                     </MudStack>
-
                     <div class="mt-8">
-                        <MudTooltip Text="@GetPipelineTooltipText()">
-                            <div class="py-2">
-                                <MudProgressLinear Color="Color.Primary" Value="@GetPipelinePercent()" Class="custom-progress-bar" />
-                            </div>
-                        </MudTooltip>
-                        <div class="d-flex justify-space-between mt-1">
-                            <MudText Typo="Typo.caption" Style="font-weight:700;">@_disposedInSelectedYear Disposed</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Total: @_totalPipelineYear</MudText>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:700; color: #0e1824;">
+                                Disposal Progress
+                                <span style="color: #b42318; margin-left: 8px;">(@GetPipelinePercent().ToString("F0")%)</span>
+                            </MudText>
+                            @if (_pendingForSelectedYear > 0)
+                            {
+                                <MudChip T="string" Color="Color.Error" Variant="Variant.Text" Size="Size.Small">
+                                    @_pendingForSelectedYear Awaiting
+                                </MudChip>
+                            }
+                        </MudStack>
+
+                        <div class="custom-progress-container">
+                            <MudProgressLinear Size="Size.Large"
+                                               Value="@GetPipelinePercent()"
+                                               Class="custom-progress-bar" />
+                        </div>
+
+                        <div class="d-flex justify-space-between mt-2">
+                            <MudText Typo="Typo.caption" Style="opacity: 0.8;">@_disposedInSelectedYear Disposed</MudText>
+                            <MudText Typo="Typo.caption" Style="opacity: 0.8;">Target: @_totalPipelineYear</MudText>
                         </div>
                     </div>
+                    
+                  
 
                     <MudDivider Class="my-5" Style="background: rgba(0,0,0,0.05)" />
 
@@ -161,25 +176,35 @@
             @* Recent Activity - Glass Panel *@
             <MudItem xs="12" md="6">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
                         <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Recent Activity</MudText>
-                        <MudLink Href="/transaction-logs" Typo="Typo.caption">View Log</MudLink>
+                        <MudLink Href="/transaction-logs" Class="glass-view-log">View Log</MudLink>
                     </MudStack>
-                    <div class="dashboard-activity-feed">
+
+                    <div class="dashboard-activity-feed no-scrollbar" style="max-height: 450px; overflow-y: auto;">
                         @foreach (var log in _activityFeed)
                         {
                             var line = GetActivityDisplay(log);
-                            <div class="activity-feed-row py-2 d-flex justify-space-between align-start border-b">
-                                <div class="d-flex gap-2 flex-wrap align-center">
-                                    @* GAP-2 FIXES CLUMPING *@
-                                    <MudText Typo="Typo.body2" Style="font-weight: 700;">@line.Name</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@line.Phrase</MudText>
-                                    @if (!string.IsNullOrEmpty(line.Title))
-                                    {
-                                        <MudText Typo="Typo.body2" Style="font-weight: 600;">"@line.Title"</MudText>
-                                    }
+                            <div class="activity-feed-row py-3 d-flex justify-space-between align-center border-b last-child-no-border">
+                                <div class="d-flex align-center gap-3">
+                                    @* Blue status dot instead of red text *@
+                                    <div class="activity-dot"></div>
+
+                                    <div class="d-flex flex-column">
+                                        <div class="d-flex gap-1 flex-wrap align-center">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 700; color: #0e1824;">@line.Name</MudText>
+                                            <MudText Typo="Typo.body2" Style="color: #555;">@line.Phrase</MudText>
+                                            @if (!string.IsNullOrEmpty(line.Title))
+                                            {
+                                                <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2a5a7a;">"@line.Title"</MudText>
+                                            }
+                                        </div>
+                                        @* Full Date and Time Display *@
+                                        <MudText Typo="Typo.caption" Style="color: #999; font-size: 0.7rem;">
+                                            @line.PerformedAt.ToLocalTime().ToString("MMM dd, yyyy • h:mm tt")
+                                        </MudText>
+                                    </div>
                                 </div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;">@log.PerformedAt.ToLocalTime().ToString("h:mm tt")</MudText>
                             </div>
                         }
                     </div>
@@ -326,8 +351,10 @@
     private double GetPipelinePercent()
     {
         if (_totalPipelineYear <= 0) return 0;
-        return Math.Min(100, 100.0 * _disposedInSelectedYear / _totalPipelineYear);
+        // Force double division by using 100.0
+        return Math.Min(100, (double)_disposedInSelectedYear / _totalPipelineYear * 100.0);
     }
+    
 
     private string GetPipelineTooltipText()
     {
@@ -401,7 +428,9 @@
         var title = ExtractQuotedTitle(log.Description);
         var phrase = MapEventToPhrase(log.EventName);
         var fallback = BuildFallbackSummary(log, title);
-        return new ActivityLine(name, title, phrase, fallback);
+
+        // Pass the PerformedAt directly from the log
+        return new ActivityLine(name, title, phrase, fallback, log.PerformedAt);
     }
 
     private string BuildFallbackSummary(TransactionLog log, string? title)
@@ -518,6 +547,6 @@
     }
 
     private record DisposalYearPoint(string Label, int Count);
-    private record ActivityLine(string Name, string? Title, string Phrase, string Fallback);
+    private record ActivityLine(string Name, string? Title, string Phrase, string Fallback, DateTime PerformedAt);
     private record ContributorRow(string Name, int Count);
 }
