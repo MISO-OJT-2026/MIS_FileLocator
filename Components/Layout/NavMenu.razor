@@ -35,11 +35,12 @@
                 
               
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
+                <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
 
                 
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
-                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
+                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2"  >
                         <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
                         <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
                         <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
@@ -73,7 +74,7 @@
                
                 @if (RoleService.CanAccessForms(_currentUserRole))
                 {
-                    <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
+                   
                     <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
                 }
             </div>

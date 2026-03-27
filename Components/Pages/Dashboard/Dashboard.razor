@@ -1,6 +1,7 @@
 @page "/"
 @page "/dashboard"
 @using MudBlazor
+@using MudBlazor.Charts
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using MIS_FileLocator.Services
@@ -9,7 +10,7 @@
 @using Microsoft.AspNetCore.Identity
 @using System.Text.RegularExpressions
 @using System.Globalization
-@attribute [Authorize(Roles = "Admin,Editor")]
+@attribute [Authorize(Roles = "Admin")]
 @rendermode InteractiveServer
 
 @inject ApplicationDbContext Db
@@ -25,7 +26,7 @@
     }
     else
     {
-        @* Hero Section - Frosted Glass *@
+        @* Hero Section *@
         <MudPaper Elevation="0" Class="pa-8 rounded-xl glass-midnight">
             <MudText Typo="Typo.caption" Class="dashboard-hero-date">@DateTime.Now.ToString("ddd, MMM d")</MudText>
             <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0e1824;">Hello, @_greetingName</MudText>
@@ -33,7 +34,7 @@
         </MudPaper>
 
         <MudGrid Spacing="3">
-            @* Stat Tiles: Solid Gradients for visual weight *@
+            @* Stat Tiles *@
             <MudItem xs="12" sm="6" md="4">
                 <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="linear-gradient(135deg, #1a3a52 0%, #2a5a7a 100%)" />
             </MudItem>
@@ -53,61 +54,43 @@
                 <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="linear-gradient(135deg, #0e1824 0%, #1c2e44 100%)" />
             </MudItem>
 
-            @* Disposal Trend - Glass Panel *@
+            @* Disposal Trend - UPDATED TO MUDBLAZOR CHART *@
             <MudItem xs="12" lg="8">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Disposal Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Official disposals by year (last 6 years)</MudText>
-                        </MudStack>
+                    <MudStack Spacing="0" Class="mb-4">
+                        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Disposal Trend</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Primary">Active Filing vs. Official Disposals (Last 6 Years)</MudText>
                     </MudStack>
-                    <div class="dashboard-line-chart-wrap">
-                        <svg class="dashboard-line-chart" viewBox="0 0 640 200">
-                            <defs>
-                                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color:#1a3a52;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#b42318;stop-opacity:1" />
-                                </linearGradient>
-                            </defs>
-                            <title>@GetTrendChartSummaryTooltip()</title>
-                            <polyline fill="none" stroke="url(#lineGrad)" stroke-width="4" stroke-linecap="round" points="@GetTrendLinePoints()" />
-                            @foreach (var pt in GetTrendPointsDetail())
-                            {
-                                <circle cx="@pt.X" cy="@pt.Y" r="5" fill="white" stroke="#0e1824" stroke-width="2">
-                                    <title>@GetTrendPointTooltip(pt.Label, pt.Count)</title>
-                                </circle>
-                            }
-                        </svg>
-                        <div class="dashboard-line-labels">
-                            @foreach (var p in _disposalTrend)
-                            {
-                                <span>@p.Label</span>
-                            }
-                        </div>
-                    </div>
+
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_series"
+                              ChartLabels="@_xAxisLabels"
+                              ChartOptions="@_chartOptions"
+                              Width="100%"
+                              Height="500px"
+                              CanScaleYAxis="true" />
                 </MudPaper>
             </MudItem>
 
-            @* Top 5 Contributors - Glass Panel *@
-            <MudItem xs="12" lg="4">
+            @* Top 5 Contributors *@
+            <MudItem xs="14" lg="4">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
-                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 700; color: #0e1824;">Top 5 Contributors</MudText>
+                    <MudText Typo="Typo.h5" Class="mb-4" Style="font-weight: 700; color: #0e1824;">Top 5 Contributors</MudText>
                     <MudStack Spacing="2">
                         @foreach (var c in _topContributors)
                         {
                             <div class="d-flex align-center gap-3 py-2 border-b last-child-no-border">
-                                <MudAvatar Color="Color.Primary" Size="Size.Small">@GetInitials(c.Name)</MudAvatar>
+                                <MudAvatar Color="Color.Primary" Size="Size.Medium">@GetInitials(c.Name)</MudAvatar>
                                 <MudText Typo="Typo.body2" Style="font-weight: 600;">@c.Name</MudText>
                                 <MudSpacer />
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@c.Count actions</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">@c.Count actions</MudText>
                             </div>
                         }
                     </MudStack>
                 </MudPaper>
             </MudItem>
 
-            @* Disposal Pipeline - Glass Panel *@
+            @* Disposal Progress & Recent Activity remains the same below... *@
             <MudItem xs="12" md="6">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -123,7 +106,7 @@
                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
                             <MudText Typo="Typo.subtitle2" Style="font-weight:700; color: #0e1824;">
                                 Disposal Progress
-                                <span style="color: #b42318; margin-left: 8px;">(@GetPipelinePercent().ToString("F0")%)</span>
+                                <span style="color: #03A9F4; margin-left: 8px;">(@GetPipelinePercent().ToString("F0")%)</span>
                             </MudText>
                             @if (_pendingForSelectedYear > 0)
                             {
@@ -134,9 +117,7 @@
                         </MudStack>
 
                         <div class="custom-progress-container">
-                            <MudProgressLinear Size="Size.Large"
-                                               Value="@GetPipelinePercent()"
-                                               Class="custom-progress-bar" />
+                            <MudProgressLinear Size="Size.Large" Value="@GetPipelinePercent()" Class="custom-progress-bar" />
                         </div>
 
                         <div class="d-flex justify-space-between mt-2">
@@ -144,28 +125,24 @@
                             <MudText Typo="Typo.caption" Style="opacity: 0.8;">Target: @_totalPipelineYear</MudText>
                         </div>
                     </div>
-                    
-                  
-
                     <MudDivider Class="my-5" Style="background: rgba(0,0,0,0.05)" />
-
                     <MudText Typo="Typo.subtitle2" Class="mb-3" Style="font-weight:700">Year @_selectedDisposalYear snapshot</MudText>
                     <MudGrid Spacing="2">
                         <MudItem xs="4">
                             <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.05);">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Disposed</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Primary">Disposed</MudText>
                                 <MudText Typo="Typo.h6" Style="font-weight: 800;">@_disposedInSelectedYear</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="4">
                             <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(180, 35, 24, 0.08);">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Awaiting</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Primary">Awaiting</MudText>
                                 <MudText Typo="Typo.h6" Style="font-weight: 800; color: #b42318;">@_pendingForSelectedYear</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="4">
                             <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="background: rgba(14, 24, 36, 0.05);">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Outstanding</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Primary">Outstanding</MudText>
                                 <MudText Typo="Typo.h6" Style="font-weight: 800;">@_outstandingPipeline</MudText>
                             </MudPaper>
                         </MudItem>
@@ -173,23 +150,19 @@
                 </MudPaper>
             </MudItem>
 
-            @* Recent Activity - Glass Panel *@
             <MudItem xs="12" md="6">
                 <MudPaper Elevation="0" Class="pa-6 rounded-xl glass-midnight h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
                         <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0e1824;">Recent Activity</MudText>
                         <MudLink Href="/transaction-logs" Class="glass-view-log">View Log</MudLink>
                     </MudStack>
-
                     <div class="dashboard-activity-feed no-scrollbar" style="max-height: 450px; overflow-y: auto;">
                         @foreach (var log in _activityFeed)
                         {
                             var line = GetActivityDisplay(log);
                             <div class="activity-feed-row py-3 d-flex justify-space-between align-center border-b last-child-no-border">
                                 <div class="d-flex align-center gap-3">
-                                    @* Blue status dot instead of red text *@
                                     <div class="activity-dot"></div>
-
                                     <div class="d-flex flex-column">
                                         <div class="d-flex gap-1 flex-wrap align-center">
                                             <MudText Typo="Typo.body2" Style="font-weight: 700; color: #0e1824;">@line.Name</MudText>
@@ -199,7 +172,6 @@
                                                 <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2a5a7a;">"@line.Title"</MudText>
                                             }
                                         </div>
-                                        @* Full Date and Time Display *@
                                         <MudText Typo="Typo.caption" Style="color: #999; font-size: 0.7rem;">
                                             @line.PerformedAt.ToLocalTime().ToString("MMM dd, yyyy • h:mm tt")
                                         </MudText>
@@ -214,23 +186,27 @@
     }
 </MudStack>
 
-
 @code {
     private bool _loading = true;
     private string _greetingName = "there";
     private int _cabinets, _boxes, _folders, _activeDocuments, _totalUsers;
-    private int _pendingForSelectedYear;
-    private int _disposedInSelectedYear;
-    private int _totalPipelineYear;
-    private int _selectedDisposalYear;
+    private int _pendingForSelectedYear, _disposedInSelectedYear, _totalPipelineYear, _selectedDisposalYear;
     private List<int> _yearChoices = new();
-    private int _disposalTrendMax;
-    private List<DisposalYearPoint> _disposalTrend = new();
-    private List<Documents> _pendingDocumentsYear = new();
     private List<TransactionLog> _activityFeed = new();
     private List<ContributorRow> _topContributors = new();
-
     private readonly Dictionary<string, string> _employeeDisplayByKey = new(StringComparer.OrdinalIgnoreCase);
+
+    // MUDCHART PROPERTIES
+    private List<ChartSeries<double>> _series = new();
+    private string[] _xAxisLabels = { };
+    private LineChartOptions _chartOptions = new()
+    {
+        XAxisTitle = "Year",
+        YAxisTitle = "Count",
+        ShowDataMarkers = true,
+        LineStrokeWidth = 3,
+        XAxisLabelRotation = 0
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -255,298 +231,88 @@
         _activeDocuments = await Db.Documents.CountAsync(d => !d.IsDeleted && !d.IsDisposal);
         _totalUsers = users.Count;
 
-        var yearMin = now.Year - 15;
-        _yearChoices = Enumerable.Range(yearMin, 18).ToList();
+        _yearChoices = Enumerable.Range(now.Year - 15, 18).ToList();
 
-        _disposalTrend = new List<DisposalYearPoint>();
+        // LOAD TREND DATA FOR CHART
+        var labels = new List<string>();
+        var disposalData = new List<double>();
+        var activeData = new List<double>();
+
         for (var i = 0; i < 6; i++)
         {
             var year = now.Year - 5 + i;
+            labels.Add(year.ToString());
+
             var yearStart = new DateTime(year, 1, 1);
             var yearEnd = yearStart.AddYears(1);
-            var count = await Db.Documents.CountAsync(d =>
-                d.IsDisposal &&
-                !d.IsDeleted &&
-                d.DateOfDisposal != null &&
-                d.DateOfDisposal >= yearStart &&
-                d.DateOfDisposal < yearEnd);
-            _disposalTrend.Add(new DisposalYearPoint(year.ToString(), count));
-        }
-        _disposalTrendMax = _disposalTrend.Count == 0 ? 0 : _disposalTrend.Max(p => p.Count);
 
-        var topRaw = await Db.TransactionLogs
-            .AsNoTracking()
-            .Where(t => t.FullName != null && t.FullName.Trim() != string.Empty)
+            // Official Disposals
+            var dCount = await Db.Documents.CountAsync(d =>
+                d.IsDisposal && !d.IsDeleted &&
+                d.DateOfDisposal >= yearStart && d.DateOfDisposal < yearEnd);
+            disposalData.Add((double)dCount);
+
+            // Documents Added (Created) in that year
+            var aCount = await Db.Documents.CountAsync(d =>
+                !d.IsDeleted && !d.IsDisposal &&
+                d.FiledAt >= yearStart && d.FiledAt < yearEnd);
+            activeData.Add((double)aCount);
+        }
+
+        _xAxisLabels = labels.ToArray();
+        _series = new List<ChartSeries<double>>
+        {
+            new ChartSeries<double> { Name = "New Filing", Data = activeData.ToArray() },
+            new ChartSeries<double> { Name = "Official Disposals", Data = disposalData.ToArray() }
+        };
+
+        // LOAD OTHER DASHBOARD DATA
+        var topRaw = await Db.TransactionLogs.AsNoTracking()
+            .Where(t => !string.IsNullOrEmpty(t.FullName))
             .GroupBy(t => t.FullName!)
             .Select(g => new { Name = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count)
-            .Take(5)
-            .ToListAsync();
+            .OrderByDescending(x => x.Count).Take(5).ToListAsync();
 
-        _topContributors = topRaw
-            .Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count))
-            .ToList();
-
-        _activityFeed = await Db.TransactionLogs
-            .AsNoTracking()
-            .OrderByDescending(t => t.PerformedAt)
-            .Take(14)
-            .ToListAsync();
+        _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();
+        _activityFeed = await Db.TransactionLogs.AsNoTracking().OrderByDescending(t => t.PerformedAt).Take(14).ToListAsync();
 
         await LoadDisposalYearDataAsync();
-
         _loading = false;
     }
 
-    private async Task OnDisposalYearChanged(int year)
-    {
-        _selectedDisposalYear = year;
-        await LoadDisposalYearDataAsync();
-    }
-
+    // Support Methods
+    private async Task OnDisposalYearChanged(int year) { _selectedDisposalYear = year; await LoadDisposalYearDataAsync(); }
     private async Task LoadDisposalYearDataAsync()
     {
-        var y = _selectedDisposalYear;
-        var now = DateTime.Now;
-        var ys = new DateTime(y, 1, 1);
-        var ye = ys.AddYears(1);
-
-        _disposedInSelectedYear = await Db.Documents.CountAsync(d =>
-            d.IsDisposal &&
-            !d.IsDeleted &&
-            d.DateOfDisposal != null &&
-            d.DateOfDisposal >= ys &&
-            d.DateOfDisposal < ye);
-
-        _totalPipelineYear = await Db.Documents.CountAsync(d =>
-            !d.IsDeleted &&
-            d.DateOfDisposal != null &&
-            d.DateOfDisposal >= ys &&
-            d.DateOfDisposal < ye);
-
-        _pendingForSelectedYear = await Db.Documents.CountAsync(d =>
-            !d.IsDisposal &&
-            !d.IsDeleted &&
-            d.DateOfDisposal != null &&
-            d.DateOfDisposal >= ys &&
-            d.DateOfDisposal < ye &&
-            d.DateOfDisposal <= now);
-
-        _pendingDocumentsYear = await Db.Documents
-            .AsNoTracking()
-            .Include(d => d.Folder).ThenInclude(f => f!.FileBox).ThenInclude(b => b!.FillingCabinet)
-            .Where(d =>
-                !d.IsDisposal &&
-                !d.IsDeleted &&
-                d.DateOfDisposal != null &&
-                d.DateOfDisposal >= ys &&
-                d.DateOfDisposal < ye &&
-                d.DateOfDisposal <= now)
-            .OrderBy(d => d.DateOfDisposal)
-            .ToListAsync();
+        var y = _selectedDisposalYear; var now = DateTime.Now; var ys = new DateTime(y, 1, 1); var ye = ys.AddYears(1);
+        _disposedInSelectedYear = await Db.Documents.CountAsync(d => d.IsDisposal && !d.IsDeleted && d.DateOfDisposal >= ys && d.DateOfDisposal < ye);
+        _totalPipelineYear = await Db.Documents.CountAsync(d => !d.IsDeleted && d.DateOfDisposal != null && d.DateOfDisposal >= ys && d.DateOfDisposal < ye);
+        _pendingForSelectedYear = await Db.Documents.CountAsync(d => !d.IsDisposal && !d.IsDeleted && d.DateOfDisposal != null && d.DateOfDisposal >= ys && d.DateOfDisposal < ye && d.DateOfDisposal <= now);
     }
-
     private int _outstandingPipeline => Math.Max(0, _totalPipelineYear - _disposedInSelectedYear);
 
-    private double GetPipelinePercent()
-    {
-        if (_totalPipelineYear <= 0) return 0;
-        // Force double division by using 100.0
-        return Math.Min(100, (double)_disposedInSelectedYear / _totalPipelineYear * 100.0);
-    }
-    
+    private double GetPipelinePercent() => _totalPipelineYear <= 0 ? 0 : Math.Min(100, (double)_disposedInSelectedYear / _totalPipelineYear * 100.0);
 
-    private string GetPipelineTooltipText()
-    {
-        var pct = GetPipelinePercent();
-        return $"{_disposedInSelectedYear:N0} disposed of {_totalPipelineYear:N0} scheduled in {_selectedDisposalYear} ({pct:F0}% complete). {_pendingForSelectedYear:N0} awaiting action.";
+    private static string GetFirstName(string? fullName) { 
+        
+        if (string.IsNullOrWhiteSpace(fullName)) return "there"; var p = fullName.Trim().Split(' '); return p[0]; 
     }
 
-    private string GetTrendPointTooltip(string label, int count)
-        => $"{label}: {count} official disposal(s)";
+    private ActivityLine GetActivityDisplay(TransactionLog log) => new ActivityLine(ResolveEmployeeName(log.FullName), ExtractQuotedTitle(log.Description), MapEventToPhrase(log.EventName), "", log.PerformedAt);
 
-    private string GetTrendChartSummaryTooltip()
-    {
-        if (_disposalTrend.Count == 0) return "No trend data";
-        var total = _disposalTrend.Sum(p => p.Count);
-        return $"Disposal trend (last 6 years): {total:N0} total disposals shown on chart. Hover points for each year.";
+    private static string? ExtractQuotedTitle(string? d) { 
+        if (string.IsNullOrEmpty(d)) return null; var m = Regex.Match(d, @"'([^']*)'"); return m.Success ? m.Groups[1].Value : null; 
     }
 
-    private string GetTrendLinePoints()
-    {
-        if (_disposalTrend.Count == 0) return "";
-        var max = Math.Max(_disposalTrendMax, 1);
-        const double w = 560;
-        const double h = 120;
-        const double padL = 40;
-        const double padT = 20;
-        var n = _disposalTrend.Count;
-        var parts = new List<string>();
-        for (var i = 0; i < n; i++)
-        {
-            var x = padL + w * i / Math.Max(n - 1, 1);
-            var y = padT + h - h * (_disposalTrend[i].Count / (double)max);
-            parts.Add($"{x.ToString("F1", CultureInfo.InvariantCulture)},{y.ToString("F1", CultureInfo.InvariantCulture)}");
-        }
-        return string.Join(" ", parts);
-    }
+    private static string MapEventToPhrase(string e) => e switch { "Document Disposed" => "disposed of", "Document Created" => "filed", "Form Accessed" => "opened form", _ => e.ToLower() };
 
-    private IEnumerable<(double X, double Y, string Label, int Count)> GetTrendPointsDetail()
-    {
-        if (_disposalTrend.Count == 0) yield break;
-        var max = Math.Max(_disposalTrendMax, 1);
-        const double w = 560;
-        const double h = 120;
-        const double padL = 40;
-        const double padT = 20;
-        var n = _disposalTrend.Count;
-        for (var i = 0; i < n; i++)
-        {
-            var p = _disposalTrend[i];
-            var x = padL + w * i / Math.Max(n - 1, 1);
-            var y = padT + h - h * (p.Count / (double)max);
-            yield return (x, y, p.Label, p.Count);
-        }
-    }
+    private void BuildEmployeeNameLookup(IEnumerable<ApplicationUser> users) { foreach (var u in users) _employeeDisplayByKey[u.FullName ?? u.UserName!] = u.FullName ?? u.UserName!; }
 
-    private static IEnumerable<int> GetTrendGridY()
-    {
-        for (var i = 1; i <= 3; i++)
-            yield return 20 + (int)(30 * i);
-    }
+    private string ResolveEmployeeName(string? r) => string.IsNullOrEmpty(r) ? "System" : _employeeDisplayByKey.GetValueOrDefault(r, r);
 
-    private static string GetFirstName(string? fullName)
-    {
-        if (string.IsNullOrWhiteSpace(fullName)) return "there";
-        var p = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return p.Length > 0 ? p[0] : "there";
-    }
+    private static string GetInitials(string n) => string.Join("", n.Split(' ').Select(x => x[0])).ToUpper();
 
-    private ActivityLine GetActivityDisplay(TransactionLog log)
-    {
-        var name = ResolveEmployeeName(log.FullName);
-        var title = ExtractQuotedTitle(log.Description);
-        var phrase = MapEventToPhrase(log.EventName);
-        var fallback = BuildFallbackSummary(log, title);
-
-        // Pass the PerformedAt directly from the log
-        return new ActivityLine(name, title, phrase, fallback, log.PerformedAt);
-    }
-
-    private string BuildFallbackSummary(TransactionLog log, string? title)
-    {
-        if (title != null) return "";
-        var s = SanitizeDescription(log.Description);
-        if (string.IsNullOrEmpty(s)) return log.EventName;
-        return s.Length > 100 ? s[..97] + "…" : s;
-    }
-
-    private static string? ExtractQuotedTitle(string? description)
-    {
-        if (string.IsNullOrWhiteSpace(description)) return null;
-        var desc = description.Trim();
-        var patterns = new[] { @"'([^']{1,200})'", "\u2018([^\u2019]{1,200})\u2019", "\"([^\"]{1,200})\"" };
-        foreach (var p in patterns)
-        {
-            var m = Regex.Match(desc, p);
-            if (m.Success)
-            {
-                var v = m.Groups[1].Value.Trim();
-                if (v.Length > 0) return v;
-            }
-        }
-        return null;
-    }
-
-    private static string SanitizeDescription(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "";
-        var s = Regex.Replace(text, @"Record\s*#-?\d+", "", RegexOptions.IgnoreCase);
-        s = Regex.Replace(s, @"#-?\d+", "");
-        s = Regex.Replace(s, @"\b\d{10,}\b", "");
-        s = Regex.Replace(s, @"\s+", " ").Trim();
-        return s;
-    }
-
-    private static string MapEventToPhrase(string eventName)
-    {
-        return eventName switch
-        {
-            "Document Disposed" => "disposed of",
-            "Document Deleted" => "removed",
-            "Document Created" => "filed",
-            "Document Updated" => "updated",
-            "Document Restoration" => "restored",
-            "Borrow Status Updated" => "updated loan status for",
-            "Cabinet Archived" => "archived",
-            "Cabinet Restored" => "restored",
-            "Cabinet Created" => "created cabinet",
-            "Cabinet Updated" => "updated cabinet",
-            "Box Created" => "created box",
-            "Box Updated" => "updated box",
-            "Box Moved" => "moved box",
-            "Box Restored" => "restored box",
-            "Folder Created" => "created folder",
-            "Folder Updated" => "updated folder",
-            "Folder Moved" => "moved folder",
-            "Folder Restored" => "restored folder",
-            "User Registered" => "registered",
-            "User Deleted" => "removed",
-            "User Updated" => "updated profile for",
-            "Security Update" => "updated security for",
-            "Form Accessed" => "opened form",
-            "Form Archived" => "archived form",
-            "Repository Updated" => "updated repository",
-            _ => string.IsNullOrEmpty(eventName) ? "" : char.ToLowerInvariant(eventName[0]) + eventName[1..]
-        };
-    }
-
-    private void BuildEmployeeNameLookup(IEnumerable<ApplicationUser> users)
-    {
-        _employeeDisplayByKey.Clear();
-        foreach (var u in users)
-        {
-            var display = string.IsNullOrWhiteSpace(u.FullName)
-                ? (string.IsNullOrWhiteSpace(u.EmployeeId) ? (u.UserName ?? u.Email ?? "User") : u.EmployeeId.Trim())
-                : u.FullName.Trim();
-
-            void AddKey(string? key)
-            {
-                if (string.IsNullOrWhiteSpace(key)) return;
-                var k = key.Trim();
-                if (!_employeeDisplayByKey.ContainsKey(k))
-                    _employeeDisplayByKey[k] = display;
-            }
-
-            AddKey(u.FullName);
-            AddKey(u.UserName);
-            AddKey(u.Email);
-            AddKey(u.EmployeeId);
-        }
-    }
-
-    private string ResolveEmployeeName(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return "System";
-        var t = raw.Trim();
-        if (_employeeDisplayByKey.TryGetValue(t, out var name)) return name;
-        foreach (var kv in _employeeDisplayByKey)
-        {
-            if (string.Equals(kv.Key, t, StringComparison.OrdinalIgnoreCase))
-                return kv.Value;
-        }
-        return t;
-    }
-
-    private static string GetInitials(string name)
-    {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return "?";
-        if (parts.Length == 1) return parts[0].Length >= 2 ? parts[0][..2].ToUpperInvariant() : parts[0].ToUpperInvariant();
-        return string.Concat(parts[0][0], parts[^1][0]).ToUpperInvariant();
-    }
-
-    private record DisposalYearPoint(string Label, int Count);
     private record ActivityLine(string Name, string? Title, string Phrase, string Fallback, DateTime PerformedAt);
+
     private record ContributorRow(string Name, int Count);
 }

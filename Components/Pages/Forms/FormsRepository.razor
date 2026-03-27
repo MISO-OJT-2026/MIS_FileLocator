@@ -56,9 +56,7 @@
                         </div>
 
                         <div class="d-flex align-center">
-                            <MudTooltip Text="Open Form">
-                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" />
-                            </MudTooltip>
+                    
 
                             @* Admin Actions *@
                             <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight">
@@ -96,6 +94,7 @@
 
     private async Task OpenAddFormDialog()
     {
+        
         var dialog = await DialogService.ShowAsync<AddFormDialog>("Add New University Form");
         var result = await dialog.Result;
         if (!result.Canceled) await LoadForms();

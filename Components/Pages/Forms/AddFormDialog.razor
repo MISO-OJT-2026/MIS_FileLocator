@@ -7,20 +7,41 @@
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="4">
-            <MudTextField @bind-Value="_newForm.FormName" Label="Form Name (e.g., Adding/Changing Form)" Variant="Variant.Outlined" Required="true" />
-            <MudTextField @bind-Value="_newForm.FormNumber" Label="Form Number (e.g., TSU-OAR-SF-22)" Variant="Variant.Outlined" />
+        <MudGrid>
+            <MudItem xs="12" sm="8">
+                <MudTextField @bind-Value="_newForm.FormName"
+                              Label="Form Name (e.g., Adding/Changing Form)"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+            </MudItem>
 
-            <MudSelect T="string" Label="Issuing Office/Category" @bind-Value="_newForm.Category" Variant="Variant.Outlined" Required="true">
-                <MudSelectItem Value="@("Registrar")">Office of the Registrar</MudSelectItem>
-                <MudSelectItem Value="@("Admissions")">Admissions</MudSelectItem>
-                <MudSelectItem Value="@("CCS")">College of Computer Studies</MudSelectItem>
-                <MudSelectItem Value="@("Scholarship")">Scholarship Office</MudSelectItem>
-            </MudSelect>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_newForm.FormNumber"
+                              Label="Form Number"
+                              Placeholder="TSU-OAR-SF-22"
+                              Variant="Variant.Outlined" />
+            </MudItem>
 
-            <MudTextField @bind-Value="_newForm.PdfUrl" Label="PDF Link / URL"
-                          HelperText="Paste the tsu.edu.ph link here" Variant="Variant.Outlined" Required="true" />
-        </MudStack>
+            <MudItem xs="12">
+                <MudSelect T="string" Label="Issuing Office/Category"
+                           @bind-Value="_newForm.Category"
+                           Variant="Variant.Outlined"
+                           Required="true">
+                    <MudSelectItem Value="@("Registrar")">Office of the Registrar</MudSelectItem>
+                    <MudSelectItem Value="@("Admissions")">Admissions</MudSelectItem>
+                    <MudSelectItem Value="@("CCS")">College of Computer Studies</MudSelectItem>
+                    <MudSelectItem Value="@("Scholarship")">Scholarship Office</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_newForm.PdfUrl"
+                              Label="PDF Link / URL"
+                              HelperText="Paste the tsu.edu.ph link here"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+            </MudItem>
+        </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>

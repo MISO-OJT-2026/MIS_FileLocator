@@ -6,14 +6,14 @@
 @using MIS_FileLocator.Data
 @using Microsoft.EntityFrameworkCore
 
-
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 @inject ApplicationDbContext _context
 
 
 
-<MudDialog>
+<MudDialog >
     <DialogContent>
         <EditForm Model="_newCabinet" OnValidSubmit="SaveCabinet">
             <DataAnnotationsValidator />
