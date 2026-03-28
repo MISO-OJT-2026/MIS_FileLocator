@@ -2,13 +2,35 @@
 @using Microsoft.AspNetCore.Authorization
 @inherits LayoutComponentBase
 
-
-<MudThemeProvider Theme="@_theme" />
+<MudThemeProvider @ref="@_mudThemeProvider" Theme="@_theme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider BackdropClick="false" />
 <MudSnackbarProvider />
 <MudPopoverProvider />
 
 <MudLayout>
+    @* Added AppBar for the Toggle and Menu controls *@
+    <MudAppBar Elevation="0" Outlined="true" Class="mud-border-bottom">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => _drawerOpen = !_drawerOpen)" />
+        <MudImage> </MudImage>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-3">
+            
+            <img src="images/MIS-LOGO.png" alt="MIS Logo" style="height:32px; width:auto;" />
+
+            
+            <MudText Typo="Typo.h6" Style="font-weight: 800; white-space: nowrap;">
+                MIS File Locator
+            </MudText>
+        </MudStack>
+        <MudSpacer />
+
+        @* Dark Mode Toggle Button *@
+        <MudToggleIconButton @bind-Toggled="@_isDarkMode"
+                             Icon="@Icons.Material.Outlined.DarkMode" Color="Color.Inherit"
+                             ToggledIcon="@Icons.Material.Outlined.WbSunny" ToggledColor="Color.Inherit"
+                             title="@(_isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode")" />
+
+       
+    </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen"
                Variant="DrawerVariant.Mini"
@@ -16,47 +38,77 @@
                Elevation="0"
                Class="app-shell-drawer no-scrollbar"
                Style="overflow-x: hidden;">
-
+        @* Passing the state to your NavMenu *@
         <NavMenu SideBarOpen="_drawerOpen" />
-
     </MudDrawer>
 
-    <MudMainContent Class="pt-5 px-8 pb-10 app-shell-main">
-        @Body
+    <MudMainContent Class="app-shell-main">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6">
+            @Body
+        </MudContainer>
     </MudMainContent>
-
 </MudLayout>
-
-
+<style>
+    .mud-timeline-item:hover {
+        background-color: var(--mud-palette-action-default-hover);
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+</style>
 
 @code {
     private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private MudThemeProvider _mudThemeProvider;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            StateHasChanged();
+        }
+    }
+
 
     private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
         {
-            PaletteLight = new PaletteLight()
-            {
-            Primary = "#0e1824", // blue?
-            Secondary = "#b42318",
-            ActionDefault = "#0e1824",
-            TextSecondary = "rgba(14, 24, 36, 0.68)",
-            
-            Background = "#f0f4f8",
-            AppbarBackground = "#0e1824",
-            AppbarText = "#ffffff",
-            DrawerBackground = "#0e1824",
-            DrawerIcon = "#FFFFFF",
-            DrawerText = "#FFFFFF",
+            Primary = "#1a3a52",
+            Background = "#f8fafc",
+            AppbarBackground = "#ffffff",
+            AppbarText = "#0e1824",
+            DrawerBackground = "#0e1824", // Your dark sidebar in light mode
+            DrawerText = "#FFFFFF",       // Force white text for dark sidebar
+            DrawerIcon = "#FFFFFF",       // Force white icons for dark sidebar
             Surface = "#FFFFFF",
-            },
+            TextPrimary = "#0e1824",
+            TextSecondary = "rgba(14, 24, 36, 0.7)"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#5eb5f7",
+            Background = "#0b0f1a",
+            Surface = "#111827",
+            DrawerBackground = "#111827",
+            DrawerText = "#f9fafb",       
+            DrawerIcon = "#f9fafb",
+            AppbarBackground = "#0b0f1a",
+            AppbarText = "#f9fafb",
+            TextPrimary = "#f9fafb",
+            TextSecondary = "rgba(249, 250, 251, 0.7)", 
 
-            LayoutProperties = new LayoutProperties()
-            {
-                DefaultBorderRadius = "14px",
-                DrawerWidthLeft = "280px",
-                DrawerMiniWidthLeft = "80px"
-            },
 
+        },
+        
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "12px",
+            DrawerWidthLeft = "280px",
+            DrawerMiniWidthLeft = "80px",
+            AppbarHeight = "64px"
+        },
         Typography = new Typography()
         {
             Default = new DefaultTypography()
@@ -64,5 +116,5 @@
                 FontFamily = new[] { "Inter", "Roboto", "Helvetica", "Arial", "sans-serif" }
             }
         }
-        };
+    };
 }

@@ -1,171 +1,140 @@
+/* --- Sidebar Container --- */
+.app-shell-drawer.mud-drawer {
+    /* Uses the color defined in your PaletteLight/Dark DrawerBackground */
+    background-color: var(--mud-palette-drawer-background) !important;
+    border-right: 1px solid var(--mud-palette-divider);
+}
+.app-shell-drawer .mud-nav-link,
+.app-shell-drawer .mud-nav-group-toggle {
+    color: var(--mud-palette-drawer-text) !important;
+}
+
+.app-shell-drawer .mud-icon-root {
+    color: var(--mud-palette-drawer-icon) !important;
+}
+
+/* Fix the Active state specifically */
+::deep .mud-nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-left: 4px solid var(--mud-palette-primary) !important;
+    color: var(--mud-palette-primary) !important;
+}
+
+    ::deep .mud-nav-link.active .mud-icon-root {
+        color: var(--mud-palette-primary) !important;
+    }
+
+/* --- Nav Links --- */
+.nav-shell-menu .mud-nav-link {
+    border-radius: 0 24px 24px 0 !important;
+    margin-right: 12px;
+    margin-bottom: 4px;
+    transition: all 0.2s ease-in-out;
+    border-left: 4px solid transparent;
+}
+
+    /* Active State */
+    .nav-shell-menu .mud-nav-link.active {
+        background-color: var(--mud-palette-primary-hover) !important;
+        color: var(--mud-palette-primary-text) !important;
+        border-left: 4px solid var(--mud-palette-primary) !important;
+    }
+
+/* --- Nested Items In Group --- */
+.nav-shell-menu .mud-nav-group .mud-nav-link {
+    padding-left: 48px !important;
+    font-size: 0.875rem;
+}
+
+/* --- Scrollbar --- */
+.nav-menu-scroll {
+    flex-grow: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mud-palette-divider) transparent;
+}
+
+    .nav-menu-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .nav-menu-scroll::-webkit-scrollbar-thumb {
+        background-color: var(--mud-palette-divider);
+        border-radius: 10px;
+    }
+
+/* --- Main Content --- */
+.app-shell-main {
+    background-color: var(--mud-palette-background) !important;
+    min-height: 100vh;
+}
+
+/* --- Modern Glassmorphism Card --- */
 .glass-midnight {
-    
-    background: rgba(240, 244, 250, 0.4) !important;
- 
+    /* Uses theme surface color with transparency */
+    background: var(--mud-palette-surface-70) !important;
     backdrop-filter: blur(16px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
-    
-    border: 1px solid rgba(14, 24, 36, 0.12) !important;
-    
-    box-shadow: 0 10px 30px -5px rgba(14, 24, 36, 0.08) !important;
+    /* Dynamic border color based on theme */
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1) !important;
     border-radius: 20px !important;
     transition: all 0.3s ease;
 }
 
-    
     .glass-midnight:hover {
-        background: rgba(255, 255, 255, 0.55) !important;
+        background: var(--mud-palette-surface) !important;
         transform: translateY(-4px);
-        box-shadow: 0 20px 40px -10px rgba(14, 24, 36, 0.15) !important;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2) !important;
     }
-.custom-progress-container {
-    padding: 10px 0;
-    overflow: visible !important;
-    
+
+/* --- Navigation Alignment (Flattened) --- */
+/* This aligns Storage/Documents with Dashboard/Profile */
+.nav-shell-menu .mud-nav-group-toggle,
+.nav-shell-menu .mud-nav-link {
+    padding-left: 16px !important;
+    margin-right: 8px;
+    border-radius: 0 20px 20px 0 !important;
+    border-left: 4px solid transparent !important;
+    color: var(--mud-palette-drawer-text) !important;
 }
 
-
-.mud-progress-linear.custom-progress-bar {
-    height: 16px !important; /* Make it thick so we can't miss it */
-    background-color: rgba(0, 0, 0, 0.1) !important; /* Visible track */
-    display: block !important;
-    visibility: visible !important;
-    position: relative !important;
+/* Fixes nested sub-items alignment */
+.nav-shell-menu .mud-nav-group .mud-nav-link {
+    padding-left: 16px !important;
 }
+
+/* --- Active/Hover Glass State for Sidebar --- */
+.nav-shell-menu .mud-nav-link.mud-nav-link-active,
+.nav-shell-menu .mud-nav-link:hover,
+.nav-shell-menu .mud-nav-group-toggle:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #5eb5f7 !important;
+}
+
+/* Dark mode specific sidebar background tweak */
+.app-shell-drawer.mud-drawer {
+    background: linear-gradient(180deg, #152a3d 0%, #0e1824 42%, #0a121c 100%) !important;
+}
+
+/* --- Progress Bar Glass Style --- */
 .custom-progress-bar.mud-progress-linear {
     height: 16px !important;
     border-radius: 20px !important;
-    /* Glass track background */
-    background: rgba(14, 24, 36, 0.05) !important;
+    background: var(--mud-palette-divider) !important;
     backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(14, 24, 36, 0.1) !important;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-    overflow: hidden !important; /* Clips the bar edges for roundness */
+    border: 1px solid var(--mud-palette-divider) !important;
 }
 
 .custom-progress-bar .mud-progress-linear-bar {
     background: linear-gradient(90deg, #0e1824 0%, #2a5a7a 50%, #5eb5f7 100%) !important;
-    height: 16px !important;
     border-radius: 20px !important;
-    box-shadow: 0 0 12px rgba(94, 181, 247, 0.3) !important;
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important; 
 }
 
-    
-.custom-progress-bar .mud-progress-linear-inner {
-    background-color: transparent !important;
-    height: 20px !important;
-}
-
-
-
-.app-shell-drawer.mud-drawer .mud-drawer-content {
-    background-color: transparent !important;
-}
-  
-.app-shell-drawer.mud-drawer .mud-nav-link {
-    border-radius: 0 20px 20px 0 !important;
-    margin-right: 8px;
-   
-    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.3s ease, border-color 0.3s ease, transform 0.2s ease !important;
-    border-left: 4px solid transparent !important;
-}
-
-
-.app-shell-drawer .mud-nav-link,
-.app-shell-drawer .mud-nav-link-text,
-.app-shell-drawer .mud-nav-group-toggle,
-.app-shell-drawer .mud-icon-root {
-    color: rgba(255, 255, 255, 0.85) !important;
-}
-
-    .app-shell-drawer .mud-nav-link:hover,
-    .app-shell-drawer .mud-nav-link.mud-nav-link-active {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(20px) saturate(160%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-        color: #ffffff !important;
-        transform: translateX(4px);
-        border-left: 4px solid #5eb5f7 !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    }
-    .app-shell-drawer .mud-nav-link .mud-icon-root {
-        transition: color 0.3s ease !important;
-    }
-
-        .app-shell-drawer .mud-nav-link:hover .mud-icon-root,
-        .app-shell-drawer .mud-nav-link.mud-nav-link-active .mud-icon-root {
-            color: #ffffff !important;
-        }
-
-.app-shell-drawer.mud-drawer,
-.mud-drawer.app-shell-drawer {
-    background: linear-gradient(180deg, #152a3d 0%, #0e1824 42%, #0a121c 100%) !important;
-}
-
-
-   
+/* --- Main Content Area --- */
 .app-shell-main {
-    background-color: #f0f4f8 !important;
-
-
-
-    min-height: 100vh;
-    padding: 2rem !important;
-}
-
-
-.app-shell-drawer .mud-nav-group.mud-expanded > .mud-nav-group-toggle,
-.app-shell-drawer .mud-nav-group.mud-expanded > .mud-nav-group-toggle .mud-nav-link-text,
-.app-shell-drawer .mud-nav-group.mud-expanded > .mud-nav-group-toggle .mud-icon-root,
-.app-shell-drawer .mud-nav-group.mud-expanded > .mud-nav-group-toggle .mud-nav-group-caret-icon {
-    color: #ffffff !important;
-}
-/*VIEW LOG BUTTON */
-/* --- Modern Glass "View Log" Button --- */
-.glass-view-log {
-    background: rgba(255, 255, 255, 0.15) !important;
-    /* 2. Add the blur (This is the "Glass" part) */
-    backdrop-filter: blur(12px) saturate(170%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(170%) !important;
-    /* 3. Add a thin, bright border to define the edge */
-    border: 1px solid #0e1824 !important;
-    padding: 8px 20px !important;
-    border-radius: 50px !important; /* Full pill shape */
-    color: #0e1824 !important;
-    font-weight: 700 !important;
-    text-decoration: none !important;
-   
-    transition: all 0.3s ease !important;
-}
-
-    .glass-view-log:hover {
-        /* Slightly more opaque on hover so it feels reactive */
-        background: #0e1824;
-        color: #ffffff;
-        box-shadow: 0 8px 20px rgba(94, 181, 247, 0.3) !important; /* Ocean Blue Glow */
-        transform: translateY(-2px);
-    }
-    /* Safe Z-index for tooltips or popping out */
-    .glass-view-log:active {
-        transform: translateY(0);
-        box-shadow: 0 4px 10px rgba(94, 181, 247, 0.2) !important;
-    }
-
-/* --- 3. MOBILE OPTIMIZATION --- */
-@media (max-width: 768px) {
-    .app-shell-drawer.mud-drawer {
-        background: #0e1824 !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
-        box-shadow: 2px 0 12px rgba(14, 24, 36, 0.08);
-    }
-}
-
-/* --- 4. MAIN CONTENT AREA (FIXING THE CREAM ISSUE) --- */
-.app-shell-main {
-    background: #ffffff !important; /* Forces the main area to be white, not cream */
+    background-color: var(--mud-palette-background) !important;
     min-height: 100vh;
 }

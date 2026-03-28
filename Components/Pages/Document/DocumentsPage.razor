@@ -1,5 +1,4 @@
 ﻿@page "/documentsPage"
-@attribute [Authorize]
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using FileLocator.Models
@@ -17,7 +16,7 @@
 @inject IRoleService RoleService 
 
 
-<MudText Typo="Typo.h5" Class="mb-4">Document Inventory</MudText>
+<MudText Typo="Typo.h5" Class="mb-4" Color="Color.Primary">Document Inventory</MudText>
 
 <MudDataGrid T="Documents"
              Items="@_allDocuments.Where(d => !d.IsDeleted && !d.IsDisposal)"
@@ -27,7 +26,7 @@
 RowClick = "OnRowClicked">
     <ToolBarContent>
         <MudStack Row="true" Spacing="2">
-    @* Add Document button - Admin and Editor only *@
+   
         @if (RoleService.CanAddEditDocuments(_currentUserRole))
         {
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenAddDialog())">
@@ -73,7 +72,6 @@ RowClick = "OnRowClicked">
             </CellTemplate>
         </TemplateColumn>
 
-        @* Confidentiality Column *@
         <TemplateColumn Title="Security">
             <CellTemplate>
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
@@ -83,7 +81,6 @@ RowClick = "OnRowClicked">
             </CellTemplate>
         </TemplateColumn>
 
-        @* Actions column - Admin and Editor only *@
         @if (RoleService.CanAddEditDocuments(_currentUserRole))
         {
             <TemplateColumn Title="Actions">
@@ -129,7 +126,7 @@ RowClick = "OnRowClicked">
     }
 
     private async Task LoadDocuments() =>
-        // We need to 'Include' the whole path so we can show where the file is!
+        
         _allDocuments = await _context.Documents
             .Include(d => d.ConfidentialityLevel)
             .Include(d => d.Folder)
@@ -164,7 +161,7 @@ RowClick = "OnRowClicked">
 
         if (!result.Canceled)
         {
-            await LoadDocuments(); // Refresh the grid
+            await LoadDocuments(); 
         }
 
     }
@@ -198,7 +195,7 @@ RowClick = "OnRowClicked">
         {
             try
             {
-                // location of the document 
+                
 
                 var location = await _context.Folders
                 .Where(f => f.Id == doc.FolderId)
@@ -224,12 +221,12 @@ RowClick = "OnRowClicked">
 
                 _context.TransactionLogs.Add(log);
 
-                // 4. Save both changes in one transaction
+               
                 await _context.SaveChangesAsync();
 
                 Snackbar.Add("Document moved to trash.", Severity.Success);
 
-                // 5. Refresh the list
+               
                 await LoadDocuments();
             }
             catch (Exception ex)

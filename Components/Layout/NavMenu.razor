@@ -1,5 +1,10 @@
-@using System.Security.Claims
 @implements IDisposable
+@inject NavigationManager NavigationManager
+@inject ICurrentUserService _currentUserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IRoleService RoleService
+
+@using System.Security.Claims
 @inject NavigationManager NavigationManager
 @inject ICurrentUserService _currentUserService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -8,39 +13,31 @@
 <MudNavMenu Class="nav-shell-menu">
     @if (SideBarOpen)
     {
-        
-        <div @onclick:stopPropagation="true"
-             style="display: flex; flex-direction: column; height: calc(100vh - 32px);">
-            
-
-            
-            <div class="d-flex flex-column align-center py-4 px-4">
-                <MudAvatar Style="background-color: rgba(255,255,255,0.92) !important; color: #0e1824 !important; font-weight: 700; height:70px; width:70px; border: 1px solid rgba(255,255,255,0.35);" Class="mb-3">
+        <div class="d-flex flex-column" style="height: calc(100vh - 32px);">
+            @* User Profile Section *@
+            <div class="d-flex flex-column align-center py-6 px-4">
+                <MudAvatar Color="Color.Default" Style="height:70px; width:70px;" Class="mb-3 elevation-4">
                     @_currentUserInitials
                 </MudAvatar>
-                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: white;">@_currentUserName</MudText>
-                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.7);">@_currentUserRole</MudText>
+                @* Use Color.Inherit so it follows the DrawerText theme setting *@
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: inherit;">@_currentUserName</MudText>
+                <MudText Typo="Typo.body2" Style="color: inherit; opacity: 0.7;">@_currentUserRole</MudText>
             </div>
 
-            
-            <div class="links-container no-scrollbar nav-menu-scroll">
-                
-                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">GENERAL</MudText>
-                
-               
+            <div class="nav-menu-scroll no-scrollbar px-2">
+                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">GENERAL</MudText>
+
                 @if (RoleService.CanAccessDashboard(_currentUserRole))
                 {
                     <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
                 }
-                
-              
+
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
                 <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
 
-                
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
-                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2"  >
+                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
                         <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
                         <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
                         <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
@@ -48,13 +45,11 @@
 
                     <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
                         <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
-                        <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
-                        <MudNavLink Href="/barrowed">Barrowed Documents</MudNavLink>
-                        <MudNavLink Href="/recyclebin">Recycle Bin </MudNavLink>
+                        <MudNavLink Href="/disposed">Disposed</MudNavLink>
+                        <MudNavLink Href="/barrowed">Borrowed</MudNavLink>
+                        <MudNavLink Href="/recyclebin">Recycle Bin</MudNavLink>
                     </MudNavGroup>
                 }
-                
-               
                 @if (_currentUserRole == "Viewer")
                 {
                     <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
@@ -63,67 +58,55 @@
                     </MudNavGroup>
                 }
 
-                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2" Style="color: white; font-weight: bold; opacity: 0.8;">ADMIN & TOOLS</MudText>
+                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">ADMIN & TOOLS</MudText>
 
-                
                 @if (RoleService.CanAccessUserManagement(_currentUserRole))
                 {
                     <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
                 }
 
-               
                 @if (RoleService.CanAccessForms(_currentUserRole))
                 {
-                   
                     <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
                 }
             </div>
 
-           
-            <div class="mt-auto pt-4 px-2">
-    <AuthorizeView>
-        <Authorized>
-           
-            <form action="Account/Logout" method="post">
-               
-                <AntiforgeryToken />
-
-                
-                <input type="hidden" name="returnUrl" value="" />
-
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Text"
-                           StartIcon="@Icons.Material.Filled.Logout"
-                           FullWidth="true"
-                           Style="justify-content: flex-start; text-transform: none; color: white;">
-                    Logout
-                </MudButton>
-            </form>
-        </Authorized>
-    </AuthorizeView>
-</div>
+            @* Logout Section *@
+            <div class="mt-auto pa-4">
+                <AuthorizeView>
+                    <Authorized>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="returnUrl" value="" />
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Text"
+                                       StartIcon="@Icons.Material.Filled.Logout"
+                                       FullWidth="true"
+                                       
+                                       Color="Color.Inherit"
+                                       Class="justify-start text-none"
+                                       Style="opacity: 0.8;">
+                                Logout
+                            </MudButton>
+                        </form>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
         </div>
     }
     else
     {
-       
-    
-        @* MINI STATE: Standardized background and padding *@
-            <div class="mini-sidebar-container">
-                <div class="d-flex flex-column align-center py-6 gap-6">
-                    <MudIcon Icon="@Icons.Material.Filled.SdCard" Size="Size.Large" Style="color: white; margin-bottom: 20px;" />
-
-                    <MudIconButton Icon="@Icons.Material.Filled.Dashboard" Color="Color.Inherit" Class="mini-nav-icon" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Color="Color.Inherit" Class="mini-nav-icon" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Description" Color="Color.Inherit" Class="mini-nav-icon" />
-                    <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Inherit" Class="mini-nav-icon" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Assignment" Color="Color.Inherit" Class="mini-nav-icon" />
-
-                    <div class="mt-auto">
-                        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Class="mini-nav-icon" />
-                    </div>
-                </div>
+        @* MINI STATE *@
+        <div class="d-flex flex-column align-center py-6 gap-4">
+            <MudIcon Icon="@Icons.Material.Filled.SdCard" Color="Color.Primary" Size="Size.Large" Class="mb-6" />
+            <MudIconButton Icon="@Icons.Material.Filled.Dashboard" href="/dashboard" />
+            <MudIconButton Icon="@Icons.Material.Filled.Inventory2" href="/storages/cabinets" />
+            <MudIconButton Icon="@Icons.Material.Filled.Description" href="/documentsPage" />
+            <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" href="/admin/users" />
+            <div class="mt-auto">
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Error" />
             </div>
+        </div>
     }
 </MudNavMenu>
 
@@ -161,6 +144,12 @@
         margin-left: 0 !important;
         border-radius: 0 20px 20px 0 !important; /* Rounded glass edge */
     }
+
+        .mud-nav-link.active {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-left: 4px solid var(--mud-palette-primary) !important;
+            color: var(--mud-palette-primary) !important;
+        }
 
     a {
         text-decoration: none;

@@ -79,12 +79,12 @@ namespace MIS_FileLocator.Services
 
         public bool CanAccessForms(string role)
         {
-            return role == "Admin" || role == "Editor";
+            return role == "Admin" || role == "Editor" || role == "Viewer";
         }
 
         public bool CanAccessTransactionLogs(string role)
         {
-            return role == "Admin" || role == "Editor";
+            return role == "Admin";
         }
     }
 }
