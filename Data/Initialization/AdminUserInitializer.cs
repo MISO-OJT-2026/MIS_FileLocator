@@ -26,11 +26,20 @@ namespace MIS_FileLocator.Data.Initialization
 
                 };
 
-                var result = await userManager.CreateAsync(adminUser,  adminPassword);
+                var result = await userManager.CreateAsync(adminUser, adminPassword);
 
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
+                    Console.WriteLine("Admin user created successfully!");
+                }
+                else
+                {
+                    // THIS WILL TELL YOU WHY IT FAILED
+                    foreach (var error in result.Errors)
+                    {
+                        Console.WriteLine($"Error: {error.Description}");
+                    }
                 }
 
             }

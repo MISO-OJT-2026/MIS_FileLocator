@@ -1,0 +1,186 @@
+@page "/admin/qr-codes"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+@inject NavigationManager Navigation
+@inject QrCodeGeneratorService QrGen
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary">QR codes</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+    Box codes list folders and all documents in that box. Folder codes list documents and support Quick Borrow for staff.
+    Print labels or copy links for physical placement (box side panel, folder tab).
+</MudText>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.FlexStart" Wrap="Wrap.Wrap">
+        <MudTextField @bind-Value="_search" Placeholder="Search name or location..." Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 240px;" />
+        <MudSelect T="string" @bind-Value="_kindFilter" Label="Show" Dense="true" Variant="Variant.Outlined" Style="min-width: 140px;">
+            <MudSelectItem Value="@("all")">All</MudSelectItem>
+            <MudSelectItem Value="@("box")">Boxes only</MudSelectItem>
+            <MudSelectItem Value="@("folder")">Folders only</MudSelectItem>
+        </MudSelect>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy"
+                   OnClick="CopyAllFilteredUrls" Disabled="@(!_rows.Any())">
+            Copy all URLs (filtered)
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudDataGrid T="QrCodeRow" Items="@FilteredRows" Dense="true" Hover="true" Filterable="false" Breakpoint="Breakpoint.Sm">
+        <Columns>
+            <PropertyColumn Property="x => x.Kind" Title="Type" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <PropertyColumn Property="x => x.LocationPath" Title="Location" />
+            <TemplateColumn Title="QR" Sortable="false">
+                <CellTemplate>
+                    <img src="@context.Item.DataUrl" alt="QR" style="width: 72px; height: 72px; image-rendering: pixelated;" />
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Link" Sortable="false">
+                <CellTemplate>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        @context.Item.TargetUrl
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="" Sortable="false" StickyRight="true">
+                <CellTemplate>
+                    <MudButtonGroup Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" title="Copy link"
+                                       OnClick="@(() => CopyUrl(context.Item.TargetUrl))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Print" title="Print label"
+                                       OnClick="@(() => PrintLabel(context.Item))" />
+                    </MudButtonGroup>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="QrCodeRow" />
+        </PagerContent>
+    </MudDataGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private string _search = "";
+    private string _kindFilter = "all";
+    private List<QrCodeRow> _rows = new();
+
+    private IEnumerable<QrCodeRow> FilteredRows
+    {
+        get
+        {
+            IEnumerable<QrCodeRow> q = _rows;
+            if (_kindFilter == "box") q = q.Where(r => r.Kind == "Box");
+            else if (_kindFilter == "folder") q = q.Where(r => r.Kind == "Folder");
+
+            if (string.IsNullOrWhiteSpace(_search)) return q;
+
+            var s = _search.Trim();
+            return q.Where(r =>
+                r.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                r.LocationPath.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                r.TargetUrl.Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var baseUri = Navigation.BaseUri.TrimEnd('/');
+        var boxes = await _context.FileBoxes.AsNoTracking()
+            .Include(b => b.FillingCabinet)
+            .Where(b => !b.IsArchived)
+            .OrderBy(b => b.FillingCabinet!.Name).ThenBy(b => b.Name)
+            .ToListAsync();
+
+        foreach (var b in boxes)
+        {
+            var url = $"{baseUri}/qr/box/{b.Id}";
+            _rows.Add(new QrCodeRow(
+                "Box",
+                b.Id,
+                b.Name.Trim(),
+                $"{b.FillingCabinet?.Name} › {b.Name}".Trim(),
+                url,
+                QrGen.ToDataUrl(url, 6)));
+        }
+
+        var folders = (await _context.Folders.AsNoTracking()
+            .Include(f => f.FileBox)!.ThenInclude(x => x!.FillingCabinet)
+            .Where(f => !f.IsArchived)
+            .ToListAsync())
+            .OrderBy(f => f.FileBox?.FillingCabinet?.Name ?? "")
+            .ThenBy(f => f.FileBox?.Name ?? "")
+            .ThenBy(f => f.Name)
+            .ToList();
+
+        foreach (var f in folders)
+        {
+            var box = f.FileBox;
+            var url = $"{baseUri}/qr/folder/{f.Id}";
+            var loc = $"{box?.FillingCabinet?.Name} › {box?.Name} › {f.Name}";
+            _rows.Add(new QrCodeRow(
+                "Folder",
+                f.Id,
+                f.Name.Trim(),
+                loc.Trim(),
+                url,
+                QrGen.ToDataUrl(url, 6)));
+        }
+
+        _loading = false;
+    }
+
+    private async Task CopyUrl(string url)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            Snackbar.Add("Link copied.", Severity.Success);
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("misQr.copyTextFallback", url);
+            Snackbar.Add("Link copied.", Severity.Success);
+        }
+    }
+
+    private async Task CopyAllFilteredUrls()
+    {
+        var lines = FilteredRows.Select(r => $"{r.Kind}\t{r.Name}\t{r.TargetUrl}").ToList();
+        var text = string.Join(Environment.NewLine, lines);
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            Snackbar.Add($"Copied {lines.Count} link(s).", Severity.Success);
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("misQr.copyTextFallback", text);
+            Snackbar.Add($"Copied {lines.Count} link(s).", Severity.Success);
+        }
+    }
+
+    private async Task PrintLabel(QrCodeRow row)
+    {
+        await JS.InvokeVoidAsync("misQr.printQrLabel", row.Kind + ": " + row.Name, row.DataUrl, row.TargetUrl, row.LocationPath);
+    }
+
+    private sealed record QrCodeRow(string Kind, int EntityId, string Name, string LocationPath, string TargetUrl, string DataUrl);
+}

@@ -18,6 +18,7 @@ namespace MIS_FileLocator.Services
         bool CanAddEditDocuments(string role);
         bool CanAccessForms(string role);
         bool CanAccessTransactionLogs(string role);
+        bool CanAccessAdminTools(string role);
     }
 
     public class RoleService : IRoleService
@@ -79,10 +80,16 @@ namespace MIS_FileLocator.Services
 
         public bool CanAccessForms(string role)
         {
-            return role == "Admin" || role == "Editor" || role == "Viewer";
+            return role == "Admin" || role == "Editor";
         }
 
         public bool CanAccessTransactionLogs(string role)
+        {
+            return role == "Admin";
+        }
+
+        /// <summary>QR admin, and other tools reserved for system administrators only (not Editors).</summary>
+        public bool CanAccessAdminTools(string role)
         {
             return role == "Admin";
         }

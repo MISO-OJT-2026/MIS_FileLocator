@@ -1,5 +1,6 @@
-﻿@page "/disposed"
-
+@page "/disposed"
+@attribute [Authorize(Roles = "Admin,Editor")]
+@using Microsoft.AspNetCore.Authorization
 @using MIS_FileLocator.Models
 @using FileLocator.Models
 @using MIS_FileLocator.Data

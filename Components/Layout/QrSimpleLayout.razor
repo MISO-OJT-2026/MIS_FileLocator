@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Outlined="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <img src="images/MIS-LOGO.png" alt="MIS" style="height:28px; width:auto;" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">MIS File Locator</MudText>
+        </MudStack>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudButton Href="/dashboard" Variant="Variant.Text" Color="Color.Primary">Dashboard</MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/Account/Login" Variant="Variant.Text" Color="Color.Primary">Staff login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+    <MudMainContent Class="pt-4 pb-8">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>

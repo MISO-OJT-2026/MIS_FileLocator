@@ -1,0 +1,153 @@
+@page "/qr/folder/{FolderId:int}"
+@layout QrSimpleLayout
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+@inject IDialogService DialogService
+@inject IRoleService RoleService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary">Filing folder</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_folder == null)
+{
+    <MudAlert Severity="Severity.Warning">This folder was not found or is archived.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-1"><b>@_folder.Name</b></MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@_locationPath</MudText>
+
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Documents</MudText>
+    @if (_documents.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">No active documents in this folder.</MudText>
+    }
+    else
+    {
+        <MudTable Items="@_documents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="width: 140px;">Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.IsBorrowed)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Borrowed</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Available</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Action">
+                    <AuthorizeView Context="authContext">
+                        <Authorized>
+                            @if (_canBorrow && !context.IsBorrowed && !context.IsDeleted && !context.IsDisposal)
+                            {
+                                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                           OnClick="@(() => QuickBorrow(context))">
+                                    Quick borrow
+                                </MudButton>
+                            }
+                            else if (context.IsBorrowed)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                            }
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Href="@GetLoginHref()">Sign in to borrow</MudButton>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+}
+
+@code {
+    [Parameter] public int FolderId { get; set; }
+
+    private Folder? _folder;
+    private List<Documents> _documents = new();
+    private string _locationPath = "";
+    private bool _loading = true;
+    private bool _canBorrow;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = auth.User.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        _canBorrow = RoleService.CanAddEditDocuments(role);
+
+        _folder = await _context.Folders
+            .AsNoTracking()
+            .Include(f => f.FileBox)!.ThenInclude(b => b!.FillingCabinet)
+            .FirstOrDefaultAsync(f => f.Id == FolderId);
+
+        if (_folder == null)
+        {
+            _loading = false;
+            return;
+        }
+
+        if (_folder.IsArchived)
+        {
+            _folder = null;
+            _loading = false;
+            return;
+        }
+
+        var box = _folder.FileBox;
+        _locationPath = $"{box?.FillingCabinet?.Name ?? "Cabinet"} › {box?.Name ?? "Box"} › {_folder.Name}";
+
+        _documents = await _context.Documents.AsNoTracking()
+            .Where(d => d.FolderId == FolderId && !d.IsDeleted && !d.IsDisposal)
+            .OrderBy(d => d.Title)
+            .ToListAsync();
+
+        _loading = false;
+    }
+
+    private string GetLoginHref()
+    {
+        var returnUrl = Uri.EscapeDataString($"/qr/folder/{FolderId}");
+        return $"/Account/Login?ReturnUrl={returnUrl}";
+    }
+
+    private async Task QuickBorrow(Documents doc)
+    {
+        var parameters = new DialogParameters<QuickBorrowDialog>
+        {
+            { x => x.DocumentId, doc.Id },
+            { x => x.DocumentTitle, doc.Title }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<QuickBorrowDialog>("Quick borrow", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+            await ReloadDocs();
+    }
+
+    private async Task ReloadDocs()
+    {
+        _documents = await _context.Documents.AsNoTracking()
+            .Where(d => d.FolderId == FolderId && !d.IsDeleted && !d.IsDisposal)
+            .OrderBy(d => d.Title)
+            .ToListAsync();
+        StateHasChanged();
+    }
+}

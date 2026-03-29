@@ -65,6 +65,7 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 builder.Services.AddScoped<IRoleService, RoleService>();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<QrCodeGeneratorService>();
 
 var app = builder.Build();
 

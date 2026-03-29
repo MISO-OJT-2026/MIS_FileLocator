@@ -11,11 +11,11 @@ namespace FileLocator.Services
     public class CurrentUserService : ICurrentUserService
     {
         private readonly AuthenticationStateProvider _authStateProvider;
-        private readonly IServiceProvider _serviceProvider ;
+        private readonly IServiceProvider _serviceProvider;
         public CurrentUserService(AuthenticationStateProvider authStateProvider, IServiceProvider serviceProvider)
         {
             _authStateProvider = authStateProvider;
-            _serviceProvider = serviceProvider; 
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<string> GetCurrentFullNameAsync()
@@ -25,7 +25,7 @@ namespace FileLocator.Services
 
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                
+
                 var fullNameClaim = user.FindFirst("FullName")?.Value;
 
                 if (!string.IsNullOrWhiteSpace(fullNameClaim))
@@ -59,7 +59,7 @@ namespace FileLocator.Services
 
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                
+
                 return user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             }
 

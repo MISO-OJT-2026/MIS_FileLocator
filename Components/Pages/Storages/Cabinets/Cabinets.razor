@@ -1,4 +1,6 @@
-﻿@page "/storages/cabinets"
+@page "/storages/cabinets"
+@attribute [Authorize(Roles = "Admin,Editor")]
+@using Microsoft.AspNetCore.Authorization
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Components.Pages  
 @using MIS_FileLocator.Models

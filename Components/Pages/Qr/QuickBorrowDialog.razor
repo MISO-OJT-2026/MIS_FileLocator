@@ -1,0 +1,104 @@
+@using FileLocator.Models
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+@inject ISnackbar Snackbar
+@inject ICurrentUserService _currentUserService
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Quick borrow</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">@DocumentTitle</MudText>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_doc == null)
+        {
+            <MudAlert Severity="Severity.Error">Document could not be found.</MudAlert>
+        }
+        else if (_doc.IsDeleted || _doc.IsDisposal)
+        {
+            <MudAlert Severity="Severity.Warning">This document is not available for borrowing.</MudAlert>
+        }
+        else if (_doc.IsBorrowed)
+        {
+            <MudAlert Severity="Severity.Info">Already borrowed by <b>@_doc.CurrentBorrower</b>.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudTextField @bind-Value="_borrower" Label="Borrower name" Variant="Variant.Outlined" Required="true" />
+                <MudDatePicker Label="Expected return (optional)" @bind-Date="_expectedReturn" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" />
+                <MudTextField @bind-Value="_remarks" Label="Remarks (optional)" Variant="Variant.Outlined" Lines="2" />
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        @if (_doc != null && !_doc.IsDeleted && !_doc.IsDisposal && !_doc.IsBorrowed && !_loading)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Mark as borrowed</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public int DocumentId { get; set; }
+    [Parameter] public string DocumentTitle { get; set; } = "";
+
+    private Documents? _doc;
+    private bool _loading = true;
+    private string _borrower = "";
+    private DateTime? _expectedReturn;
+    private string? _remarks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _doc = await _context.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == DocumentId);
+        _loading = false;
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_borrower))
+        {
+            Snackbar.Add("Borrower name is required.", Severity.Warning);
+            return;
+        }
+
+        var realDoc = await _context.Documents.FirstOrDefaultAsync(d => d.Id == DocumentId);
+        if (realDoc == null || realDoc.IsDeleted || realDoc.IsDisposal || realDoc.IsBorrowed)
+        {
+            Snackbar.Add("This document cannot be borrowed.", Severity.Error);
+            return;
+        }
+
+        var current = await _currentUserService.GetCurrentFullNameAsync();
+        realDoc.IsBorrowed = true;
+        realDoc.CurrentBorrower = _borrower.Trim();
+        realDoc.ExpectedReturnDate = _expectedReturn;
+        realDoc.BorrowRemarks = string.IsNullOrWhiteSpace(_remarks) ? null : _remarks.Trim();
+        realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
+        realDoc.UpdatedBy = current;
+
+        _context.TransactionLogs.Add(new TransactionLog
+        {
+            FullName = current,
+            EventName = "Borrow Status Updated",
+            Description = $"Document '{realDoc.Title}' borrowed by {realDoc.CurrentBorrower} (QR quick borrow).",
+            Status = "Success",
+            PerformedAt = DateTime.UtcNow.AddHours(8)
+        });
+
+        await _context.SaveChangesAsync();
+        Snackbar.Add("Borrow recorded.", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

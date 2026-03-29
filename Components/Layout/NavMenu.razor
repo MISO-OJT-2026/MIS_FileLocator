@@ -33,7 +33,11 @@
                 }
 
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
-                <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
+
+                @if (RoleService.CanAccessForms(_currentUserRole))
+                {
+                    <MudNavLink Href="/forms" Icon="@Icons.Material.Filled.Assignment">Forms</MudNavLink>
+                }
 
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
@@ -50,24 +54,29 @@
                         <MudNavLink Href="/recyclebin">Recycle Bin</MudNavLink>
                     </MudNavGroup>
                 }
-                @if (_currentUserRole == "Viewer")
+                else if (RoleService.CanAccessDocuments(_currentUserRole))
                 {
-                    <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
-                        <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
-                        <MudNavLink Href="/disposed">Disposed Documents</MudNavLink>
-                    </MudNavGroup>
+                    <MudNavLink Href="/documentsPage" Icon="@Icons.Material.Filled.Description" Match="NavLinkMatch.Prefix">Documents</MudNavLink>
                 }
 
-                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">ADMIN & TOOLS</MudText>
-
-                @if (RoleService.CanAccessUserManagement(_currentUserRole))
+                @if (RoleService.CanAccessUserManagement(_currentUserRole) || RoleService.CanAccessAdminTools(_currentUserRole) || RoleService.CanAccessTransactionLogs(_currentUserRole))
                 {
-                    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
-                }
+                    <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">ADMIN & TOOLS</MudText>
 
-                @if (RoleService.CanAccessForms(_currentUserRole))
-                {
-                    <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
+                    @if (RoleService.CanAccessUserManagement(_currentUserRole))
+                    {
+                        <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
+                    }
+
+                    @if (RoleService.CanAccessAdminTools(_currentUserRole))
+                    {
+                        <MudNavLink Href="/admin/qr-codes" Icon="@Icons.Material.Filled.QrCode">QR Codes</MudNavLink>
+                    }
+
+                    @if (RoleService.CanAccessTransactionLogs(_currentUserRole))
+                    {
+                        <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
+                    }
                 }
             </div>
 
@@ -99,10 +108,23 @@
         @* MINI STATE *@
         <div class="d-flex flex-column align-center py-6 gap-4">
             <MudIcon Icon="@Icons.Material.Filled.SdCard" Color="Color.Primary" Size="Size.Large" Class="mb-6" />
-            <MudIconButton Icon="@Icons.Material.Filled.Dashboard" href="/dashboard" />
-            <MudIconButton Icon="@Icons.Material.Filled.Inventory2" href="/storages/cabinets" />
+            @if (RoleService.CanAccessDashboard(_currentUserRole))
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Dashboard" href="/dashboard" />
+            }
+            @if (RoleService.CanAccessStorage(_currentUserRole))
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Inventory2" href="/storages/cabinets" />
+            }
             <MudIconButton Icon="@Icons.Material.Filled.Description" href="/documentsPage" />
-            <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" href="/admin/users" />
+            @if (RoleService.CanAccessAdminTools(_currentUserRole))
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.QrCode" href="/admin/qr-codes" />
+            }
+            @if (RoleService.CanAccessUserManagement(_currentUserRole))
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" href="/admin/users" />
+            }
             <div class="mt-auto">
                 <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Error" />
             </div>
@@ -165,8 +187,6 @@
         await OnToggleSideBar.InvokeAsync();
     }
 
-    private bool _storageExpanded = false;
-    private bool _documentsExpanded = false;
     private string? currentUrl;
     private string _currentUserInitials = "";
     private string _currentUserRole = "";

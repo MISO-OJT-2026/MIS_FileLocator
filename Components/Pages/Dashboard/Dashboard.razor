@@ -1,5 +1,5 @@
-@page "/"
 @page "/dashboard"
+@attribute [Authorize(Roles = "Admin,Editor")]
 @using MudBlazor
 @using MudBlazor.Charts
 @using MIS_FileLocator.Data
@@ -8,7 +8,6 @@
 @using FileLocator.Models
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
-@using System.Text.RegularExpressions
 @using System.Globalization
 @rendermode InteractiveServer
 
@@ -144,7 +143,13 @@
                             {
                                 var line = GetActivityDisplay(log);
                                 <MudTimelineItem Color="Color.Info" Size="Size.Small">
-                                    <MudText Typo="Typo.body2" Class="mud-text-primary"><b>@line.Name</b> @line.Phrase "@line.Title"</MudText>
+                                    <MudText Typo="Typo.body2" Class="mud-text-primary">
+                                        <b>@line.ActorName</b><span class="mud-text-secondary"> · @line.Action</span>
+                                    </MudText>
+                                    @if (!string.IsNullOrEmpty(line.Detail))
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1" Style="line-height: 1.45;">@line.Detail</MudText>
+                                    }
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">@line.PerformedAt.ToString("MMM dd, h:mm tt")</MudText>
                                 </MudTimelineItem>
                             }
@@ -264,20 +269,12 @@
     }
     private static string GetFirstName(string? n) => string.IsNullOrWhiteSpace(n) ? "there" : n.Trim().Split(' ')[0];
 
-    private ActivityLine GetActivityDisplay(TransactionLog log) => new ActivityLine(ResolveEmployeeName(log.FullName), ExtractQuotedTitle(log.Description), MapEventToPhrase(log.EventName), "", log.PerformedAt);
-
-
-    private static string? ExtractQuotedTitle(string? d) 
+    private ActivityLine GetActivityDisplay(TransactionLog log)
     {
-        
-        if (string.IsNullOrEmpty(d)) return null; var m = Regex.Match(d, @"'([^']*)'"); return m.Success ? m.Groups[1].Value : null;
+        var action = string.IsNullOrWhiteSpace(log.EventName) ? "Activity" : log.EventName.Trim();
+        var detail = string.IsNullOrWhiteSpace(log.Description) ? null : log.Description.Trim();
+        return new ActivityLine(ResolveEmployeeName(log.FullName), action, detail, log.PerformedAt);
     }
-
-
-    private static string MapEventToPhrase(string e) => e switch 
-    {
-        "Document Disposed" => "disposed of", "Document Created" => "filed", _ => e.ToLower() 
-    };
     private void BuildEmployeeNameLookup(IEnumerable<ApplicationUser> users) 
     {
         foreach (var u in users) _employeeDisplayByKey[u.FullName ?? u.UserName!] = u.FullName ?? u.UserName!; 
@@ -286,7 +283,7 @@
 
     private static string GetInitials(string n) => string.IsNullOrEmpty(n) ? "?" : string.Join("", n.Split(' ').Select(x => x[0])).ToUpper();
 
-    private record ActivityLine(string Name, string? Title, string Phrase, string Fallback, DateTime PerformedAt);
+    private record ActivityLine(string ActorName, string Action, string? Detail, DateTime PerformedAt);
 
 
     private record ContributorRow(string Name, int Count);

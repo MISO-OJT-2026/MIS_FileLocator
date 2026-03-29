@@ -1,4 +1,6 @@
-﻿@page "/forms"
+@page "/forms"
+@attribute [Authorize(Roles = "Admin,Editor")]
+@using Microsoft.AspNetCore.Authorization
 @using FileLocator.Models
 @using FileLocator.Services
 @using MIS_FileLocator.Data

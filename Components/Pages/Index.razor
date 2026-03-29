@@ -1,17 +1,29 @@
-﻿
-@using Microsoft.AspNetCore.Components.Authorization
+@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
 
-<AuthorizeView Roles="Admin,Editor">
-    <Authorized>
-        
-        <Dashboard />
-    </Authorized>
-    <NotAuthorized>
-        
-        <DocumentsPage />
-    </NotAuthorized>
-</AuthorizeView>
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-12">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    <MudText Typo="Typo.body2" Class="mt-4 mud-text-secondary">Loading…</MudText>
+</MudStack>
 
 @code {
-  
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = auth.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+
+        var target = role switch
+        {
+            "Viewer" => "/documentsPage",
+            "Admin" or "Editor" => "/dashboard",
+            _ => "/documentsPage"
+        };
+
+        Navigation.NavigateTo(target, replace: true);
+    }
 }

@@ -28,7 +28,11 @@
                 </MudItem>
 
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" />
+                    <MudSelect T-"string" @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined">
+                       <MudSelectItem Value="@("Network Unit")">Network Unit</MudSelectItem>
+                        <MudSelectItem Value="@("Hardware Unit")">Hardware Unit</MudSelectItem>
+                        <MudSelectItem Value="@("Software Unit/Front Desk")">Software Unit/Front Desk</MudSelectItem>
+                        </MudSelect>
                 </MudItem>
 
                 <MudItem xs="12" md="6">
