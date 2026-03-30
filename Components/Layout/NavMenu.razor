@@ -5,10 +5,13 @@
 @inject IRoleService RoleService
 
 @using System.Security.Claims
+@using MudBlazor
 @inject NavigationManager NavigationManager
 @inject ICurrentUserService _currentUserService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IRoleService RoleService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 
 <MudNavMenu Class="nav-shell-menu">
     @if (SideBarOpen)
@@ -91,7 +94,7 @@
                                        Variant="Variant.Text"
                                        StartIcon="@Icons.Material.Filled.Logout"
                                        FullWidth="true"
-                                       
+                                      
                                        Color="Color.Inherit"
                                        Class="justify-start text-none"
                                        Style="opacity: 0.8;">
@@ -192,7 +195,7 @@
     private string _currentUserRole = "";
     private string _currentUserName ="";
 
-    
+
     protected override async Task OnInitializedAsync()
     {
         _currentUserName = await _currentUserService.GetCurrentFullNameAsync();
@@ -205,7 +208,7 @@
                 : _currentUserName.Substring(0, Math.Min(2, _currentUserName.Length)).ToUpper();
         }
 
-       
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
@@ -218,7 +221,7 @@
             _currentUserRole = roleClaim != null ? roleClaim.Value : "Staff";
         }
     }
-    
+
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -234,6 +237,25 @@
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    private async Task HandleLogout()
+    {
+       
+      
+
+        bool? result = await DialogService.ShowMessageBoxAsync(
+        "Logout Confirmation", "You are about to end your session. Do you want to proceed?",
+        yesText: "Log Me Out",
+        cancelText: "Cancel"
+        
+        );
+        if (result == true)
+        {
+            
+            await JSRuntime.InvokeVoidAsync("document.getElementById('logout-form').submit()");
+        }
+        
     }
 
     
