@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using MIS_FileLocator.Services;
 using FileLocator.Services;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
