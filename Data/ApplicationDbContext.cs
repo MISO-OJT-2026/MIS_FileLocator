@@ -1,4 +1,4 @@
-using FileLocator.Models;
+﻿using FileLocator.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MIS_FileLocator.Models;
@@ -7,9 +7,18 @@ using System.Text.Json;
 
 namespace MIS_FileLocator.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUserService)
-        : IdentityDbContext<ApplicationUser>(options)
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
+        private readonly ICurrentUserService _currentUserService;
+
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            ICurrentUserService currentUserService)
+            : base(options)
+        {
+            _currentUserService = currentUserService;
+        }
+
         public DbSet<FillingCabinet> FillingCabinets { get; set; }
         public DbSet<FileBoxes> FileBoxes { get; set; }
         public DbSet<Folder> Folders { get; set; }
@@ -23,27 +32,29 @@ namespace MIS_FileLocator.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // --- THE POSTGRESQL "CLEANER" LOOP ---
-            // This forces EF Core to forget SQL Server types (nvarchar, bit, datetime2)
+            // ✅ FORCE PostgreSQL-safe types
             foreach (var entity in modelBuilder.Model.GetEntityTypes())
             {
                 foreach (var property in entity.GetProperties())
                 {
-                    var columnType = property.GetColumnType();
-                    if (columnType != null)
+                    if (property.ClrType == typeof(string))
                     {
-                        // Remove SQL Server specific types so Postgres can use its own defaults
-                        if (columnType.Contains("nvarchar") ||
-                            columnType.Contains("bit") ||
-                            columnType.Contains("datetime2") ||
-                            columnType.Contains("datetimeoffset"))
-                        {
-                            property.SetColumnType(null);
-                        }
+                        property.SetColumnType("text"); // PostgreSQL safe
+                    }
+
+                    if (property.ClrType == typeof(bool))
+                    {
+                        property.SetColumnType("boolean");
+                    }
+
+                    if (property.ClrType == typeof(DateTime))
+                    {
+                        property.SetColumnType("timestamp with time zone");
                     }
                 }
             }
 
+            // ✅ Indexes
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(x => x.EmployeeId)
                 .IsUnique();
@@ -52,6 +63,7 @@ namespace MIS_FileLocator.Data
                 .HasIndex(x => x.Name)
                 .IsUnique();
 
+            // ✅ Relationships
             modelBuilder.Entity<FileBoxes>()
                 .HasOne(x => x.FillingCabinet)
                 .WithMany(x => x.FileBox)
@@ -76,9 +88,10 @@ namespace MIS_FileLocator.Data
                 .HasForeignKey(x => x.ConfidentialityLevelId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // ✅ Seed Data
             modelBuilder.Entity<ConfidentialityLevel>().HasData(
                 new ConfidentialityLevel { Id = 1, Name = "Public" },
-                new ConfidentialityLevel { Id = 2, Name = "Internal Use " },
+                new ConfidentialityLevel { Id = 2, Name = "Internal Use" },
                 new ConfidentialityLevel { Id = 3, Name = "Restricted" },
                 new ConfidentialityLevel { Id = 4, Name = "Confidential" }
             );
@@ -86,8 +99,8 @@ namespace MIS_FileLocator.Data
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
-            var currentUserId = await currentUserService.GetCurrentUserIdAsync();
+            var currentUsername = await _currentUserService.GetCurrentFullNameAsync();
+            var currentUserId = await _currentUserService.GetCurrentUserIdAsync();
 
             foreach (var entry in ChangeTracker.Entries())
             {
@@ -96,11 +109,12 @@ namespace MIS_FileLocator.Data
                     if (entry.State == EntityState.Added)
                     {
                         doc.FiledBy = currentUsername;
-                        doc.FiledAt = DateTime.UtcNow; // Always use UtcNow for Postgres
+                        doc.FiledAt = DateTime.UtcNow;
                     }
                     else if (entry.State == EntityState.Modified)
                     {
                         var isDeletedProperty = entry.Property("IsDeleted");
+
                         if (doc.IsDeleted && isDeletedProperty.IsModified)
                         {
                             doc.DeletedAt = DateTime.UtcNow;
@@ -110,7 +124,7 @@ namespace MIS_FileLocator.Data
                 }
             }
 
-            // Audit Trail Logic
+            // ✅ Audit Trail
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added ||
                             e.State == EntityState.Modified ||
