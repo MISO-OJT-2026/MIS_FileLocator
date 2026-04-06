@@ -4,70 +4,43 @@ using Microsoft.EntityFrameworkCore;
 using MIS_FileLocator.Models;
 using MIS_FileLocator.Services;
 using System.Text.Json;
-
+using System.Threading.Channels;
 namespace MIS_FileLocator.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUserService) : IdentityDbContext<ApplicationUser>(options)
     {
-        private readonly ICurrentUserService _currentUserService;
 
-        public ApplicationDbContext(
-            DbContextOptions<ApplicationDbContext> options,
-            ICurrentUserService currentUserService)
-            : base(options)
-        {
-            _currentUserService = currentUserService;
-        }
+         public DbSet<FillingCabinet> FillingCabinets { get; set; }
+         public DbSet<FileBoxes> FileBoxes { get; set; }
 
-        public DbSet<FillingCabinet> FillingCabinets { get; set; }
-        public DbSet<FileBoxes> FileBoxes { get; set; }
         public DbSet<Folder> Folders { get; set; }
-        public DbSet<Documents> Documents { get; set; }
+        public DbSet<Documents> Documents { get; set; } 
+
         public DbSet<ConfidentialityLevel> ConfidentialityLevels { get; set; }
-        public DbSet<AuditTrails> AuditTrails { get; set; }
+
+        public DbSet<AuditTrails>AuditTrails { get; set; }
+
         public DbSet<TransactionLog> TransactionLogs { get; set; }
+
         public DbSet<FormTemplate> FormTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ✅ FORCE PostgreSQL-safe types
-            foreach (var entity in modelBuilder.Model.GetEntityTypes())
-            {
-                foreach (var property in entity.GetProperties())
-                {
-                    if (property.ClrType == typeof(string))
-                    {
-                        property.SetColumnType("text"); // PostgreSQL safe
-                    }
-
-                    if (property.ClrType == typeof(bool))
-                    {
-                        property.SetColumnType("boolean");
-                    }
-
-                    if (property.ClrType == typeof(DateTime))
-                    {
-                        property.SetColumnType("timestamp with time zone");
-                    }
-                }
-            }
-
-            // ✅ Indexes
             modelBuilder.Entity<ApplicationUser>()
                 .HasIndex(x => x.EmployeeId)
                 .IsUnique();
 
+
             modelBuilder.Entity<FillingCabinet>()
                 .HasIndex(x => x.Name)
-                .IsUnique();
+                .IsUnique(); // now same name 
 
-            // ✅ Relationships
             modelBuilder.Entity<FileBoxes>()
                 .HasOne(x => x.FillingCabinet)
                 .WithMany(x => x.FileBox)
-                .HasForeignKey(x => x.FillingCabinetId)
+                .HasForeignKey (x => x.FillingCabinetId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Folder>()
@@ -76,55 +49,62 @@ namespace MIS_FileLocator.Data
                 .HasForeignKey(x => x.FileBoxId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+           
+
             modelBuilder.Entity<Documents>()
                 .HasOne(x => x.Folder)
                 .WithMany(x => x.Documents)
                 .HasForeignKey(x => x.FolderId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+
             modelBuilder.Entity<Documents>()
-                .HasOne(x => x.ConfidentialityLevel)
+                .HasOne(x =>x.ConfidentialityLevel)
                 .WithMany()
                 .HasForeignKey(x => x.ConfidentialityLevelId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ✅ Seed Data
             modelBuilder.Entity<ConfidentialityLevel>().HasData(
                 new ConfidentialityLevel { Id = 1, Name = "Public" },
-                new ConfidentialityLevel { Id = 2, Name = "Internal Use" },
+                new ConfidentialityLevel { Id = 2, Name = "Internal Use " },  
                 new ConfidentialityLevel { Id = 3, Name = "Restricted" },
                 new ConfidentialityLevel { Id = 4, Name = "Confidential" }
-            );
+                );
         }
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+       // LIKE A TRIGGER
+         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            var currentUsername = await _currentUserService.GetCurrentFullNameAsync();
-            var currentUserId = await _currentUserService.GetCurrentUserIdAsync();
+            // for deletion- doc 
+
+      
+            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
+            var currentUserId = await currentUserService.GetCurrentUserIdAsync();
+
+
 
             foreach (var entry in ChangeTracker.Entries())
             {
-                if (entry.Entity is Documents doc)
-                {
+                 if(entry.Entity is Documents doc)
+
                     if (entry.State == EntityState.Added)
                     {
                         doc.FiledBy = currentUsername;
-                        doc.FiledAt = DateTime.UtcNow;
+                        doc.FiledAt = DateTime.UtcNow.AddHours(8);
                     }
                     else if (entry.State == EntityState.Modified)
                     {
                         var isDeletedProperty = entry.Property("IsDeleted");
-
                         if (doc.IsDeleted && isDeletedProperty.IsModified)
                         {
-                            doc.DeletedAt = DateTime.UtcNow;
+                            doc.DeletedAt = DateTime.UtcNow.AddHours(8);
+
                             doc.DeletedByUserId = currentUserId;
                         }
                     }
-                }
-            }
-
-            // ✅ Audit Trail
+            
+        }
+            
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added ||
                             e.State == EntityState.Modified ||
@@ -133,8 +113,10 @@ namespace MIS_FileLocator.Data
 
             var auditLogs = new List<AuditTrails>();
 
+           
             foreach (var entry in entries)
             {
+                
                 if (entry.Entity is AuditTrails || entry.Entity is TransactionLog)
                     continue;
 
@@ -143,18 +125,21 @@ namespace MIS_FileLocator.Data
                     TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
                     Action = entry.State.ToString(),
                     PerformedAt = DateTime.UtcNow,
-                    FullName = currentUsername
+                    FullName = currentUsername 
                 };
 
+                
                 var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
                 auditTrail.RecordId = primaryKey?.CurrentValue?.ToString() ?? "Unknown";
 
+               
                 if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
                 {
                     var oldValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.OriginalValue);
                     auditTrail.OldValues = JsonSerializer.Serialize(oldValues);
                 }
 
+                
                 if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
                 {
                     var newValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
@@ -169,7 +154,9 @@ namespace MIS_FileLocator.Data
                 await AuditTrails.AddRangeAsync(auditLogs, cancellationToken);
             }
 
+            
             return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }
+    
