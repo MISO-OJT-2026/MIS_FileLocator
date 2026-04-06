@@ -1,13 +1,14 @@
 
-using Microsoft.AspNetCore.Identity;
+using FileLocator.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MIS_FileLocator.Components.Account;
 using MIS_FileLocator.Data;
 using MIS_FileLocator.Data.Initialization;
-using MudBlazor.Services;
 using MIS_FileLocator.Services;
-using FileLocator.Services;
+using MudBlazor.Services;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -37,11 +38,17 @@ builder.Services.AddMudServices(config =>
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<ApplicationDbContext>(options => {
+    options.UseNpgsql(connectionString);
+    
+    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options => {
+    options.UseNpgsql(connectionString);
+    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
