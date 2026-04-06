@@ -7,6 +7,7 @@ using MIS_FileLocator.Data.Initialization;
 using MudBlazor.Services;
 using MIS_FileLocator.Services;
 using FileLocator.Services;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,11 +33,13 @@ builder.Services.AddMudServices(config =>
         MudBlazor.Defaults.Classes.Position.BottomRight;
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
