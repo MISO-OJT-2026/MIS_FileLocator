@@ -103,7 +103,8 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapRazorComponents<MIS_FileLocator.Components.App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(MudBlazor.MudButton).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
 

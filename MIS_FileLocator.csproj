@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+	  <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+	  <EmitStaticAssetsManifest>true</EmitStaticAssetsManifest>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-MIS_FileLocator-eb9b01d1-12e2-42f4-9015-9bf23b5d3d48</UserSecretsId>
