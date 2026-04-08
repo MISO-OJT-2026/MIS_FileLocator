@@ -92,10 +92,7 @@ RowClick = "OnRowClicked">
                                        Color="Color.Warning"
                                        Size="Size.Small"
                                        OnClick="@(() => OpenEditDialog(doc.Item))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Size="Size.Small"
-                                       OnClick="@(() => ConfirmDelete(doc.Item))" />
+                     
                     </div>
                 </CellTemplate>
             </TemplateColumn>
@@ -185,60 +182,7 @@ RowClick = "OnRowClicked">
 
         if (!result.Canceled) await LoadDocuments();
     }
-    private async Task ConfirmDelete(Documents doc)
-    {
-        bool? result = await DialogService.ShowMessageBoxAsync(
-        "Delete Confirmation", 
-        $"Are you sure you want to delete '{doc.Title}'?", 
-        yesText:"Delete", cancelText:"Cancel"
-        );
-
-        if (result == true)
-        {
-            try
-            {
-                
-
-                var location = await _context.Folders
-                .Where(f => f.Id == doc.FolderId)
-                .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
-                .FirstOrDefaultAsync();
-
-
-                doc.IsDeleted = true;
-                _context.Documents.Update(doc);
-
-                var user = await _currentUserService.GetCurrentFullNameAsync();
-
-
-                var log = new TransactionLog
-                {
-                    FullName= user,
-                    EventName= "Document Deleted", 
-                    Description = $"Delete Document '{doc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}.",
-                    Status= "Success",
-                    PerformedAt = DateTime.UtcNow.AddHours(8)
-
-                };
-
-                _context.TransactionLogs.Add(log);
-
-               
-                await _context.SaveChangesAsync();
-
-                Snackbar.Add("Document moved to trash.", Severity.Success);
-
-               
-                await LoadDocuments();
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Error during deletion: {ex.Message}", Severity.Error);
-            }
-        }
-
-
-    }
+    
     private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
     {
         var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };

@@ -18,7 +18,7 @@
 <div class="login-page-wrapper">
     <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="height: 100vh; padding-top: 8vh;">
 
-        @* We use MudPaper with Elevation 0 to let our custom glass CSS handle the look *@
+        
         <MudPaper Elevation="0" Class="glass-card pa-8">
 
             <div class="d-flex flex-column align-center mb-2">
@@ -59,16 +59,7 @@
                                   ShrinkLabel="true"
                                   Class="glass-input mb-1" />
 
-                    <div class="d-flex align-center justify-space-between mt-n2 mb-2">
-                        <MudCheckBox @bind-Value="Input.RememberMe"
-                             Label="Remember Me"
-                             Color="Color.Primary"
-                             T="bool"
-                             Class="glass-checkbox mt-2 mb-2" 
-                             Style="position: relative; z-index: 10;" />
-
-                        
-                    </div>
+                    
 
                     <MudButton ButtonType="ButtonType.Submit"
                                Variant="Variant.Filled"
