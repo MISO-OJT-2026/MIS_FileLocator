@@ -10,7 +10,6 @@ using FileLocator.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseStaticWebAssets();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -104,8 +103,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapRazorComponents<MIS_FileLocator.Components.App>()
-    .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies(typeof(MudBlazor.MudButton).Assembly);
+    .AddInteractiveServerRenderMode();
 
 app.MapAdditionalIdentityEndpoints();
 
