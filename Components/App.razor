@@ -7,6 +7,10 @@
     <base href="/" />
 
     <link href="https://cdn.jsdelivr.net/npm/mudblazor@7.15.0/dist/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["css/app-shell.css"]" />
+    <link rel="stylesheet" href="@Assets["MIS_FileLocator.styles.css"]" />
 
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -17,6 +21,8 @@
     <Routes @rendermode="RenderModeForPage" />
 
     <script src="https://cdn.jsdelivr.net/npm/mudblazor@7.15.0/dist/MudBlazor.min.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+    <script src="js/qr.js"></script>
 
 <script>
         window.downloadFile = (fileName, content) => {
