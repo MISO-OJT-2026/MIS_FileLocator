@@ -47,25 +47,15 @@ else
             <PropertyColumn Property="x => x.Kind" Title="Type" />
             <PropertyColumn Property="x => x.Name" Title="Name" />
             <PropertyColumn Property="x => x.LocationPath" Title="Location" />
-            <TemplateColumn Title="QR" Sortable="false">
-                <CellTemplate>
-                    <img src="@context.Item.DataUrl" alt="QR" style="width: 72px; height: 72px; image-rendering: pixelated;" />
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Link" Sortable="false">
-                <CellTemplate>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        @context.Item.TargetUrl
-                    </MudText>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="" Sortable="false" StickyRight="true">
+           
+          
+            <TemplateColumn Title="Action" Sortable="false"  >
                 <CellTemplate>
                     <MudButtonGroup Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" title="Copy link"
-                                       OnClick="@(() => CopyUrl(context.Item.TargetUrl))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Print" title="Print label"
+                       <MudTooltip Text="Print QR Code" Placement="Placement.Top">
+                        <MudIconButton Icon="@Icons.Material.Filled.Print" 
                                        OnClick="@(() => PrintLabel(context.Item))" />
+                        </MudTooltip>
                     </MudButtonGroup>
                 </CellTemplate>
             </TemplateColumn>

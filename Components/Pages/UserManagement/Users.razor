@@ -49,10 +49,12 @@
                                        OnClick="@(() => OpenResetPasswordDialog(context.Id, context.FullName))" />
                     </MudTooltip>
 
+                    <MudTooltip Text="Delete User">
                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                    Color="Color.Error"
                                    Size="Size.Small"
                                    OnClick="@(() => DeleteUser(context.Id))" />
+                    </MudTooltip>
                 </MudStack>
             </MudTd>
         </RowTemplate>
