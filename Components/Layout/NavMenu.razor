@@ -10,8 +10,6 @@
 @inject ICurrentUserService _currentUserService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IRoleService RoleService
-@inject IDialogService DialogService
-@inject IJSRuntime JSRuntime
 
 <MudNavMenu Class="nav-shell-menu">
     @if (SideBarOpen)
@@ -86,17 +84,16 @@
             <div class="mt-auto pa-4">
                 <AuthorizeView>
                     <Authorized>
-                        <form action="Account/Logout" method="post">
+                        <form action="Account/Logout" method="post" class="nav-logout-form">
                             <AntiforgeryToken />
                             <input type="hidden" name="returnUrl" value="" />
                             <MudButton ButtonType="ButtonType.Submit"
                                        Variant="Variant.Text"
                                        StartIcon="@Icons.Material.Filled.Logout"
                                        FullWidth="true"
-                                      
                                        Color="Color.Inherit"
-                                       Class="justify-start text-none"
-                                       Style="opacity: 0.8;">
+                                       Class="justify-start text-none nav-logout-btn"
+                                       Style="opacity: 0.9;">
                                 Logout
                             </MudButton>
                         </form>
@@ -178,6 +175,36 @@
     a {
         text-decoration: none;
     }
+
+    .nav-logout-form {
+        width: 100%;
+    }
+
+    .nav-logout-form ::deep .nav-logout-btn.mud-button-root {
+        transition: background-color .2s ease, color .2s ease, opacity .2s ease, border-color .2s ease;
+        border-radius: 0 20px 20px 0 !important;
+        margin-right: 0 !important;
+        margin-left: -4px !important;
+        width: calc(100% + 4px) !important;
+        min-height: 44px;
+        justify-content: flex-start !important;
+        border-left: 4px solid transparent !important;
+        padding-left: 20px !important;
+        text-transform: none !important;
+        font-weight: 600 !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .nav-logout-form ::deep .nav-logout-btn.mud-button-root:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-left: 4px solid var(--mud-palette-primary) !important;
+        color: var(--mud-palette-primary) !important;
+        opacity: 1 !important;
+    }
+
+    .nav-logout-form ::deep .nav-logout-btn .mud-button-start-icon {
+        margin-right: 10px;
+    }
 </style>
 
 @code {
@@ -238,24 +265,5 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
-    private async Task HandleLogout()
-    {
-       
-      
 
-        bool? result = await DialogService.ShowMessageBoxAsync(
-        "Logout Confirmation", "You are about to end your session. Do you want to proceed?",
-        yesText: "Log Me Out",
-        cancelText: "Cancel"
-        
-        );
-        if (result == true)
-        {
-            
-            await JSRuntime.InvokeVoidAsync("document.getElementById('logout-form').submit()");
-        }
-        
-    }
-
-    
 }

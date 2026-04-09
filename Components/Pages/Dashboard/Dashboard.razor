@@ -16,17 +16,17 @@
 @inject ICurrentUserService CurrentUser
 @inject IRoleService RoleService
 
-<MudStack Spacing="4" Class="pa-4">
+<MudStack Spacing="4" Class="pa-6">
     @if (_loading)
     {
-        <MudPaper Class="pa-12 d-flex flex-column glass-midnight align-center justify-center" Elevation="0" Style="background:transparent; min-height: 400px;">
+        <MudPaper Class="pa-12 d-flex flex-column align-center justify-center" Elevation="0" Style="background:transparent; min-height: 400px;">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.body1" Class="mt-4" Color="Color.Primary">Loading records...</MudText>
+            <MudText Typo="Typo.body1" Class="mt-4" Color="Color.Primary">Optimizing your view...</MudText>
         </MudPaper>
     }
     else
     {
-        @* Hero Section - Uses MudBlazor text colors for Dark Mode compatibility *@
+        @* HERO SECTION *@
         <MudPaper Elevation="0" Outlined="true" Class="pa-8 glass-midnight rounded-xl border-solid border-2 mud-border-primary">
             <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 700;">@DateTime.Now.ToString("dddd, MMMM d, yyyy")</MudText>
             <MudText Typo="Typo.h3" Style="font-weight: 800;" Class="mud-text-primary">Hello, @_greetingName</MudText>
@@ -34,54 +34,112 @@
         </MudPaper>
 
         <MudGrid Spacing="3">
-            @* Stat Tiles *@
-            <MudItem xs="12" sm="6" md="4">
-                <SolidStatTile Title="Filing cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="var(--mud-palette-primary)" />
+            @* STAT TILES - Optimized Row *@
+            <MudItem xs="12" sm="6" md="2">
+                <SolidStatTile Title="Cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="var(--mud-palette-primary)" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <SolidStatTile Title="Filing boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#b42318" />
+            <MudItem xs="12" sm="6" md="2">
+                <SolidStatTile Title="Boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#b42318" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
+            <MudItem xs="12" sm="6" md="2">
                 <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="#7b6ab3" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <SolidStatTile Title="Active documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#3a6351" />
+            <MudItem xs="12" sm="6" md="2">
+                <SolidStatTile Title="Documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#3a6351" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <SolidStatTile Title="Pending disposal" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#7d1c1c" />
+            <MudItem xs="12" sm="6" md="2">
+                <SolidStatTile Title="Pending" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#7d1c1c" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <SolidStatTile Title="Total users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#0e1824" />
+            <MudItem xs="12" sm="6" md="2">
+                <SolidStatTile Title="Users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#0e1824" />
             </MudItem>
 
-            @* Disposal Trend *@
+            @* TREND CHART - Main Visual *@
             <MudItem xs="12" lg="8">
-                <MudPaper Outlined="true" Class="pa-6 pb-10 rounded-xl h-100">
-                    <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mud-text-primary">Disposal Trend</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-4 d-block">Activity vs. Disposals (Last 6 Years)</MudText>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_series"
-                              ChartLabels="@_xAxisLabels" 
-                              Width="100%"
-                              Height="500px"
-                              CanHideSeries="true"
-                              ChartOptions="@_chartOptions"
-                              ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
+                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 shadow-sm">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" Class="mr-2" />
+                        <MudText Typo="Typo.h6" Style="font-weight: 700;">Disposal & Filing Trend</MudText>
+                    </div>
+                    <div style="height: 320px;">
+                        <MudChart T="double" ChartType="ChartType.Line"
+                                  ChartSeries="@_series"
+                                  ChartLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="300px"
+                                  ChartOptions="@_chartOptions"
+                                  ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
+                    </div>
                 </MudPaper>
             </MudItem>
 
-            @* Top 5 Contributors *@
+            @* CIRCULATION - The "Donut" *@
             <MudItem xs="12" lg="4">
-                <MudPaper Outlined="true" Class="pa-6 glass-midnight rounded-xl h-100">
-                    <MudText Typo="Typo.h6" Class="mb-4 mud-text-primary" Style="font-weight: 700;">Top 5 Contributors</MudText>
-                    <MudStack Spacing="2">
+                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 glass-midnight">
+                    <MudText Typo="Typo.h6" Style="font-weight: 700;">File Circulation</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">Current storage vs. out-of-office</MudText>
+        
+                    <div class="d-flex justify-center align-center" style="height: 220px; width: 100%;">
+                        @if (_hasBorrowableDocs)
+                        {
+                            <div class="circulation-donut" style="@GetBorrowDonutStyle()">
+                                <div class="circulation-donut-center">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Borrowed</MudText>
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight:700;">@($"{_borrowedPercent:F0}%")</MudText>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.DonutLarge" Color="Color.Default" Size="Size.Large" />
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No active documents yet</MudText>
+                            </MudStack>
+                        }
+                    </div>
+
+                    <MudStack Spacing="2" Class="mt-4">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2">Return Compliance</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Success" Style="font-weight: 700;">@_returnRate%</MudText>
+                        </div>
+                        <MudProgressLinear Color="Color.Success" Value="@_returnRate" Size="Size.Small" Rounded="true" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            @* BOTTOM ROW: THREE EQUAL COLUMNS *@
+            <MudItem xs="12" md="4">
+                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                        <MudText Typo="Typo.h6" Style="font-weight:700;">Disposal Progress</MudText>
+                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px;">
+                            @foreach (var y in _yearChoices)
+                            {
+                                <MudSelectItem Value="y">@y</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Year Compliance: <b>@GetPipelinePercent().ToString("F0")%</b></MudText>
+                    <MudProgressLinear Color="Color.Primary" Size="Size.Large" Value="@GetPipelinePercent()" Rounded="true" Class="mb-2" />
+                    <div class="d-flex justify-space-between">
+                        <MudText Typo="Typo.caption">@_disposedInSelectedYear Disposed</MudText>
+                        <MudText Typo="Typo.caption">Target: @_totalPipelineYear</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700;">Top Contributors</MudText>
+                    <MudStack Spacing="1">
                         @foreach (var c in _topContributors)
                         {
-                            <div class="d-flex align-center gap-3 py-2">
-                                <MudAvatar Color="Color.Primary" Size="Size.Medium" Variant="Variant.Filled">@GetInitials(c.Name)</MudAvatar>
-                                <div class="d-flex flex-column">
-                                    <MudText Typo="Typo.body2" Style="font-weight: 600;" Class="mud-text-primary">@c.Name</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Success">@c.Count actions recorded</MudText>
+                            <div class="d-flex align-center gap-3 py-1">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">@GetInitials(c.Name)</MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 600;">@c.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Success">@c.Count Actions</MudText>
                                 </div>
                             </div>
                         }
@@ -89,68 +147,20 @@
                 </MudPaper>
             </MudItem>
 
-            @* Disposal Progress *@
-            <MudItem xs="12" md="6">
-                <MudPaper Outlined="true" Class="pa-6 glass-midnightrounded-xl h-100">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.h6" Style="font-weight:700;" Class="mud-text-primary">Disposal Progress</MudText>
-                        <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:120px;">
-                            @foreach (var y in _yearChoices)
-                            {
-                                <MudSelectItem Value="y">@y</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudStack>
-                    <div class="mt-8">
-                        
-                        @{
-                            var status = GetDisposalStatus();
-                        }
-
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                            <MudText Typo="Typo.subtitle2" Class="mud-text-primary">
-                                Year Compliance: <b>@GetPipelinePercent().ToString("F0")%</b>
-                            </MudText>
-                            <MudChip T="string"
-                                     Variant="Variant.Text"
-                                     Color="@status.Color"
-                                     Size="Size.Small"
-                                     Icon="@status.Icon"
-                                     Style="font-weight: 700;">
-                                @status.Text
-                            </MudChip>
-                        </MudStack>
-                        <MudProgressLinear Color="Color.Primary" Size="Size.Large" Value="@GetPipelinePercent()" Rounded="true" />
-                        <div class="d-flex justify-space-between mt-2">
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@_disposedInSelectedYear Disposed</MudText>
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Target: @_totalPipelineYear</MudText>
-                        </div>
-                    </div>
- 
-                </MudPaper>
-            </MudItem>
-
-            @* Recent Activity *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="4">
                 <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-                        <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mud-text-primary">Recent Activity</MudText>
-                        <MudButton Href="/transaction-logs" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">View Log</MudButton>
-                    </MudStack>
-                    <div style="max-height: 350px; overflow-y: auto;" class="no-scrollbar">
-                        <MudTimeline TimelinePosition="TimelinePosition.Start">
-                            @foreach (var log in _activityFeed.Take(8))
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6" Style="font-weight: 700;">Recent Activity</MudText>
+                        <MudButton Href="/transaction-logs" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">View All</MudButton>
+                    </div>
+                    <div style="max-height: 250px; overflow-y: auto;" class="no-scrollbar">
+                        <MudTimeline TimelinePosition="TimelinePosition.Start" Dense="true">
+                            @foreach (var log in _activityFeed.Take(5))
                             {
                                 var line = GetActivityDisplay(log);
                                 <MudTimelineItem Color="Color.Info" Size="Size.Small">
-                                    <MudText Typo="Typo.body2" Class="mud-text-primary">
-                                        <b>@line.ActorName</b><span class="mud-text-secondary"> · @line.Action</span>
-                                    </MudText>
-                                    @if (!string.IsNullOrEmpty(line.Detail))
-                                    {
-                                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1" Style="line-height: 1.45;">@line.Detail</MudText>
-                                    }
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@line.PerformedAt.ToString("MMM dd, h:mm tt")</MudText>
+                                    <MudText Typo="Typo.caption" Class="d-block" Style="font-weight:700;">@line.ActorName</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@line.Action · @line.PerformedAt.ToString("h:mm tt")</MudText>
                                 </MudTimelineItem>
                             }
                         </MudTimeline>
@@ -160,6 +170,28 @@
         </MudGrid>
     }
 </MudStack>
+
+<style>
+    .circulation-donut {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+    }
+
+    .circulation-donut-center {
+        width: 122px;
+        height: 122px;
+        border-radius: 50%;
+        background: var(--mud-palette-background);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+    }
+</style>
 
 @code {
     private bool _loading = true;
@@ -182,67 +214,150 @@
 
     protected override async Task OnInitializedAsync()
     {
-
-
-       
-        _selectedDisposalYear = DateTime.Now.Year;
-        await LoadAsync();
         _selectedDisposalYear = DateTime.Now.Year;
         await LoadAsync();
     }
 
     private async Task LoadAsync()
+{
+    _loading = true;
+    var now = DateTime.Now;
+
+
+    var fullName = await CurrentUser.GetCurrentFullNameAsync();
+    _greetingName = GetFirstName(fullName);
+
+    
+    var users = await UserManager.Users
+        .AsNoTracking()
+        .Select(u => new { u.FullName, u.UserName })
+        .ToListAsync();
+    
+    _totalUsers = users.Count;
+    _employeeDisplayByKey.Clear();
+    foreach (var u in users) _employeeDisplayByKey[u.FullName ?? u.UserName!] = u.FullName ?? u.UserName!;
+
+    
+    var stats = await Db.Documents
+        .AsNoTracking()
+        .Select(d => new { d.IsDeleted, d.IsDisposal })
+        .GroupBy(x => 1) 
+        .Select(g => new {
+            ActiveDocs = g.Count(d => !d.IsDeleted && !d.IsDisposal),
+            DisposedDocs = g.Count(d => d.IsDisposal && !d.IsDeleted)
+        })
+        .FirstOrDefaultAsync();
+
+    _activeDocuments = stats?.ActiveDocs ?? 0;
+    _cabinets = await Db.FillingCabinets.CountAsync();
+    _boxes = await Db.FileBoxes.CountAsync();
+    _folders = await Db.Folders.CountAsync();
+
+  
+    var sixYearsAgo = now.Year - 5;
+    var rawChartData = await Db.Documents
+        .AsNoTracking()
+            .Where(d => !d.IsDeleted && d.FiledAt.Year >= sixYearsAgo)
+            .GroupBy(d => d.FiledAt.Year)
+        .Select(g => new { 
+            Year = g.Key, 
+            Active = g.Count(d => !d.IsDisposal), 
+            Disposed = g.Count(d => d.IsDisposal) 
+        })
+        .ToListAsync();
+
+    
+    var labels = new List<string>();
+    var activeData = new List<double>();
+    var disposalData = new List<double>();
+
+    for (var i = 0; i < 6; i++)
     {
-        _loading = true;
-        var now = DateTime.Now;
-
-        var fullName = await CurrentUser.GetCurrentFullNameAsync();
-        _greetingName = GetFirstName(fullName);
-
-        var users = await UserManager.Users.AsNoTracking().ToListAsync();
-        BuildEmployeeNameLookup(users);
-
-        _cabinets = await Db.FillingCabinets.CountAsync();
-        _boxes = await Db.FileBoxes.CountAsync();
-        _folders = await Db.Folders.CountAsync();
-        _activeDocuments = await Db.Documents.CountAsync(d => !d.IsDeleted && !d.IsDisposal);
-        _totalUsers = users.Count;
-
-        _yearChoices = Enumerable.Range(now.Year - 10, 15).ToList();
-
-        // CHART DATA
-        var labels = new List<string>();
-        var disposalData = new List<double>();
-        var activeData = new List<double>();
-
-        for (var i = 0; i < 6; i++)
-        {
-            var year = now.Year - 5 + i;
-            labels.Add(year.ToString());
-            var ys = new DateTime(year, 1, 1); var ye = ys.AddYears(1);
-            disposalData.Add(await Db.Documents.CountAsync(d => d.IsDisposal && !d.IsDeleted && d.DateOfDisposal >= ys && d.DateOfDisposal < ye));
-            activeData.Add(await Db.Documents.CountAsync(d => !d.IsDeleted && !d.IsDisposal && d.FiledAt >= ys && d.FiledAt < ye));
-        }
-
-        _xAxisLabels = labels.ToArray();
-        _series = new List<ChartSeries<double>>
-        {
-            new ChartSeries<double> { Name = "New Filing", Data = activeData.ToArray() },
-            new ChartSeries<double> { Name = "Official Disposals", Data = disposalData.ToArray() }
-        };
-
-        var topRaw = await Db.TransactionLogs.AsNoTracking()
-            .Where(t => !string.IsNullOrEmpty(t.FullName))
-            .GroupBy(t => t.FullName!)
-            .Select(g => new { Name = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count).Take(5).ToListAsync();
-
-        _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();
-        _activityFeed = await Db.TransactionLogs.AsNoTracking().OrderByDescending(t => t.PerformedAt).Take(15).ToListAsync();
-
-        await LoadDisposalYearDataAsync();
-        _loading = false;
+        var year = sixYearsAgo + i;
+        labels.Add(year.ToString());
+        var yearMatch = rawChartData.FirstOrDefault(x => x.Year == year);
+        activeData.Add(yearMatch?.Active ?? 0);
+        disposalData.Add(yearMatch?.Disposed ?? 0);
     }
+
+    _xAxisLabels = labels.ToArray();
+    _series = new List<ChartSeries<double>>
+    {
+        new ChartSeries<double> { Name = "New Filing", Data = activeData.ToArray() },
+        new ChartSeries<double> { Name = "Official Disposals", Data = disposalData.ToArray() }
+    };
+
+    //  ACTIVITY & CONTRIBUTORS
+    _activityFeed = await Db.TransactionLogs
+        .AsNoTracking()
+        .OrderByDescending(t => t.PerformedAt)
+        .Take(15)
+        .ToListAsync();
+
+    var topRaw = await Db.TransactionLogs
+        .AsNoTracking()
+        .Where(t => !string.IsNullOrEmpty(t.FullName))
+        .GroupBy(t => t.FullName!)
+        .Select(g => new { Name = g.Key, Count = g.Count() })
+        .OrderByDescending(x => x.Count)
+        .Take(5)
+        .ToListAsync();
+
+    _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();
+
+    await LoadBorrowStatsAsync();
+    await LoadDisposalYearDataAsync();
+    _loading = false;
+}
+// BORROWED SECTION 
+
+private int _totalBorrowed, _overdueDocuments;
+private double _returnRate;
+private double[] _borrowData = { 0, 0 };
+private string[] _borrowLabels = { "In Storage", "Borrowed" };
+private bool _hasBorrowableDocs;
+private double _borrowedPercent;
+
+private async Task LoadBorrowStatsAsync()
+{
+  
+    var borrowStats = await Db.Documents
+        .AsNoTracking()
+        .Where(d => !d.IsDeleted && !d.IsDisposal)
+        .GroupBy(x => 1)
+        .Select(g => new {
+            Total = g.Count(),
+            Borrowed = g.Count(d => d.IsBorrowed), 
+            Overdue = g.Count(d => d.IsBorrowed && d.BorrowedAt < DateTime.Now),
+            InStorage = g.Count(d => !d.IsBorrowed)
+        })
+        .FirstOrDefaultAsync();
+
+    if (borrowStats != null)
+    {
+        _hasBorrowableDocs = borrowStats.Total > 0;
+        _totalBorrowed = borrowStats.Borrowed;
+        _overdueDocuments = borrowStats.Overdue;
+
+        _borrowData = borrowStats.Total > 0
+            ? new double[] { borrowStats.InStorage, borrowStats.Borrowed }
+            : new double[] { 0, 0 };
+
+        _borrowedPercent = borrowStats.Total <= 0
+            ? 0
+            : (double)borrowStats.Borrowed / borrowStats.Total * 100.0;
+
+        _returnRate = borrowStats.Total <= 0
+            ? 0
+            : Math.Round((double)borrowStats.InStorage / borrowStats.Total * 100, 0);
+    }
+}
+
+private string GetBorrowDonutStyle()
+{
+    var p = Math.Clamp(_borrowedPercent, 0, 100);
+    return $"background: conic-gradient(#f59e0b 0% {p:F2}%, #1f2937 {p:F2}% 100%);";
+}
 
     private async Task OnDisposalYearChanged(int year) { _selectedDisposalYear = year; await LoadDisposalYearDataAsync(); }
 

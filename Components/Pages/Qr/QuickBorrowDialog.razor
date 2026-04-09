@@ -6,6 +6,7 @@
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -70,6 +71,15 @@
             Snackbar.Add("Borrower name is required.", Severity.Warning);
             return;
         }
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Confirm Borrow",
+            $"Mark '{DocumentTitle}' as borrowed by '{_borrower.Trim()}'?",
+            yesText: "Confirm",
+            cancelText: "Cancel");
+
+        if (confirmed != true)
+            return;
 
         var realDoc = await _context.Documents.FirstOrDefaultAsync(d => d.Id == DocumentId);
         if (realDoc == null || realDoc.IsDeleted || realDoc.IsDisposal || realDoc.IsBorrowed)

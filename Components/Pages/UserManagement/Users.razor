@@ -1,4 +1,4 @@
-﻿@page "/admin/users"
+@page "/admin/users"
 @attribute [Authorize(Roles = "Admin")]
 
 
@@ -18,56 +18,71 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">User Management</MudText>
 
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class="mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class="mb-3">
         Add New User
     </MudButton>
 
-    <MudTable T="UserDisplayModel" Items="@_users" Dense="true" Hover="true" Elevation="3" Loading="@_loading" OnRowClick="HandleRowClick">
-        <HeaderContent>
-            <MudTh>Employee ID</MudTh>
-            <MudTh>Username</MudTh>
-            <MudTh>Full Name</MudTh>
-            <MudTh>Department</MudTh>
-            <MudTh>Role</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Employee ID">@context.EmployeeId</MudTd>
-            <MudTd DataLabel="Username">@context.UserName</MudTd>
-            <MudTd DataLabel="Full Name">@context.FullName</MudTd>
-            <MudTd DataLabel="Department">@context.Department</MudTd>
-            <MudTd DataLabel="Role">
-                <MudChip T="string" Color="@GetRoleColor(context.Role)" Size="Size.Small">@context.Role</MudChip>
-            </MudTd>
-            @* Inside RowTemplate of Users.razor *@
-            <MudTd DataLabel="Actions">
-                <MudStack Row="true">
-                    <MudTooltip Text="Reset Password">
-                        <MudIconButton Icon="@Icons.Material.Filled.VpnKey"
-                                       Color="Color.Warning"
-                                       Size="Size.Small"
-                                       OnClick="@(() => OpenResetPasswordDialog(context.Id, context.FullName))" />
-                    </MudTooltip>
-
-                    <MudTooltip Text="Delete User">
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                   Color="Color.Error"
-                                   Size="Size.Small"
-                                   OnClick="@(() => DeleteUser(context.Id))" />
-                    </MudTooltip>
-                </MudStack>
-            </MudTd>
-        </RowTemplate>
+    <MudDataGrid T="UserDisplayModel" Items="@_users" Dense="true" Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
+        <ToolBarContent>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString"
+                          Placeholder="Search users..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Margin="Margin.Dense"
+                          Style="max-width: 360px;" />
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.EmployeeId" Title="Employee ID" />
+            <PropertyColumn Property="x => x.UserName" Title="Username" />
+            <PropertyColumn Property="x => x.FullName" Title="Full Name" />
+            <PropertyColumn Property="x => x.Department" Title="Department" />
+            <TemplateColumn Title="Role">
+                <CellTemplate>
+                    <MudChip T="string" Color="@GetRoleColor(context.Item.Role)" Size="Size.Small">@context.Item.Role</MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudStack Row="true" @onclick:stopPropagation="true">
+                        <MudTooltip Text="Reset Password">
+                            <MudIconButton Icon="@Icons.Material.Filled.VpnKey"
+                                           Color="Color.Warning"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OpenResetPasswordDialog(context.Item.Id, context.Item.FullName))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Delete User">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteUser(context.Item.Id))" />
+                        </MudTooltip>
+                    </MudStack>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
         <PagerContent>
-            <MudTablePager />
+            <MudDataGridPager T="UserDisplayModel" />
         </PagerContent>
-    </MudTable>
+    </MudDataGrid>
 
 </MudContainer>
 
 @code {
     private bool _loading = true;
+    private string _searchString = "";
     private List<UserDisplayModel> _users = new();
+    private Func<UserDisplayModel, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        var s = _searchString.Trim();
+        return x.EmployeeId.Contains(s, StringComparison.OrdinalIgnoreCase)
+            || x.UserName.Contains(s, StringComparison.OrdinalIgnoreCase)
+            || x.FullName.Contains(s, StringComparison.OrdinalIgnoreCase)
+            || x.Department.Contains(s, StringComparison.OrdinalIgnoreCase)
+            || x.Role.Contains(s, StringComparison.OrdinalIgnoreCase);
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,7 +195,7 @@
         public string Role { get; set; } = "";
     }
 
-    private async Task HandleRowClick(TableRowClickEventArgs<UserDisplayModel> args)
+    private async Task HandleGridRowClick(DataGridRowClickEventArgs<UserDisplayModel> args)
     {
         var parameters = new DialogParameters
     {

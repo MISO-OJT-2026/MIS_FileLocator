@@ -1,4 +1,5 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Services
@@ -70,14 +71,19 @@
         {
             var roles = await UserManager.GetRolesAsync(_user);
 
-            _editUser = new EditUserModel
-            {
-                EmployeeId = _user.EmployeeId ?? "",
-                UserName = _user.UserName ?? "",
-                FullName = _user.FullName ?? "",
-                Department = _user.Department ?? "",
-                Role = roles.FirstOrDefault() ?? "Viewer"
-            };
+            _editUser = await _context.Users.AsNoTracking().Where(u => u.Id == UserId)
+                .Select(u => new EditUserModel
+                    {
+                        EmployeeId = u.EmployeeId ?? "",
+                        UserName = u.UserName ?? " ",
+                        FullName = u.FullName ?? "",
+                        Department = u.Department ?? "",
+                        Role = _context.UserRoles.Where(ur => ur.UserId == u.Id).Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                            .FirstOrDefault() ?? "Viewer"
+                    })
+                .FirstOrDefaultAsync() ?? new EditUserModel();
+
+            _user = await UserManager.FindByIdAsync(UserId);
         }
     }
 
