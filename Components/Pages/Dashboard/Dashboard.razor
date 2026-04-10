@@ -56,55 +56,77 @@
 
             @* TREND CHART - Main Visual *@
             <MudItem xs="12" lg="8">
-                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 shadow-sm">
-                    <div class="d-flex align-center mb-4">
-                        <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" Class="mr-2" />
-                        <MudText Typo="Typo.h6" Style="font-weight: 700;">Disposal & Filing Trend</MudText>
-                    </div>
-                    <div style="height: 320px;">
-                        <MudChart T="double" ChartType="ChartType.Line"
-                                  ChartSeries="@_series"
-                                  ChartLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="300px"
-                                  ChartOptions="@_chartOptions"
-                                  ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
-                    </div>
+                <MudPaper Outlined="true" Class="pa-6 pb-10 rounded-xl h-100">
+                    <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mud-text-primary">Disposal Trend</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-4 d-block">Activity vs. Disposals (Last 6 Years)</MudText>
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_series"
+                              ChartLabels="@_xAxisLabels"
+                              Width="100%"
+                              Height="500px"
+                              CanHideSeries="true"
+                              ChartOptions="@_chartOptions"
+                              ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
                 </MudPaper>
             </MudItem>
 
             @* CIRCULATION - The "Donut" *@
             <MudItem xs="12" lg="4">
-                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 glass-midnight">
+                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 glass-midnight d-flex flex-column">
                     <MudText Typo="Typo.h6" Style="font-weight: 700;">File Circulation</MudText>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">Current storage vs. out-of-office</MudText>
-        
-                    <div class="d-flex justify-center align-center" style="height: 220px; width: 100%;">
-                        @if (_hasBorrowableDocs)
-                        {
+
+                    @* DONUT CHART WITH TOOLTIP *@
+                    <div class="d-flex justify-center align-center" style="height: 200px; width: 100%;">
+                        <MudTooltip Text="@($"{_totalBorrowed} Borrowed, {_activeDocuments - _totalBorrowed} In Storage")">
                             <div class="circulation-donut" style="@GetBorrowDonutStyle()">
                                 <div class="circulation-donut-center">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Borrowed</MudText>
                                     <MudText Typo="Typo.subtitle1" Style="font-weight:700;">@($"{_borrowedPercent:F0}%")</MudText>
                                 </div>
                             </div>
-                        }
-                        else
-                        {
-                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.DonutLarge" Color="Color.Default" Size="Size.Large" />
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No active documents yet</MudText>
-                            </MudStack>
-                        }
+                        </MudTooltip>
                     </div>
 
-                    <MudStack Spacing="2" Class="mt-4">
+                    @* COMPLIANCE BAR *@
+                    <MudStack Spacing="1" Class="mt-4">
                         <div class="d-flex justify-space-between align-center">
-                            <MudText Typo="Typo.body2">Return Compliance</MudText>
+                            <MudText Typo="Typo.body2" Style="font-size: 0.8rem;">Return Compliance</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Success" Style="font-weight: 700;">@_returnRate%</MudText>
                         </div>
                         <MudProgressLinear Color="Color.Success" Value="@_returnRate" Size="Size.Small" Rounded="true" />
                     </MudStack>
+
+                    @* OVERDUE HIGHLIGHTS - This fills the white space *@
+                    <div class="mt-6 flex-grow-1">
+                        <MudText Typo="Typo.overline" Style="font-weight: 700; color: #b42318; letter-spacing: 1px;">OVERDUE HIGHLIGHTS</MudText>
+
+                        <div style="max-height: 180px; overflow-y: auto;" class="no-scrollbar mt-2">
+                            @if (_overdueItems.Any())
+                            {
+                                <MudStack Spacing="2">
+                                    @foreach (var item in _overdueItems.Take(3))
+                                    {
+                                        <div class="pa-3 rounded-lg" style="background: rgba(180, 35, 24, 0.1); border-left: 4px solid #b42318;">
+                                            <div class="d-flex justify-space-between align-center">
+                                                <MudText Typo="Typo.body2" Style="font-weight: 700;">@item.Title</MudText>
+                                                <MudText Typo="Typo.caption" Style="color: #b42318; font-weight: 800;">LATE</MudText>
+                                            </div>
+                                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">Borrowed by: @item.Borrower</MudText>
+                                            <MudText Typo="Typo.caption" Style="font-style: italic;">Due: @item.DueDate.ToString("MMM dd")</MudText>
+                                        </div>
+                                    }
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-column align-center justify-center py-4" style="border: 2px dashed rgba(0,0,0,0.05); border-radius: 12px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Color="Color.Success" Size="Size.Medium" />
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">All borrowed files are on track.</MudText>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </MudPaper>
             </MudItem>
 
@@ -209,7 +231,9 @@
     {
         XAxisTitle = "Year",
         XAxisLabelRotation = 45,
-        LineStrokeWidth = 3,
+        LineStrokeWidth = 5,
+		YAxisTicks = 10,
+    
     };
 
     protected override async Task OnInitializedAsync()
@@ -317,6 +341,7 @@ private double[] _borrowData = { 0, 0 };
 private string[] _borrowLabels = { "In Storage", "Borrowed" };
 private bool _hasBorrowableDocs;
 private double _borrowedPercent;
+private List<OverdueItem> _overdueItems = new();
 
 private async Task LoadBorrowStatsAsync()
 {
@@ -351,6 +376,27 @@ private async Task LoadBorrowStatsAsync()
             ? 0
             : Math.Round((double)borrowStats.InStorage / borrowStats.Total * 100, 0);
     }
+
+        _overdueItems = await Db.Documents
+            .AsNoTracking()
+            .Where(d => d.IsBorrowed && !d.IsDeleted && d.BorrowedAt < DateTime.Now)
+            .OrderBy(d => d.BorrowedAt)
+            .Select(d => new OverdueItem
+            {
+                Title = d.Title,
+                Borrower = d.CurrentBorrower ?? "Unknown", // Adjust to your property name
+                DueDate = d.ExpectedReturnDate ?? DateTime.Now,
+
+            })
+            .Take(5)
+            .ToListAsync();
+    }
+
+    private record OverdueItem
+    {
+        public string Title { get; set; } = "";
+        public string Borrower { get; set; } = "";
+        public DateTime DueDate { get; set; }
 }
 
 private string GetBorrowDonutStyle()
