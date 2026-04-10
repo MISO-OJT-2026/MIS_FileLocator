@@ -15,14 +15,14 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">User Management</MudText>
 
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class="mb-3">
+    <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">User Management</MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class=" mb-3">
         Add New User
     </MudButton>
 
-    <MudDataGrid T="UserDisplayModel" Items="@_users" Dense="true" Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
+    <MudDataGrid T="UserDisplayModel" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
         <ToolBarContent>
             <MudSpacer />
             <MudTextField @bind-Value="_searchString"
@@ -31,7 +31,7 @@
                           AdornmentIcon="@Icons.Material.Filled.Search"
                           Immediate="true"
                           Margin="Margin.Dense"
-                          Style="max-width: 360px;" />
+                           />
         </ToolBarContent>
         <Columns>
             <PropertyColumn Property="x => x.EmployeeId" Title="Employee ID" />
@@ -67,7 +67,7 @@
         </PagerContent>
     </MudDataGrid>
 
-</MudContainer>
+
 
 @code {
     private bool _loading = true;

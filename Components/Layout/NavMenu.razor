@@ -17,7 +17,7 @@
         <div class="d-flex flex-column" style="height: calc(100vh - 32px);">
             @* User Profile Section *@
             <div class="d-flex flex-column align-center py-6 px-4">
-                <MudAvatar Color="Color.Default" Style="height:70px; width:70px;" Class="mb-3 elevation-4">
+                <MudAvatar Style="height:70px; width:70px; color:white;" Class="mb-3 elevation-4">
                     @_currentUserInitials
                 </MudAvatar>
                 @* Use Color.Inherit so it follows the DrawerText theme setting *@
@@ -26,7 +26,7 @@
             </div>
 
             <div class="nav-menu-scroll no-scrollbar px-2">
-                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">GENERAL</MudText>
+                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:ghostwhite;">GENERAL</MudText>
 
                 @if (RoleService.CanAccessDashboard(_currentUserRole))
                 {
@@ -61,7 +61,7 @@
 
                 @if (RoleService.CanAccessUserManagement(_currentUserRole) || RoleService.CanAccessAdminTools(_currentUserRole) || RoleService.CanAccessTransactionLogs(_currentUserRole))
                 {
-                    <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:antiquewhite;">ADMIN & TOOLS</MudText>
+                    <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:ghostwhite;">ADMIN & TOOLS</MudText>
 
                     @if (RoleService.CanAccessUserManagement(_currentUserRole))
                     {

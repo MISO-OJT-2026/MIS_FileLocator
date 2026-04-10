@@ -5,9 +5,10 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
+
 <MudLayout>
-    <MudAppBar Elevation="1" Outlined="true">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+    <MudAppBar Elevation="0" Outlined="true" >
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" >
             <img src="images/MIS-LOGO.png" alt="MIS" style="height:28px; width:auto;" />
             <MudText Typo="Typo.h6" Style="font-weight: 700;">MIS File Locator</MudText>
         </MudStack>
@@ -27,3 +28,20 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+@code{
+    private MudThemeProvider _mudThemeProvider;
+    private MudTheme _theme = new ()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1a3a52",
+            Secondary = "#4f6d7a",
+            Background = "#f0f0f0",
+            Surface = "#ffffff",
+            AppbarBackground = "#1a3a52",
+            DrawerBackground = "#ffffff",
+            DrawerText = "#1a3a52",
+            DrawerIcon = "#1a3a52"
+        }
+    };  
+}

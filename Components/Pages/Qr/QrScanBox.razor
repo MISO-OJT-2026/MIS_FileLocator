@@ -9,7 +9,7 @@
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext _context
 
-<MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary">Filing box</MudText>
+<MudText Typo="Typo.h4" Class="mb-2" Color="Color.Primary">Filing box</MudText>
 
 @if (_loading)
 {
@@ -21,20 +21,20 @@ else if (_box == null)
 }
 else
 {
-    <MudText Typo="Typo.subtitle1" Class="mb-1"><b>@_box.Name</b></MudText>
+    <MudText Typo="Typo.subtitle2" Class="mb-1"><b>@_box.Name</b></MudText>
     <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@_locationPath</MudText>
 
     <MudText Typo="Typo.subtitle2" Class="mb-2">Folders in this box</MudText>
     @if (_folders.Count == 0)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">No folders in this box.</MudText>
+        <MudText Typo="Typo.body2"  Class="mud-text-secondary">No folders in this box.</MudText>
     }
     else
     {
         <MudStack Spacing="2" Class="mb-6">
             @foreach (var f in _folders)
             {
-                <MudPaper Outlined="true" Class="pa-3">
+                <MudPaper Outlined="true" Class="pa-3" Style="color:#1a3a52;">
                     <MudLink Href="@($"/qr/folder/{f.Id}")" Typo="Typo.body1" Style="font-weight: 600;">
                         <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Class="mr-1" />@f.Name
                     </MudLink>

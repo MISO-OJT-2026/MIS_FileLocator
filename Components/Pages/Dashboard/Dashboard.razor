@@ -16,6 +16,7 @@
 @inject ICurrentUserService CurrentUser
 @inject IRoleService RoleService
 
+
 <MudStack Spacing="4" Class="pa-6">
     @if (_loading)
     {
@@ -113,7 +114,7 @@
                                                 <MudText Typo="Typo.caption" Style="color: #b42318; font-weight: 800;">LATE</MudText>
                                             </div>
                                             <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">Borrowed by: @item.Borrower</MudText>
-                                            <MudText Typo="Typo.caption" Style="font-style: italic;">Due: @item.DueDate.ToString("MMM dd")</MudText>
+                                            <MudText Typo="Typo.caption" Style="font-style: italic;">Due: @item.DueDate.ToString("MMM dd yyyy")</MudText>
                                         </div>
                                     }
                                 </MudStack>
@@ -136,6 +137,8 @@
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
                         <MudText Typo="Typo.h6" Style="font-weight:700;">Disposal Progress</MudText>
                         <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Style="width:100px;">
+                        
+                            
                             @foreach (var y in _yearChoices)
                             {
                                 <MudSelectItem Value="y">@y</MudSelectItem>
@@ -239,6 +242,7 @@
     protected override async Task OnInitializedAsync()
     {
         _selectedDisposalYear = DateTime.Now.Year;
+		_yearChoices = Enumerable.Range(_selectedDisposalYear - 5, 6).Reverse().ToList();
         await LoadAsync();
     }
 
@@ -324,7 +328,7 @@
         .GroupBy(t => t.FullName!)
         .Select(g => new { Name = g.Key, Count = g.Count() })
         .OrderByDescending(x => x.Count)
-        .Take(5)
+        .Take(15)
         .ToListAsync();
 
     _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();

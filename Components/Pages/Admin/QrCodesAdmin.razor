@@ -12,7 +12,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-<MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary">QR codes</MudText>
+<MudText Typo="Typo.h4" Class="mb-2" Color="Color.Primary">QR codes</MudText>
 <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
     Box codes list folders and all documents in that box. Folder codes list documents and support Quick Borrow for staff.
     Print labels or copy links for physical placement (box side panel, folder tab).
@@ -20,19 +20,18 @@
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.FlexStart" Wrap="Wrap.Wrap">
-        <MudTextField @bind-Value="_search" Placeholder="Search name or location..." Immediate="true"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 240px;" />
-        <MudSelect T="string" @bind-Value="_kindFilter" Label="Show" Dense="true" Variant="Variant.Outlined" Style="min-width: 140px;">
+        
+        <MudSelect T="string" @bind-Value="_kindFilter" Label="Show" Dense="true" Variant="Variant.Outlined" Style="min-width: 60px;">
             <MudSelectItem Value="@("all")">All</MudSelectItem>
             <MudSelectItem Value="@("box")">Boxes only</MudSelectItem>
             <MudSelectItem Value="@("folder")">Folders only</MudSelectItem>
         </MudSelect>
-        <MudSpacer />
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy"
-                   OnClick="CopyAllFilteredUrls" Disabled="@(!_rows.Any())">
-            Copy all URLs (filtered)
-        </MudButton>
+        <MudSpacer/>
+        <MudTextField @bind-Value="_search" Placeholder="Search name or location..." Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                       />
+     
+        
     </MudStack>
 </MudPaper>
 
@@ -49,13 +48,13 @@ else
             <PropertyColumn Property="x => x.LocationPath" Title="Location" />
            
           
-            <TemplateColumn Title="Action" Sortable="false"  >
+            <TemplateColumn Title="Print QR Code" Sortable="false"  >
                 <CellTemplate>
                     <MudButtonGroup Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">
-                       <MudTooltip Text="Print QR Code" Placement="Placement.Top">
+                       
                         <MudIconButton Icon="@Icons.Material.Filled.Print" 
                                        OnClick="@(() => PrintLabel(context.Item))" />
-                        </MudTooltip>
+                        
                     </MudButtonGroup>
                 </CellTemplate>
             </TemplateColumn>
