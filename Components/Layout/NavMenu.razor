@@ -17,10 +17,10 @@
         <div class="d-flex flex-column" style="height: calc(100vh - 32px);">
             @* User Profile Section *@
             <div class="d-flex flex-column align-center py-6 px-4">
-                <MudAvatar Style="height:70px; width:70px; color:white;" Class="mb-3 elevation-4">
+                <MudAvatar Style="height:70px; width:70px; color:white;!important" Class="mb-3 elevation-4">
                     @_currentUserInitials
                 </MudAvatar>
-                @* Use Color.Inherit so it follows the DrawerText theme setting *@
+                
                 <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: inherit;">@_currentUserName</MudText>
                 <MudText Typo="Typo.body2" Style="color: inherit; opacity: 0.7;">@_currentUserRole</MudText>
             </div>
