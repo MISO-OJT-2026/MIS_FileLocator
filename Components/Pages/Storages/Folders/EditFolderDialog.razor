@@ -64,43 +64,68 @@
 
     private async Task SaveUpdates()
     {
-        // Load the tracked entity
-        var realFolder = await _context.Folders.FindAsync(_editFolder.Id);
-        if (realFolder == null) return;
-
-        // Check if box changed (This is a "Move" event)
-        bool isMoving = realFolder.FileBoxId != _editFolder.FileBoxId;
-
-        realFolder.Name = _editFolder.Name;
-        realFolder.Description = _editFolder.Description;
-        realFolder.FileBoxId = _editFolder.FileBoxId;
-
-        // Get parent Box name for the log
-        var boxName = await _context.FileBoxes
-            .Where(b => b.Id == _editFolder.FileBoxId)
-            .Select(b => b.Name)
-            .FirstOrDefaultAsync();
-
-        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-
-        var log = new TransactionLog
+        if (string.IsNullOrWhiteSpace(_editFolder.Name))
         {
-            FullName = currentAdmin,
-            EventName = isMoving ? "Folder Moved" : "Folder Updated",
-            Description = isMoving
-                ? $"Moved folder '{realFolder.Name}' to Box '{boxName}'."
-                : $"Updated details for folder '{realFolder.Name}'.",
-            Status = "Success",
-            PerformedAt = DateTime.UtcNow.AddHours(8)
-        };
+            Snackbar.Add("Folder name is required.", Severity.Error);
+            return;
+        }
 
-        _context.TransactionLogs.Add(log);
+        try
+        {
+            bool isDuplicate = await _context.Folders.AnyAsync(f => f.Name.ToLower() == _editFolder.Name.ToLower() && f.Id != _editFolder.Id);
 
-        // EF automatically handles the Update for realFolder because it is tracked
-        await _context.SaveChangesAsync();
+            if (isDuplicate)
+            {
+                Snackbar.Add($"Folder name '{_editFolder.Name}'is aleady taken. Please use different name.", Severity.Error);
+                return;
+            }
+            // Load the tracked entity
+            var realFolder = await _context.Folders.FindAsync(_editFolder.Id);
+            if (realFolder == null) return;
 
-        Snackbar.Add("Folder updated successfully!", Severity.Success);
-        MudDialog.Close(DialogResult.Ok(true));
+            // Check if box changed (This is a "Move" event)
+            bool isMoving = realFolder.FileBoxId != _editFolder.FileBoxId;
+
+            realFolder.Name = _editFolder.Name;
+            realFolder.Description = _editFolder.Description;
+            realFolder.FileBoxId = _editFolder.FileBoxId;
+
+            // Get parent Box name for the log
+            var boxName = await _context.FileBoxes
+                .Where(b => b.Id == _editFolder.FileBoxId)
+                .Select(b => b.Name)
+                .FirstOrDefaultAsync();
+
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
+            var log = new TransactionLog
+            {
+                FullName = currentAdmin,
+                EventName = isMoving ? "Folder Moved" : "Folder Updated",
+                Description = isMoving
+                    ? $"Moved folder '{realFolder.Name}' to Box '{boxName}'."
+                    : $"Updated details for folder '{realFolder.Name}'.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            };
+
+            _context.TransactionLogs.Add(log);
+
+            // EF automatically handles the Update for realFolder because it is tracked
+            await _context.SaveChangesAsync();
+
+            Snackbar.Add("Folder updated successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+
+        }
+        catch (DbUpdateException ex)
+        {
+            Snackbar.Add("Database Error: Could not save changes. Ensure the name is unique.", Severity.Error);
+
+
+            Console.WriteLine(ex.InnerException?.Message);
+        }
+        
     }
 
     private void Cancel() => MudDialog.Cancel();

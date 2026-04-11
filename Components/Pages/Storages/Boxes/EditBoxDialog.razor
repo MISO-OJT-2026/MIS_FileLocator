@@ -52,37 +52,63 @@
     }
 
     private async Task SaveUpdates()
+
     {
-        var realBox = await _context.FileBoxes.FindAsync(_editBox.Id);
-        if (realBox == null) return;
-
-        // Check if cabinet changed (This is a "Move" event)
-        bool isMoving = realBox.FillingCabinetId != _editBox.FillingCabinetId;
-
-        realBox.Name = _editBox.Name;
-        realBox.Description = _editBox.Description;
-        realBox.FillingCabinetId = _editBox.FillingCabinetId;
-
-        var cabinetName = await _context.FillingCabinets.Where(c => c.Id == _editBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
-       
-
-        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-        var log = new TransactionLog
+        if (string.IsNullOrWhiteSpace(_editBox.Name))
         {
-            FullName = currentAdmin,
-            EventName = isMoving ? "Box Moved" : "Box Updated",
-            Description = isMoving
-                ? $"Moved box '{realBox.Name}' to Cabinet  '{cabinetName}'."
-                : $"Updated details for box '{realBox.Name}'.",
-            Status = "Success",
-            PerformedAt = DateTime.UtcNow.AddHours(8)
-        };
+            Snackbar.Add("Box name is required.", Severity.Error);
+            return;
+        }
+        try
+        {
+            bool isDuplicate = await _context.FileBoxes.AnyAsync(b => b.Name.ToLower() == _editBox.Name.ToLower() && b.Id != _editBox.Id);
 
-        _context.TransactionLogs.Add(log);
-        await _context.SaveChangesAsync();
+            if (isDuplicate)
+            {
+                Snackbar.Add($"Box name '{_editBox.Name}'is already taken. Please ako nalang", Severity.Error);
+                return;
+            }
 
-        Snackbar.Add("Box updated successfully!", Severity.Success);
-        MudDialog.Close(DialogResult.Ok(true));
+            var realBox = await _context.FileBoxes.FindAsync(_editBox.Id);
+            if (realBox == null) return;
+
+            // Check if cabinet changed (This is a "Move" event)
+            bool isMoving = realBox.FillingCabinetId != _editBox.FillingCabinetId;
+
+            realBox.Name = _editBox.Name;
+            realBox.Description = _editBox.Description;
+            realBox.FillingCabinetId = _editBox.FillingCabinetId;
+
+            var cabinetName = await _context.FillingCabinets.Where(c => c.Id == _editBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
+
+
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+            var log = new TransactionLog
+            {
+                FullName = currentAdmin,
+                EventName = isMoving ? "Box Moved" : "Box Updated",
+                Description = isMoving
+                    ? $"Moved box '{realBox.Name}' to Cabinet  '{cabinetName}'."
+                    : $"Updated details for box '{realBox.Name}'.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            };
+
+            _context.TransactionLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            Snackbar.Add("Box updated successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+
+        }
+        catch(DbUpdateException ex)
+        {
+            Snackbar.Add("Database Error: Could not save changes. Ensure the name is unique.", Severity.Error);
+
+            Console.WriteLine(ex.InnerException?.Message);
+
+        }
+        
     }
 
     private void Cancel() => MudDialog.Cancel();

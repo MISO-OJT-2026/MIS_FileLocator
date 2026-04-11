@@ -3,6 +3,7 @@
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @using Microsoft.AspNetCore.Components.Forms
 
@@ -50,35 +51,50 @@
             Snackbar.Add("Cabinet name is required.", Severity.Warning);
             return;
         }
-
-        // find the cabinet selected 
-        var realCabinet = await _context.FillingCabinets.FindAsync(_editCabinet.Id);
-        if(realCabinet  == null) return;
-
-
-        //update valuess
-        realCabinet.Name = _editCabinet.Name;
-        realCabinet.Description = _editCabinet.Description;
-
-        //create transaction log 
-        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-        var log = new TransactionLog
-
+        try
         {
-            FullName= currentAdmin, 
-            EventName = "Cabinet Updated",
-            Description = $"Updated the details for cabinet '{realCabinet.Name}'.",
-            Status = "Success",
-            PerformedAt = DateTime.UtcNow.AddHours(8)
-        };
+            bool isDuplicate = await _context.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _editCabinet.Name.ToLower() && c.Id != _editCabinet.Id);
 
-        _context.TransactionLogs.Add(log);
+            if (isDuplicate)
+            {
+                Snackbar.Add($"Cabinet name '{_editCabinet.Name}'is already taken (naol taken).Please use different name. ", Severity.Error);
+                return;
+            }
 
-        // save my everything and nice
+            var realCabinet = await _context.FillingCabinets.FindAsync(_editCabinet.Id);
+            if(realCabinet == null)
+            {
+                Snackbar.Add("Cabinet not found. It may have been deleted by another users", Severity.Error);
+                return; 
+            }   
+                realCabinet.Name = _editCabinet.Name;
+                realCabinet.Description = _editCabinet.Description;
 
-        await _context.SaveChangesAsync();
-        Snackbar.Add($"Cabinet updated successfully!", Severity.Success);
-        MudDialog.Close(DialogResult.Ok(true));
+                //create transaction log
+                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+                var log = new TransactionLog
+
+                {
+                    FullName = currentAdmin,
+                    EventName = "Cabinet Updated",
+                    Description = $"Updated the details for cabinet '{realCabinet.Name}'.",
+                    Status = "Success",
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
+                };
+                _context.TransactionLogs.Add(log);
+                await _context.SaveChangesAsync();
+                Snackbar.Add($"Cabinet updated successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        
+        catch(DbUpdateException ex)
+        {
+            Snackbar.Add("Database Error: Could not save changes. Ensure the name is unique.", Severity.Error);
+
+           
+            Console.WriteLine(ex.InnerException?.Message);
+        }
+   
 
     }
     private void Cancel() => MudDialog.Cancel();
