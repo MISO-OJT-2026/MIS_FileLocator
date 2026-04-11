@@ -13,12 +13,13 @@
         }
         else
         {
-            <MudList T="string">
+            <MudList T="string" Class="static-list" ReadOnly="true" >
                 @foreach (var folder in SelectedBox.Folders.Where(f => !f.IsArchived))
                 {
                     <MudListItem Text="@folder.Name"
                                  Icon="@Icons.Material.Filled.FolderOpen"
-                                 SecondaryText="@folder.Description" />
+                                 SecondaryText="@folder.Description"
+                                 Hover="false" />
                 }
             </MudList>
         }

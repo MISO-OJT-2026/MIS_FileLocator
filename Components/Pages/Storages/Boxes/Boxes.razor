@@ -26,7 +26,9 @@
                      Items="@_boxes.Where(b => !b.IsArchived)"
                      Context="box"
                      Filterable="true"
-                     QuickFilter="@_quickFilter">
+                     QuickFilter="@_quickFilter"
+                    Dense="true"
+                    Hover="true">
 
             <ToolBarContent>
                 <MudStack Row ="true" Spacing ="2" AlignItems ="AlignItems.Center">
@@ -42,6 +44,17 @@
                                        OnClick="@(() => ExportToCSV(false))"
                                        Class="mr-2" />
                     </MudTooltip>
+
+                    <MudMenu Icon="@Icons.Material.Filled.FilterList" Label="By Cabinet" Variant="Variant.Outlined" Color="Color.Info" EndIcon="@Icons.Material.Filled.KeyboardArrowDown">
+                        <MudMenuItem OnClick="@(() => _searchString = "")">All Cabinets</MudMenuItem>
+                        <MudDivider />
+                        @foreach (var cabinetName in _cabinetNames)
+                        {
+                            <MudMenuItem OnClick="@(() => _searchString = cabinetName)">@cabinetName</MudMenuItem>
+                        }
+                        <MudDivider />
+                        <MudMenuItem OnClick="@(() => _searchString = "Unassigned")">Unassigned Only</MudMenuItem>
+                    </MudMenu>
                 </MudStack>
                 <MudSpacer />
 
@@ -165,6 +178,7 @@
 
 @code {
     private List<FileBoxes> _boxes = new();
+    private List<string> _cabinetNames = new();
     private string _searchString = "";
 
     protected override async Task OnInitializedAsync()
@@ -178,12 +192,24 @@
             .Include(b => b.FillingCabinet)
             .Include(b => b.Folders)
             .ToListAsync();
+
+        _cabinetNames = _boxes
+        .Where(b => b.FillingCabinet != null)
+        .Select(b =>b.FillingCabinet!.Name)
+        .Distinct()
+        .OrderBy(name => name)
+        .ToList()
+        ;
+
+        StateHasChanged();
+
     }
 
     private Func<FileBoxes, bool> _quickFilter => x =>
     {
         if (string.IsNullOrWhiteSpace(_searchString)) return true;
         if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+
         if (x.FillingCabinet?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
         return false;
         if (x.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;

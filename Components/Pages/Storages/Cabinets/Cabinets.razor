@@ -19,28 +19,51 @@
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Filing Cabinets</MudText>
 
 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" SliderColor="Color.Primary"
-         Color="Color.Transparent"
->
+         Color="Color.Transparent">
+
 
  
     <MudTabPanel Text="Active Cabinets" 
                  Icon="@Icons.Material.Filled.Folder" >
-        <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => !c.IsArchived)" Filterable="true" QuickFilter="@_quickFilter">
+        <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => !c.IsArchived)" Filterable="false" QuickFilter="@_quickFilter" Dense="true" Hover="true">
             <ToolBarContent>
                 <MudStack Row="true" Spacing ="2" AlignItems= "AlignItems.Center">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
-                    Add Cabinet
-                </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog" >
+                    Add 
+                  </MudButton>
 
-                <MudTooltip Text="Export Active Cabinets to CSV" Placement="Placement.Top">
+                  <MudTooltip Text="Export Active Cabinets to CSV" Placement="Placement.Top">
                     <MudIconButton Variant="Variant.Outlined"
                                    Color="Color.Success"
                                    Icon="@Icons.Material.Filled.Print"
                                    OnClick="@(() => ExportToCSV(false))"
                                    Class="mr-2" />
-                </MudTooltip>
-                </MudStack>
-                <MudSpacer/>
+                                   
+
+                         </MudTooltip>
+
+                    
+              </MudStack>
+                <MudSelect T="string"
+                           @bind-Value="_searchString"
+                           Label="Filter by Level"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Margin="Margin.Dense"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.FilterList"
+                           Style="width: 200px; background-color: white;">
+                    <MudSelectItem Value="@("")">All Levels</MudSelectItem>
+                    <MudDivider />
+                    @foreach (var level in _levelChoices)
+                    {
+                        <MudSelectItem Value="@level">@level</MudSelectItem>
+                    }
+                    <MudDivider />
+                    <MudSelectItem Value="@("OPEN SHELF")">Open Shelving</MudSelectItem>
+                </MudSelect>
+                
+
                 <MudTextField @bind-Value="_searchString"
                               Placeholder="Search active..."
                               Adornment="Adornment.Start"
@@ -89,6 +112,24 @@
                                    OnClick="@(() => ExportToCSV(true))"
                                    Class="mr-2" />
                 </MudTooltip>
+                <MudSelect T="string"
+                           @bind-Value="_searchString"
+                           Label="Filter by Level"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Margin="Margin.Dense"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.FilterList"
+                           Style="width: 200px; background-color: white;">
+                    <MudSelectItem Value="@("")">All Levels</MudSelectItem>
+                    <MudDivider />
+                    @foreach (var level in _levelChoices)
+                    {
+                        <MudSelectItem Value="@level">@level</MudSelectItem>
+                    }
+                    <MudDivider />
+                    <MudSelectItem Value="@("OPEN SHELF")">Open Shelving</MudSelectItem>
+                </MudSelect>
                 <MudSpacer />
                 <MudTextField @bind-Value="_searchString" Placeholder="Search archived cabinets..." Adornment="Adornment.Start" Immediate="true"
                               AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
@@ -122,7 +163,9 @@
 
 @code {
     private List<FillingCabinet> _cabinets = new();
+    private List<string> _levelChoices = new();
     private string _searchString = "";
+    
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,12 +174,27 @@
 
     private async Task LoadCabinets()
     {
-        // Fetch Cabinets -> Boxes -> Folders -> Documents so we can count them all
+
         _cabinets = await _context.FillingCabinets
             .Include(c => c.FileBox)
                 .ThenInclude(b => b.Folders)
                     .ThenInclude(f => f.Documents)
             .ToListAsync();
+
+        _levelChoices = _cabinets
+        .Where(c => !string.IsNullOrEmpty(c.Description) && c.Description.Contains("Level"))
+            .Select(c => ExtractLevel(c.Description!))
+            .Distinct()
+            .OrderBy(l => l)
+            .ToList();
+
+        StateHasChanged();
+
+    }
+    private string ExtractLevel(string description)
+    {
+        var parts = description.Split(',');
+        return parts[0].Trim();
     }
 
     private Func<FillingCabinet, bool> _quickFilter => x =>
@@ -213,6 +271,7 @@
         }
 
     }
+
     private async Task UnarchiveCabinet(FillingCabinet cabinet)
     {
      

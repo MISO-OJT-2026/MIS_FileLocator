@@ -13,12 +13,13 @@
         }
         else
         {
-            <MudList T="string">
+            <MudList T="string" Class="static-list" ReadOnly="true">
                 @foreach (var box in SelectedCabinet.FileBox. Where (b => !b.IsArchived))
                 {
                     <MudListItem Text="@($"Box {box.Name}")"
                                  Icon="@Icons.Material.Filled.Inventory2"
-                                 SecondaryText="@box.Description" />
+                                 SecondaryText="@box.Description" 
+                                 />
                 }
             </MudList>
         }
@@ -27,6 +28,7 @@
         <MudButton OnClick="Close">Close</MudButton>
     </DialogActions>
 </MudDialog>
+
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;

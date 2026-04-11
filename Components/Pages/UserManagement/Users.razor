@@ -22,7 +22,7 @@
         Add New User
     </MudButton>
 
-    <MudDataGrid T="UserDisplayModel" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
+    <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
         <ToolBarContent>
             <MudSpacer />
             <MudTextField @bind-Value="_searchString"
@@ -67,7 +67,20 @@
         </PagerContent>
     </MudDataGrid>
 
+   <style>
+        
+.mud-table-root .mud-table-cell {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    padding: 8px 16px !important; /* Adjust '8px' to change row thickness */
+}
 
+
+.mud-table-head .mud-table-cell {
+    border-bottom: 2px solid var(--mud-palette-primary) !important;
+    font-weight: 700;
+}
+
+    </style >
 
 @code {
     private bool _loading = true;

@@ -19,7 +19,7 @@
         }
         else
         {
-            <MudList T="string" Clickable="false">
+            <MudList T="string" Class="static-list" ReadOnly="true">
                 @foreach (var doc in SelectedFolder.Documents.Where(d => !d.IsDeleted))
                 {
                     <MudListItem Icon="@Icons.Material.Filled.Description">
@@ -37,7 +37,7 @@
                                          Size="Size.Small"
                                          Variant="Variant.Text"
                                          Color="@GetConfidentialityColor(doc.ConfidentialityLevel?.Name)">
-                                    @(doc.ConfidentialityLevel?.Name ?? "General")
+                                    @(doc.ConfidentialityLevel?.Name ?? "Unknown")
                                 </MudChip>
                             </MudStack>
                         </ChildContent>

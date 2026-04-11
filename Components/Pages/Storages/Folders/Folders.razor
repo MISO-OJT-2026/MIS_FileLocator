@@ -25,7 +25,9 @@
                      Items="@_folders.Where(f => !f.IsArchived)"
                      Context="folder"
                      Filterable="true"
-                     QuickFilter="@_quickFilter">
+                     QuickFilter="@_quickFilter"
+                    Dense="true"
+                    Hover="true">
 
             <ToolBarContent>
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">

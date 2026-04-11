@@ -138,3 +138,22 @@
     background-color: var(--mud-palette-background) !important;
     min-height: 100vh;
 }
+
+/* --- HOVER EFFECT IN STORAGE EXPLORER --- */
+
+.static-list .mud-list-item:hover {
+    background-color: transparent !important;
+}
+
+.static-list .mud-list-item.mud-list-item-active {
+    background-color: transparent !important;
+}
+
+
+.static-list .mud-list-item .mud-list-item-hover:before {
+    display: none !important;
+}
+
+.static-list .mud-list-item {
+    cursor: default !important;
+}
