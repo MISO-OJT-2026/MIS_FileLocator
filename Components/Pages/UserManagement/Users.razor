@@ -16,86 +16,131 @@
 @inject ISnackbar Snackbar
 
 
-    <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">User Management</MudText>
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class=" mb-3">
+    Add New User
+</MudButton>
 
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog" Class=" mb-3">
-        Add New User
-    </MudButton>
-
-    <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
-        <ToolBarContent>
+<MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
+    <ToolBarContent>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
             <MudSpacer />
-            <MudTextField @bind-Value="_searchString"
-                          Placeholder="Search users..."
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true"
-                          Margin="Margin.Dense"
-                           />
-        </ToolBarContent>
-        <Columns>
-            <PropertyColumn Property="x => x.EmployeeId" Title="Employee ID" />
-            <PropertyColumn Property="x => x.UserName" Title="Username" />
-            <PropertyColumn Property="x => x.FullName" Title="Full Name" />
-            <PropertyColumn Property="x => x.Department" Title="Department" />
-            <TemplateColumn Title="Role">
-                <CellTemplate>
-                    <MudChip T="string" Color="@GetRoleColor(context.Item.Role)" Size="Size.Small">@context.Item.Role</MudChip>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
-                <CellTemplate>
-                    <MudStack Row="true" @onclick:stopPropagation="true">
-                        <MudTooltip Text="Reset Password">
-                            <MudIconButton Icon="@Icons.Material.Filled.VpnKey"
-                                           Color="Color.Warning"
-                                           Size="Size.Small"
-                                           OnClick="@(() => OpenResetPasswordDialog(context.Item.Id, context.Item.FullName))" />
-                        </MudTooltip>
-                        <MudTooltip Text="Delete User">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
-                                           Size="Size.Small"
-                                           OnClick="@(() => DeleteUser(context.Item.Id))" />
-                        </MudTooltip>
-                    </MudStack>
-                </CellTemplate>
-            </TemplateColumn>
-        </Columns>
-        <PagerContent>
-            <MudDataGridPager T="UserDisplayModel" />
-        </PagerContent>
-    </MudDataGrid>
 
-   <style>
-        
-.mud-table-root .mud-table-cell {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-    padding: 8px 16px !important; /* Adjust '8px' to change row thickness */
-}
+            @* Filter and Search Group *@
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @* Filter by Role *@
+                <MudMenu Label="Filter by Role"
+                         Variant="Variant.Outlined"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         Dense="true"
+                         StartIcon="@Icons.Material.Filled.FilterList"
+                         EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                         Margin="Margin.Dense"
+                         Style="width: 200px;">
+                    <div class="pa-4" style="min-width: 200px;">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Filter by Role</MudText>
+                        <MudSelect T="string" Label="Role" @bind-Value="_selectedRole"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
+                            <MudSelectItem Value="@("")">All Roles</MudSelectItem>
+                            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                            <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
+                            <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
+                            <MudSelectItem Value="@("Staff")">Staff</MudSelectItem>
+                        </MudSelect>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset</MudButton>
+                    </div>
+                </MudMenu>
 
+                @* Search Field *@
+                <MudTextField @bind-Value="_searchString"
+                              Placeholder="Search..."
+                              Adornment="Adornment.Start"
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Style="width: 200px;" />
+            </MudStack>
+        </MudStack>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.EmployeeId" Title="Employee ID" />
+        <PropertyColumn Property="x => x.UserName" Title="Username" />
+        <PropertyColumn Property="x => x.FullName" Title="Full Name" />
+        <PropertyColumn Property="x => x.Department" Title="Department" />
+        <TemplateColumn Title="Role">
+            <CellTemplate>
+                <MudChip T="string" Color="@GetRoleColor(context.Item.Role)" Size="Size.Small">@context.Item.Role</MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <MudStack Row="true" @onclick:stopPropagation="true">
+                    <MudTooltip Text="Reset Password">
+                        <MudIconButton Icon="@Icons.Material.Filled.VpnKey"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       OnClick="@(() => OpenResetPasswordDialog(context.Item.Id, context.Item.FullName))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Delete User">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       OnClick="@(() => DeleteUser(context.Item.Id))" />
+                    </MudTooltip>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="UserDisplayModel" />
+    </PagerContent>
+</MudDataGrid>
 
-.mud-table-head .mud-table-cell {
-    border-bottom: 2px solid var(--mud-palette-primary) !important;
-    font-weight: 700;
-}
+<style>
+    .mud-table-root .mud-table-cell {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+        padding: 8px 16px !important; /* Adjust '8px' to change row thickness */
+    }
 
-    </style >
+    .mud-table-head .mud-table-cell {
+        border-bottom: 2px solid var(--mud-palette-primary) !important;
+        font-weight: 700;
+    }
+</style>
 
 @code {
     private bool _loading = true;
     private string _searchString = "";
+    private string _selectedRole = "";
     private List<UserDisplayModel> _users = new();
     private Func<UserDisplayModel, bool> _quickFilter => x =>
     {
-        if (string.IsNullOrWhiteSpace(_searchString)) return true;
-        var s = _searchString.Trim();
-        return x.EmployeeId.Contains(s, StringComparison.OrdinalIgnoreCase)
-            || x.UserName.Contains(s, StringComparison.OrdinalIgnoreCase)
-            || x.FullName.Contains(s, StringComparison.OrdinalIgnoreCase)
-            || x.Department.Contains(s, StringComparison.OrdinalIgnoreCase)
-            || x.Role.Contains(s, StringComparison.OrdinalIgnoreCase);
+        // Filter by Role
+        if (!string.IsNullOrWhiteSpace(_selectedRole))
+        {
+            if (x.Role != _selectedRole) return false;
+        }
+
+        // Search text
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            var s = _searchString.Trim();
+            return x.EmployeeId.Contains(s, StringComparison.OrdinalIgnoreCase)
+                || x.UserName.Contains(s, StringComparison.OrdinalIgnoreCase)
+                || x.FullName.Contains(s, StringComparison.OrdinalIgnoreCase)
+                || x.Department.Contains(s, StringComparison.OrdinalIgnoreCase)
+                || x.Role.Contains(s, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return true;
     };
+
+    private void ResetFilters()
+    {
+        _selectedRole = "";
+        _searchString = "";
+    }
 
     protected override async Task OnInitializedAsync()
     {
