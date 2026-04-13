@@ -48,27 +48,32 @@
                 </MudSelect>
             </MudItem>
 
-            @* File Upload Section *@
-            <MudItem xs="12">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy (Cloud Storage)</MudText>
-                <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
-    <ActivatorContent>
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Info" 
-                   StartIcon="@Icons.Material.Filled.CloudUpload">
-            @(_selectedFile == null ? "Select Document File" : _selectedFile.Name)
-        </MudButton>
-    </ActivatorContent>
-</MudFileUpload>
-                @if (_isUploading)
-                {
-                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-2" />
-                }
-            </MudItem>
+           @* --- File Upload Section (Optional) --- *@
+<MudItem xs="12">
+    <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
+        <ActivatorContent>
+            @* Changed Color to Default/Secondary to look less "Mandatory" *@
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Default" 
+                       StartIcon="@Icons.Material.Filled.AttachFile">
+                @(_selectedFile == null ? "Attach Digital Copy (Optional)" : _selectedFile.Name)
+            </MudButton>
+        </ActivatorContent>
+    </MudFileUpload>
+    
+    @* Show a small hint if no file is selected *@
+    @if (_selectedFile == null)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Info" Class="ml-2">
+            You can upload the digital copy later during editing.
+        </MudText>
+    }
+</MudItem>
 
             @* Document Info *@
             <MudItem xs="12" md="8">
-                <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" 
+                  Immediate="true"/>
             </MudItem>
             <MudItem xs="12" md="4">
                 <MudSelect T="int?" Label="Document Year" Value="_newDoc.Year" ValueChanged="OnYearChanged" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
@@ -148,6 +153,8 @@
         if (string.IsNullOrWhiteSpace(_newDoc.Title))
         {
             _newDoc.Title = Path.GetFileNameWithoutExtension(file.Name);
+
+            StateHasChanged();
         }
     }
 
@@ -184,16 +191,10 @@
 
     private async Task Save()
     {
-        // 1. Validation
+        
         if (_newDoc.FolderId == 0 || string.IsNullOrEmpty(_newDoc.Title) || _newDoc.ConfidentialityLevelId == 0)
         {
-            Snackbar.Add("Please complete all fields!", Severity.Error);
-            return;
-        }
-
-        if (_selectedFile == null)
-        {
-            Snackbar.Add("Please select a file to upload.", Severity.Warning);
+            Snackbar.Add("Please fill in the Title, Folder, and Security level.", Severity.Error);
             return;
         }
 
@@ -202,52 +203,43 @@
             _isUploading = true;
             StateHasChanged();
 
-            // 2. Upload to Azure Blob Storage
-            string connectionString = _config.GetConnectionString("AzureStorage");
-            var blobServiceClient = new BlobServiceClient(connectionString);
-            var containerClient = blobServiceClient.GetBlobContainerClient("documents");
             
-            // Create a unique name to prevent overwrites
-            string fileName = $"{Guid.NewGuid()}_{_selectedFile.Name}";
-            var blobClient = containerClient.GetBlobClient(fileName);
+            if (_selectedFile != null)
+            {
+                string connectionString = _config.GetConnectionString("AzureStorage");
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerClient = blobServiceClient.GetBlobContainerClient("documents");
 
-            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024); // 15MB Limit
-            await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
+                string fileName = $"{Guid.NewGuid()}_{_selectedFile.Name}";
+                var blobClient = containerClient.GetBlobClient(fileName);
 
-            // 3. Set Automated Metadata and the File Link
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
+                await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
+
+                
+                _newDoc.FilePath = blobClient.Uri.ToString();
+            }
+            else
+            {
+                
+                _newDoc.FilePath = null;
+            }
+
+            
             var user = await _currentUserService.GetCurrentFullNameAsync();
-            _newDoc.FilePath = blobClient.Uri.ToString(); // Store the URL
             _newDoc.CreatedBy = user;
             _newDoc.FiledBy = user;
             _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
 
-            // 4. Get Location Data for Logs
-            var location = await _context.Folders
-                .Where(f => f.Id == _newDoc.FolderId)
-                .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
-                .FirstOrDefaultAsync();
-
             _context.Documents.Add(_newDoc);
-
-            // 5. Create Transaction Log
-            var log = new TransactionLog
-            {
-                FullName = user,
-                EventName = "Document Filed",
-                Description = $"Filed '{_newDoc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}. Digital copy stored in Cloud.",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            };
-            _context.TransactionLogs.Add(log);
-
             await _context.SaveChangesAsync();
 
-            Snackbar.Add("Document filed and uploaded successfully!", Severity.Success);
+            Snackbar.Add(_selectedFile != null ? "Document & File Saved!" : "Physical Record Saved!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
-            Snackbar.Add("Error: " + (ex.InnerException?.Message ?? ex.Message), Severity.Error);
+            Snackbar.Add("Error: " + ex.Message, Severity.Error);
         }
         finally
         {

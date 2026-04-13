@@ -40,7 +40,7 @@
                 </MudStack>
             </MudItem>
 
-            @* Right Side: Status & Metadata *@
+            @* Right Side: Status, Digital Copy & Metadata *@
             <MudItem xs="12" md="5">
                 <MudPaper Outlined="true" Class="pa-4 bg-light">
                     <MudText Typo="Typo.button" Class="mb-2 d-block">Inventory Status</MudText>
@@ -56,6 +56,29 @@
                     {
                         <MudAlert Severity="Severity.Success" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
                             Available in Folder
+                        </MudAlert>
+                    }
+
+                    <MudDivider Class="my-4" />
+
+                    @* --- NEW: DIGITAL COPY VIEW BUTTON --- *@
+                    <MudText Typo="Typo.button" Class="mb-2 d-block">Digital Assets</MudText>
+                    @if (!string.IsNullOrEmpty(SelectedDoc.FilePath))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   Href="@SelectedDoc.FilePath"
+                                   Target="_blank"
+                                   Class="mb-2">
+                            View Digital Copy
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.CloudOff">
+                            No Digital Copy Uploaded
                         </MudAlert>
                     }
 

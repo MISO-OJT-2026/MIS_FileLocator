@@ -23,6 +23,7 @@
 <MudDataGrid T="Documents"
              Items="@_allDocuments.Where(d => !d.IsDeleted && !d.IsDisposal)"
              Filterable="true"
+             Hover="true"
              QuickFilter="@_quickFilter"
              Hideable="true"
 RowClick = "OnRowClicked">

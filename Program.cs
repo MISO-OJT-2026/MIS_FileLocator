@@ -16,6 +16,10 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddCascadingAuthenticationState();
 
+builder.Services.AddServerSideBlazor().AddHubOptions(options =>
+{
+    options.MaximumReceiveMessageSize = 31457280; // 30MB in bytes
+});
 
 builder.Services.AddScoped<IdentityRedirectManager>();
 
