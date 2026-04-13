@@ -34,7 +34,7 @@
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.Add"
                                    OnClick="OpenAddDialog">
-                            Add
+                            Add Cabinet
                         </MudButton>
                         <MudTooltip Text="Export to CSV">
                             <MudIconButton Variant="Variant.Outlined"
@@ -51,12 +51,12 @@
                         @* Dynamic Cabinet Name Filter *@
                         <MudSelect T="string"
                                    @bind-Value="_selectedCabinetName"
-                                   Label="Select Cabinet"
+                                   Clearable="true"
                                    Variant="Variant.Outlined"
                                    Dense="true"
                                    Margin="Margin.Dense"
                                    Style="width: 200px;"
-                                   AdornmentIcon="@Icons.Material.Filled.FilterAlt">
+                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FilterList">
                             @* <--- ADD THIS '>' HERE *@
                             <MudSelectItem Value="@("")">All Cabinets / Shelves</MudSelectItem>
                             @foreach (var name in _cabinets.Where(c => !c.IsArchived).Select(c => c.Name).Distinct().OrderBy(n => n))
@@ -72,8 +72,8 @@
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Style="width: 200px;" />
+                                    AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Style="width: 300px;" />
                     </MudStack>
                 </MudStack>
             </ToolBarContent>

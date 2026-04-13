@@ -49,7 +49,7 @@
                         @* Option 1: Cabinet Filter *@
                         <MudSelect T="string"
                                    @bind-Value="_selectedCabinet"
-                                   Label="Filter by Cabinet"
+                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FilterList"
                                    Variant="Variant.Outlined"
                                    Dense="true"
                                    Margin="Margin.Dense"
@@ -71,7 +71,7 @@
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Style="width: 200px;"
+                                      Style="width: 300px;"
                                       Clearable="true" />
                     </MudStack>
                 </MudStack>

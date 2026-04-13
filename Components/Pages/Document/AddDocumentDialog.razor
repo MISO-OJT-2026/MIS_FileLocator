@@ -3,9 +3,12 @@
 @using MIS_FileLocator.Models
 @using MIS_FileLocator.Services
 @using Microsoft.EntityFrameworkCore
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
+@inject IConfiguration _config
 
 <MudDialog>
     <TitleContent>
@@ -16,7 +19,7 @@
     </TitleContent>
     <DialogContent>
         <MudGrid Spacing="2">
-            @*  Physical Location Cascading Selects *@
+            @* Physical Location Cascading Selects *@
             <MudItem xs="12" md="4">
                 <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged"
                            Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
@@ -45,6 +48,24 @@
                 </MudSelect>
             </MudItem>
 
+            @* File Upload Section *@
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy (Cloud Storage)</MudText>
+                <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
+    <ActivatorContent>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Info" 
+                   StartIcon="@Icons.Material.Filled.CloudUpload">
+            @(_selectedFile == null ? "Select Document File" : _selectedFile.Name)
+        </MudButton>
+    </ActivatorContent>
+</MudFileUpload>
+                @if (_isUploading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-2" />
+                }
+            </MudItem>
+
             @* Document Info *@
             <MudItem xs="12" md="8">
                 <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" />
@@ -53,7 +74,7 @@
                 <MudSelect T="int?" Label="Document Year" Value="_newDoc.Year" ValueChanged="OnYearChanged" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
                     @foreach (var y in _yearOptions)
                     {
-                        <MudSelectItem T= "int?" Value="@y">@y</MudSelectItem>
+                        <MudSelectItem T="int?" Value="@y">@y</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
@@ -69,33 +90,34 @@
                 </MudSelect>
             </MudItem>
 
-            @*Retention & Disposal Logic *@
+            @* Retention & Disposal Logic *@
             <MudItem xs="12" md="3">
                 <MudSelect T="int" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="OnDisposalYearsChanged" Variant="Variant.Outlined">
                     @for (int i = 1; i <= 10; i++)
                     {
-                        
                         var years = i;
-
-                        
                         <MudSelectItem Value="@years">@years Years</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" DateFormat ="yyyy" OpenTo="OpenTo.Year" FixMonth="1" FixDay="1" />
+                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" DateFormat="yyyy" OpenTo="OpenTo.Year" FixMonth="1" FixDay="1" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save Document</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@(_isUploading)">
+            @(_isUploading ? "Uploading..." : "Save Document")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private Documents _newDoc = new();
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading = false;
 
     private List<FillingCabinet> _cabinets = new();
     private List<FileBoxes> _boxes = new();
@@ -112,13 +134,21 @@
         int currentYear = DateTime.Now.Year;
         int startYear = currentYear - 3;
         int maxYear = currentYear + 1;
-       
-
-        int count =(maxYear - startYear) +1 ; // =5
-        _yearOptions = Enumerable.Range(startYear,count).Reverse().ToList();
+        int count = (maxYear - startYear) + 1;
+        _yearOptions = Enumerable.Range(startYear, count).Reverse().ToList();
 
         _newDoc.Year = currentYear;
         OnDisposalYearsChanged();
+    }
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+        // Auto-fill title with filename if title is empty
+        if (string.IsNullOrWhiteSpace(_newDoc.Title))
+        {
+            _newDoc.Title = Path.GetFileNameWithoutExtension(file.Name);
+        }
     }
 
     private async Task OnCabinetChanged(int? id)
@@ -126,20 +156,16 @@
         _boxes.Clear();
         _folders.Clear();
         _newDoc.FolderId = 0;
-
         if (id == null) return;
         _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
-
     }
 
     private async Task OnBoxChanged(int? id)
     {
         _folders.Clear();
         _newDoc.FolderId = 0;
-
         if (id == null) return;
         _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
-       
     }
 
     private void OnYearChanged(int? newYear)
@@ -158,23 +184,44 @@
 
     private async Task Save()
     {
-        // 1. Validation to prevent SQL Foreign Key Errors
+        // 1. Validation
         if (_newDoc.FolderId == 0 || string.IsNullOrEmpty(_newDoc.Title) || _newDoc.ConfidentialityLevelId == 0)
         {
-            Snackbar.Add("Please complete all fields, including Folder and Confidentiality!", Severity.Error);
+            Snackbar.Add("Please complete all fields!", Severity.Error);
+            return;
+        }
+
+        if (_selectedFile == null)
+        {
+            Snackbar.Add("Please select a file to upload.", Severity.Warning);
             return;
         }
 
         try
         {
-            var user = await _currentUserService.GetCurrentFullNameAsync();
+            _isUploading = true;
+            StateHasChanged();
 
-            //  Set Automated Metadata
+            // 2. Upload to Azure Blob Storage
+            string connectionString = _config.GetConnectionString("AzureStorage");
+            var blobServiceClient = new BlobServiceClient(connectionString);
+            var containerClient = blobServiceClient.GetBlobContainerClient("documents");
+            
+            // Create a unique name to prevent overwrites
+            string fileName = $"{Guid.NewGuid()}_{_selectedFile.Name}";
+            var blobClient = containerClient.GetBlobClient(fileName);
+
+            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024); // 15MB Limit
+            await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
+
+            // 3. Set Automated Metadata and the File Link
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+            _newDoc.FilePath = blobClient.Uri.ToString(); // Store the URL
             _newDoc.CreatedBy = user;
             _newDoc.FiledBy = user;
             _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
 
-           
+            // 4. Get Location Data for Logs
             var location = await _context.Folders
                 .Where(f => f.Id == _newDoc.FolderId)
                 .Select(f => new { Folder = f.Name, Box = f.FileBox.Name, Cabinet = f.FileBox.FillingCabinet.Name })
@@ -182,12 +229,12 @@
 
             _context.Documents.Add(_newDoc);
 
-            
+            // 5. Create Transaction Log
             var log = new TransactionLog
             {
                 FullName = user,
-                EventName = "Document Created",
-                Description = $"Filed document '{_newDoc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}.",
+                EventName = "Document Filed",
+                Description = $"Filed '{_newDoc.Title}' in {location?.Cabinet} > {location?.Box} > {location?.Folder}. Digital copy stored in Cloud.",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             };
@@ -195,12 +242,17 @@
 
             await _context.SaveChangesAsync();
 
-            Snackbar.Add("Document filed successfully!", Severity.Success);
+            Snackbar.Add("Document filed and uploaded successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
             Snackbar.Add("Error: " + (ex.InnerException?.Message ?? ex.Message), Severity.Error);
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
         }
     }
 

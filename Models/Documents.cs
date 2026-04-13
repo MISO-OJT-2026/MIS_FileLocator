@@ -14,7 +14,11 @@
 
         public string CreatedBy { get; set; } = " "; //when docs created in system
 
-        public string? UpdatedBy { get; set; } 
+        public string? UpdatedBy { get; set; }
+
+        // new
+        public string? FileName { get; set; } // The original name (e.g., "Resume.pdf")
+        public string? FilePath { get; set; }
 
 
         public bool IsDisposal { get; set; } 
