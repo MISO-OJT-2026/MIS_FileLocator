@@ -1,13 +1,19 @@
 ﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Threading
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
+@inject IConfiguration _config
 
 <MudDialog>
     <DialogContent>
-        <MudGrid>
+        <MudGrid Spacing="3">
+            @* --- Basic Info --- *@
             <MudItem xs="12" sm="8">
                 <MudTextField @bind-Value="_newForm.FormName"
                               Label="Form Name (e.g., Adding/Changing Form)"
@@ -22,64 +28,192 @@
                               Variant="Variant.Outlined" />
             </MudItem>
 
+            @* --- DYNAMIC CATEGORY (Type to Add New) --- *@
             <MudItem xs="12">
-                <MudSelect T="string" Label="Issuing Office/Category"
-                           @bind-Value="_newForm.Category"
-                           Variant="Variant.Outlined"
-                           Required="true">
-                    <MudSelectItem Value="@("Registrar")">Office of the Registrar</MudSelectItem>
-                    <MudSelectItem Value="@("Admissions")">Admissions</MudSelectItem>
-                    <MudSelectItem Value="@("CCS")">College of Computer Studies</MudSelectItem>
-                    <MudSelectItem Value="@("Scholarship")">Scholarship Office</MudSelectItem>
-                    <MudSelectItem Value="@("MIS")">MIS Office</MudSelectItem>
-                </MudSelect>
+                <MudAutocomplete T="string" Label="Issuing Office / Category" 
+                                 @bind-Value="_newForm.Category" 
+                                 SearchFunc="@SearchCategories"
+                                 Placeholder="Select an office or type a new one..."
+                                 Variant="Variant.Outlined" 
+                                 Required="true"
+                                 CoerceText="true" 
+                                 CoerceValue="true"
+                                 ResetValueOnEmptyText="false"
+                                 AdornmentIcon="@Icons.Material.Filled.Business" 
+                                 HelperText="New offices typed here will be saved to the list automatically."/>
             </MudItem>
 
+            @* --- HYBRID DIGITAL ASSET SECTION --- *@
             <MudItem xs="12">
-                <MudTextField @bind-Value="_newForm.PdfUrl"
-                              Label="PDF Link / URL"
-                              HelperText="Paste the tsu.edu.ph link here"
-                              Variant="Variant.Outlined"
-                              Required="true" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy (Optional Upload or Link)</MudText>
+                <MudPaper Variant="Variant.Outlined" Class="pa-4">
+                    <MudStack Spacing="4">
+                        @* Path 1: File Upload (Supports PDF and Office Files) *@
+                        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Info" 
+                                           StartIcon="@Icons.Material.Filled.CloudUpload">
+                                    @(_selectedFile == null ? "Upload File (PDF, Word, Excel)" : _selectedFile.Name)
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+
+                        @if (_selectedFile != null)
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="@(() => _selectedFile = null)">
+                                Selected: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
+                            </MudAlert>
+                        }
+
+                        <MudDivider />
+
+                        @* Path 2: Manual Link *@
+                        <MudTextField @bind-Value="_newForm.PdfUrl"
+                                      Label="Or Paste Manual URL"
+                                      Placeholder="https://tsu.edu.ph/..."
+                                      Variant="Variant.Outlined"
+                                      Clearable="true"
+                                      Disabled="@(_selectedFile != null)"
+                                      HelperText="@(_selectedFile != null ? "File upload will take priority." : "Use this if the form is already online.")" />
+                    </MudStack>
+                </MudPaper>
+
+                @if (_isUploading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2" />
+                }
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Add to Repository</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@_isUploading">
+            @(_isUploading ? "Uploading..." : "Add to Repository")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private FormTemplate _newForm = new();
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading = false;
+    private List<string> _existingCategories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Start with your default university offices
+        var defaultCategories = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
+
+        // 2. Load any additional categories currently used in the database
+        var dbCategories = await _context.FormTemplates
+            .Where(f => !string.IsNullOrEmpty(f.Category))
+            .Select(f => f.Category)
+            .Distinct()
+            .ToListAsync();
+
+        // 3. Combine them and remove duplicates
+        _existingCategories = defaultCategories
+            .Union(dbCategories)
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    // FIX: Added CancellationToken to match MudAutocomplete requirements
+    private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return _existingCategories;
+        return _existingCategories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+        // Auto-fill form name from the file name if it's currently empty
+        if (string.IsNullOrWhiteSpace(_newForm.FormName))
+        {
+            _newForm.FormName = Path.GetFileNameWithoutExtension(file.Name);
+        }
+    }
 
     private async Task Save()
     {
-        if (string.IsNullOrEmpty(_newForm.FormName) || string.IsNullOrEmpty(_newForm.PdfUrl))
+        // 1. Validation
+        if (string.IsNullOrEmpty(_newForm.FormName) || string.IsNullOrEmpty(_newForm.Category))
         {
-            Snackbar.Add("Please fill in the Name and Link.", Severity.Warning);
+            Snackbar.Add("Please fill in the Form Name and Office Category.", Severity.Error);
             return;
         }
 
-        var user = await _currentUserService.GetCurrentFullNameAsync();
-        _newForm.AddedBy = user;
-
-        _context.FormTemplates.Add(_newForm);
-
-        // TRANSACTION LOG
-        _context.TransactionLogs.Add(new TransactionLog
+        if (_selectedFile == null && string.IsNullOrEmpty(_newForm.PdfUrl))
         {
-            FullName = user,
-            EventName = "Repository Updated",
-            Description = $"Added new university form: {_newForm.FormName} ({_newForm.FormNumber})",
-            Status = "Success",
-            PerformedAt = DateTime.UtcNow.AddHours(8)
-        });
+            Snackbar.Add("Please either upload a file or provide a manual link.", Severity.Warning);
+            return;
+        }
 
-        await _context.SaveChangesAsync();
-        Snackbar.Add("Form added to repository!", Severity.Success);
-        MudDialog.Close(DialogResult.Ok(true));
+        try
+        {
+            _isUploading = true;
+            StateHasChanged();
+
+            // 2. Handle Azure Upload
+            if (_selectedFile != null)
+            {
+                string connectionString = _config.GetConnectionString("AzureStorage");
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerClient = blobServiceClient.GetBlobContainerClient("templates");
+                
+                await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+                string fileName = $"TEMPLATE_{Guid.NewGuid()}_{_selectedFile.Name}";
+                var blobClient = containerClient.GetBlobClient(fileName);
+
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
+                
+                // Set ContentType dynamically (PDF, DOCX, XLSX, etc.)
+                var headers = new BlobHttpHeaders { 
+                    ContentType = _selectedFile.ContentType,
+                    ContentDisposition = "inline" 
+                };
+
+                await blobClient.UploadAsync(stream, headers);
+                _newForm.PdfUrl = blobClient.Uri.ToString();
+            }
+
+            // 3. Metadata
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+            _newForm.AddedBy = user;
+            _newForm.DateAdded = DateTime.UtcNow.AddHours(8);
+
+            // 4. Database Persistence
+            _context.FormTemplates.Add(_newForm);
+
+            // 5. Audit Logging
+            _context.TransactionLogs.Add(new TransactionLog
+            {
+                FullName = user,
+                EventName = "Form Template Added",
+                Description = $"New form: {_newForm.FormName} ({_newForm.Category})",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+
+            await _context.SaveChangesAsync();
+            
+            Snackbar.Add("Form successfully added!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
     }
+
     private void Cancel() => MudDialog.Cancel();
 }

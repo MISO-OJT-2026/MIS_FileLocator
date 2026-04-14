@@ -15,166 +15,185 @@
 @inject ICurrentUserService _currentUserService
 @inject ISnackbar Snackbar
 
-<MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">University Form Repository</MudText>
-
-<MudPaper Elevation="0" Class="pa-4 mb-4">
-    <MudStack Row="true" AlignItems="AlignItems.Center">
-        <MudTextField @bind-Value="_searchString" Placeholder="Search form name or number..."
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
-
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddFormDialog">
-            Add New Form
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    @* --- Header Section --- *@
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+        <MudText Typo="Typo.h4">University Forms Repository</MudText>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="OpenAddDialog"
+                   Size="Size.Large">
+            Add New For
         </MudButton>
     </MudStack>
-</MudPaper>
 
-<MudPaper Elevation="1">
-    <MudList T="FormTemplate" Clickable="true" Color="Color.Primary">
-        @if (!GroupedForms.Any())
-        {
-            <MudListItem>
-                <MudText Typo="Typo.body2" Align="Align.Center">No forms found matching your search.</MudText>
-            </MudListItem>
-        }
+    @* --- Filter & Search Section --- *@
+    <MudPaper Elevation="3" Class="pa-6 mb-6">
+        <MudGrid Spacing="3" AlignItems="AlignItems.Center">
+            @* Search by Name or Number *@
+            <MudItem xs="12" md="5">
+                <MudTextField @bind-Value="_searchString" 
+                              Label="Search Forms"
+                              Placeholder="Type form name or TSU number..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              IconSize="Size.Medium" 
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true" />
+            </MudItem>
 
-        @foreach (var group in GroupedForms)
-        {
-            <MudListSubheader>
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary"><b>@group.Key.ToUpper()</b></MudText>
-            </MudListSubheader>
+            @* Filter by Office/Category *@
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" Label="Issuing Office" 
+                           @bind-Value="_selectedCategory" 
+                           AnchorOrigin="Origin.BottomCenter"
+                           Variant="Variant.Outlined"
+                           Clearable="true">
+                    <MudSelectItem Value="@((string)null)">All Offices</MudSelectItem>
+                    @foreach (var cat in _categories)
+                    {
+                        <MudSelectItem Value="@cat">@cat</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
 
-            @foreach (var form in group)
-            {
-                <MudListItem OnClick="@(() => OpenLink(form.PdfUrl))">
-                    <div class="d-flex align-center justify-space-between w-100">
-                        <div class="d-flex align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Error" Class="mr-4" />
-                            <div>
-                                <MudText Typo="Typo.body1">@form.FormName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@form.FormNumber</MudText>
-                            </div>
-                        </div>
+            @* Filter Actions *@
+            <MudItem xs="12" md="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
+                  
+                    @if (!string.IsNullOrWhiteSpace(_searchString) || !string.IsNullOrEmpty(_selectedCategory))
+                    {
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Error" 
+                                   OnClick="ResetFilters" 
+                                   StartIcon="@Icons.Material.Filled.FilterAltOff">
+                            Reset
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-                        <div class="d-flex align-center">
-                    
-
-                            @* Admin Actions *@
-                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight">
-                                <MudMenuItem Icon="@Icons.Material.Filled.Edit"  OnClick="@(() => OpenEditDialog(form))">Edit Info</MudMenuItem>
-                                <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => ConfirmArchive(form))" >Remove</MudMenuItem>
-                            </MudMenu>
-                        </div>
-                    </div>
-                </MudListItem>
-                <MudDivider DividerType="DividerType.Inset" />
-            }
-        }
-    </MudList>
-</MudPaper>
+    @* --- Repository Table --- *@
+    <MudTable Items="@FilteredForms" 
+              Hover="true" 
+              Breakpoint="Breakpoint.Sm" 
+              Loading="@_loading" 
+              LoadingProgressColor="Color.Info"
+              Elevation="3"
+              Class="rounded-lg"
+              Dense="true">
+        <HeaderContent>
+            <MudTh Style="font-weight: bold;">Form Details</MudTh>
+            <MudTh Style="font-weight: bold;">Form Number</MudTh>
+            <MudTh Style="font-weight: bold;">Office / Category</MudTh>
+            <MudTh Style="font-weight: bold;">Added By</MudTh>
+            <MudTh Style="font-weight: bold; text-align: center;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Form Name">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body1" >@context.FormName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Added: @context.DateAdded.ToString("MMM dd, yyyy")</MudText>
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Form Number">
+                <MudText Typo="Typo.body2" Class="font-monospace">@(string.IsNullOrEmpty(context.FormNumber) ? "---" : context.FormNumber)</MudText>
+            </MudTd>
+            <MudTd DataLabel="Category">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Label="true">@context.Category</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Added By">@context.AddedBy</MudTd>
+            <MudTd DataLabel="Action" Style="text-align: center;">
+                <MudStack Row="true" Justify="Justify.Center" Spacing="1">
+                    <MudTooltip Text="View/Download PDF">
+                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
+                                       Color="Color.Primary" 
+                                       Href="@context.PdfUrl" 
+                                       Target="_blank" />
+                    </MudTooltip>
+                    <MudTooltip Text="Edit Metadata">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                       Color="Color.Default" 
+                                       Size="Size.Small" />
+                    </MudTooltip>
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Class="ma-4">
+                No forms match the current search or filter criteria.
+            </MudAlert>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
 
 @code {
-    private string _searchString = "";
     private List<FormTemplate> _allForms = new();
+    private List<string> _categories = new();
+    private string _searchString = "";
+    private string _selectedCategory = null;
+    private bool _loading = true;
 
-    private IEnumerable<IGrouping<string, FormTemplate>> GroupedForms => _allForms
-        .Where(x => string.IsNullOrWhiteSpace(_searchString)
-                 || (x.FormName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false)
-                 || (x.FormNumber?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false))
-        .OrderBy(x => x.FormName)
-        .GroupBy(x => x.Category ?? "Uncategorized");
-
-    protected override async Task OnInitializedAsync() => await LoadForms();
-
-    private async Task LoadForms()
+    protected override async Task OnInitializedAsync()
     {
-        _allForms = await _context.FormTemplates
-            .Where(f => !f.IsArchived)
-            .ToListAsync();
+        await LoadData();
     }
 
-    private async Task OpenAddFormDialog()
+    private async Task LoadData()
     {
-        
-        var dialog = await DialogService.ShowAsync<AddFormDialog>("Add New University Form");
-        var result = await dialog.Result;
-        if (!result.Canceled) await LoadForms();
-    }
-
-    // --- FIX 2: Missing OpenLink with Logging ---
-    private async Task OpenLink(string url)
-    {
-        if (string.IsNullOrEmpty(url)) return;
-
-        // Find the form name for the log (Optional but better for OJT)
-        var formName = _allForms.FirstOrDefault(f => f.PdfUrl == url)?.FormName ?? "Unknown Form";
-
+        _loading = true;
         try
         {
-            var user = await _currentUserService.GetCurrentFullNameAsync();
+            _allForms = await _context.FormTemplates
+                .Where(f => !f.IsArchived)
+                .OrderByDescending(f => f.DateAdded)
+                .ToListAsync();
 
-            _context.TransactionLogs.Add(new TransactionLog
-            {
-                FullName = user,
-                EventName = "Form Accessed",
-                Description = $"User opened/downloaded: {formName}",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            });
-
-            await _context.SaveChangesAsync();
-
-            // Using jSRunTime (lowercase 'j' to match your @inject)
-            await jSRunTime.InvokeVoidAsync("open", url, "_blank");
+            // Populate the filter dropdown from actual database values
+            _categories = _allForms
+                .Select(f => f.Category)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Fallback: Still open the link even if logging fails
-            await jSRunTime.InvokeVoidAsync("open", url, "_blank");
+            Snackbar.Add("Error loading repository: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
-    // --- FIX 3: Corrected DialogParameters Syntax ---
-    private async Task OpenEditDialog(FormTemplate form)
-    {
-        var parameters = new DialogParameters<EditFormDialog>();
-        parameters.Add(x => x.FormToEdit, form); // Using .Add() is safer for some versions
+    // Logic for filtering the list in memory for better performance
+    private IEnumerable<FormTemplate> FilteredForms => _allForms
+        .Where(f => 
+            (string.IsNullOrWhiteSpace(_searchString) || 
+             f.FormName.Contains(_searchString, StringComparison.OrdinalIgnoreCase) || 
+             f.FormNumber.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(_selectedCategory) || f.Category == _selectedCategory)
+        );
 
-        var dialog = await DialogService.ShowAsync<EditFormDialog>("Edit Form Information", parameters);
+    private void ResetFilters()
+    {
+        _searchString = "";
+        _selectedCategory = null;
+    }
+
+    private async Task OpenAddDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddFormDialog>("Add New University Form", options);
         var result = await dialog.Result;
 
-        if (!result.Canceled) await LoadForms();
-    }
-
-    private async Task ConfirmArchive(FormTemplate form)
-    {
-        bool? result = await DialogService.ShowMessageBoxAsync(
-            "Archive Form",
-            $"Are you sure you want to remove '{form.FormName}'?",
-            yesText: "Remove", cancelText: "Cancel");
-
-        if (result == true)
+        if (!result.Canceled)
         {
-            form.IsArchived = true;
-            var user = await _currentUserService.GetCurrentFullNameAsync();
-
-            _context.TransactionLogs.Add(new TransactionLog
-            {
-                FullName = user,
-                EventName = "Form Remove",
-                Description = $"Removed form: {form.FormName}",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            });
-
-            await _context.SaveChangesAsync();
-            Snackbar.Add("Form removed.", Severity.Success);
-            await LoadForms();
+            await LoadData(); // Refresh the list and filters after adding a new entry
         }
-    
-
-    
-    
-}
+    }
 }
