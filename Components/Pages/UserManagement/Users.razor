@@ -20,7 +20,7 @@
     Add New User
 </MudButton>
 
-<MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users"  Hover="true" Filterable="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
+<MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users"  Hover="true" Filterable="false" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
     <ToolBarContent>
         <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
             <MudSpacer />
