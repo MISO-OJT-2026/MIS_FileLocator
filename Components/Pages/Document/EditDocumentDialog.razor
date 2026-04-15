@@ -1,7 +1,10 @@
-@using FileLocator.Models
+﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using MIS_FileLocator.Services
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Threading
 @using Microsoft.EntityFrameworkCore
 @using Azure.Storage.Blobs
 @using Azure.Storage.Blobs.Models
@@ -19,8 +22,15 @@
             <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.Info">
                 <MudStack Spacing="4" Class="mt-4">
                     <MudTextField @bind-Value="_editDoc.Title" Label="Document Title" Variant="Variant.Outlined" Required="true" />
+                    
                     <MudStack Row="true">
-                        <MudNumericField @bind-Value="_editDoc.Year" Label="Year" Variant="Variant.Outlined" />
+                        <MudDatePicker Label="Document Date" 
+                                       Date="_editDoc.DocumentDate" 
+                                       DateChanged="OnDocumentDateChanged"
+                                       Variant="Variant.Outlined" 
+                                       Required="true"
+                                       DateFormat="MMM dd, yyyy" />
+
                         <MudSelect T="int" Label="Confidentiality" @bind-Value="_editDoc.ConfidentialityLevelId" Variant="Variant.Outlined">
                             @foreach (var level in _levels)
                             {
@@ -28,36 +38,52 @@
                             }
                         </MudSelect>
                     </MudStack>
+
                     <MudTextField @bind-Value="_editDoc.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
-                    <MudDatePicker Label="Scheduled Disposal Date" @bind-Date="_editDoc.DateOfDisposal" Variant="Variant.Outlined" HelperText="Based on retention policy" />
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudSelect T="int" Label="Retention (Years)" @bind-Value="_retentionYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
+                            @for (int i = 1; i <= 10; i++)
+                            {
+                                var years = i;
+                                <MudSelectItem Value="@years">@years Years</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudDatePicker Label="Scheduled Disposal Date" 
+                                       @bind-Date="_editDoc.DateOfDisposal" 
+                                       Variant="Variant.Outlined" 
+                                       ReadOnly="true"
+                                       Color="Color.Secondary"
+                                       HelperText="Calculated from Document Date"
+                                       DateFormat="MMM dd, yyyy" />
+                    </MudStack>
                 </MudStack>
             </MudTabPanel>
 
-            @* TAB 2: Digital Copy (The "Blod" Section) *@
+            @* TAB 2: Digital Copy (RESTORED) *@
             <MudTabPanel Text="Digital Copy" Icon="@Icons.Material.Filled.Cloud">
                 <MudStack Spacing="4" Class="mt-4">
-                    @if (!string.IsNullOrEmpty(DocumentToEdit?.FilePath)) @* Use the tracked path *@
+                    @if (!string.IsNullOrEmpty(_editDoc.FilePath))
                     {
                         <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width:100%;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%;">
                                 <MudText>
-                                    Current Digital Copy:
-                                    <MudLink Href="@DocumentToEdit.FilePath" Target="_blank" Color="Color.Primary"><b>View File</b></MudLink>
+                                    Current Digital Copy: 
+                                    <MudLink Href="@_editDoc.FilePath" Target="_blank" Style="color: white !important;"><b>View File</b></MudLink>
                                 </MudText>
-
-                                @* NEW REMOVE BUTTON *@
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                
-                                               Color="Color.Error"
-                                               OnClick="RemoveDigitalFile"
-                                               Title="Remove this file from cloud" />
+                                <MudSpacer />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Variant="Variant.Filled"
+                                               OnClick="RemoveDigitalFile" 
+                                               Title="Remove from cloud" />
                             </MudStack>
                         </MudAlert>
                     }
 
                     <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
                         <ActivatorContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FileUpload">
+                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FileUpload" FullWidth="true">
                                 @(_selectedFile == null ? "Replace/Upload New Digital Copy" : _selectedFile.Name)
                             </MudButton>
                         </ActivatorContent>
@@ -70,11 +96,11 @@
                 </MudStack>
             </MudTabPanel>
 
-            
+            @* TAB 3: Borrowing *@
             <MudTabPanel Text="Borrowing" Icon="@Icons.Material.Filled.Outbound">
                 <MudStack Spacing="3" Class="mt-4">
-                    <MudAlert Severity="@(_editDoc.IsBorrowed? Severity.Error: Severity.Success)" Variant="Variant.Outlined">
-                        Status: @(_editDoc.IsBorrowed ? "OUT (Borrowed)" : "IN (Available)")
+                    <MudAlert Severity="@(_editDoc.IsBorrowed ? Severity.Error : Severity.Success)" Variant="Variant.Outlined">
+                        Status: @(_editDoc.IsBorrowed ? $"OUT (Borrowed by {_editDoc.CurrentBorrower})" : "IN (Available)")
                     </MudAlert>
                     <MudSwitch @bind-Value="_editDoc.IsBorrowed" Label="@(_editDoc.IsBorrowed ? "Mark as Returned" : "Mark as Borrowed")" Color="Color.Error" UnCheckedColor="Color.Success" />
                     @if (_editDoc.IsBorrowed)
@@ -85,19 +111,11 @@
                     }
                 </MudStack>
             </MudTabPanel>
-
-            
         </MudTabs>
     </DialogContent>
     <DialogActions>
-        
-        
-
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="SaveUpdates"
-                   Disabled="@_isUploading">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUpdates" Disabled="@_isUploading">
             @(_isUploading ? "Uploading..." : "Save Changes")
         </MudButton>
     </DialogActions>
@@ -111,24 +129,42 @@
     private List<ConfidentialityLevel> _levels = new();
     private IBrowserFile? _selectedFile;
     private bool _isUploading = false;
+    private int _retentionYears = 2;
+    private string _oldValuesJson = "";
+
+    // CONFIG: Fixes the cycle crash
+    private JsonSerializerOptions _jsonOptions = new() { ReferenceHandler = ReferenceHandler.IgnoreCycles };
 
     protected override async Task OnInitializedAsync()
     {
         _levels = await _context.ConfidentialityLevels.ToListAsync();
+        
         if (DocumentToEdit != null)
         {
-            
-            _editDoc.Id = DocumentToEdit.Id;
-            _editDoc.Title = DocumentToEdit.Title;
-            _editDoc.Description = DocumentToEdit.Description;
-            _editDoc.Year = DocumentToEdit.Year;
-            _editDoc.ConfidentialityLevelId = DocumentToEdit.ConfidentialityLevelId;
-            _editDoc.DateOfDisposal = DocumentToEdit.DateOfDisposal;
-            _editDoc.IsBorrowed = DocumentToEdit.IsBorrowed;
-            _editDoc.CurrentBorrower = DocumentToEdit.CurrentBorrower;
-            _editDoc.ExpectedReturnDate = DocumentToEdit.ExpectedReturnDate;
-            _editDoc.BorrowRemarks = DocumentToEdit.BorrowRemarks;
-            _editDoc.FilePath = DocumentToEdit.FilePath;
+            // Fix: Safe clone to prevent crash
+            var json = JsonSerializer.Serialize(DocumentToEdit, _jsonOptions);
+            _editDoc = JsonSerializer.Deserialize<Documents>(json)!;
+            _oldValuesJson = json;
+
+            if (_editDoc.DocumentDate.HasValue && _editDoc.DateOfDisposal.HasValue)
+            {
+                _retentionYears = _editDoc.DateOfDisposal.Value.Year - _editDoc.DocumentDate.Value.Year;
+                if (_retentionYears < 1) _retentionYears = 2;
+            }
+        }
+    }
+
+    private void OnDocumentDateChanged(DateTime? newDate)
+    {
+        _editDoc.DocumentDate = newDate;
+        CalculateDisposal();
+    }
+
+    private void CalculateDisposal()
+    {
+        if (_editDoc.DocumentDate.HasValue)
+        {
+            _editDoc.DateOfDisposal = _editDoc.DocumentDate.Value.AddYears(_retentionYears);
         }
     }
 
@@ -140,81 +176,79 @@
 
     private async Task SaveUpdates()
     {
+        var confirm = await DialogService.ShowMessageBoxAsync("Confirm Changes", "Update document record?", yesText: "Save", cancelText: "Cancel");
+        if (confirm == null || confirm == false) return;
+
         var realDoc = await _context.Documents.FindAsync(_editDoc.Id);
         if (realDoc == null) return;
 
-        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-        
         try 
         {
             _isUploading = true;
+            StateHasChanged();
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+            List<string> changeLog = new();
 
-           
+            // Handle New File Upload
             if (_selectedFile != null)
             {
-                string connectionString = _config.GetConnectionString("AzureStorage");
-                var blobServiceClient = new BlobServiceClient(connectionString);
-                var containerClient = blobServiceClient.GetBlobContainerClient("documents");
-                
+                string conn = _config.GetConnectionString("AzureStorage");
+                var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
                 string fileName = $"{Guid.NewGuid()}_{_selectedFile.Name}";
-                var blobClient = containerClient.GetBlobClient(fileName);
+                var blob = container.GetBlobClient(fileName);
 
-               
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
+                await blob.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
 
-                realDoc.FilePath = blobClient.Uri.ToString();
+                realDoc.FilePath = blob.Uri.ToString();
+                realDoc.FileName = _selectedFile.Name;
+                _editDoc.FilePath = realDoc.FilePath; // Keep in sync for audit trail
+                changeLog.Add("Replaced digital attachment");
             }
 
-          
-            realDoc.Title = _editDoc.Title;
-            realDoc.Description = _editDoc.Description;
-            realDoc.Year = _editDoc.Year;
-            realDoc.ConfidentialityLevelId = _editDoc.ConfidentialityLevelId;
-            realDoc.DateOfDisposal = _editDoc.DateOfDisposal;
-            realDoc.UpdatedBy = currentAdmin;
+            // Borrowing logic logs
+            if (!DocumentToEdit.IsBorrowed && _editDoc.IsBorrowed) changeLog.Add($"Borrowed by {_editDoc.CurrentBorrower}");
+            else if (DocumentToEdit.IsBorrowed && !_editDoc.IsBorrowed) changeLog.Add($"Returned by {DocumentToEdit.CurrentBorrower}");
 
-            
-            realDoc.IsBorrowed = _editDoc.IsBorrowed;
-            realDoc.CurrentBorrower = _editDoc.IsBorrowed ? _editDoc.CurrentBorrower : null;
-            realDoc.ExpectedReturnDate = _editDoc.IsBorrowed ? _editDoc.ExpectedReturnDate : null;
-            realDoc.BorrowRemarks = _editDoc.BorrowRemarks;
+            // Sync Database record
+            _context.Entry(realDoc).CurrentValues.SetValues(_editDoc);
+            realDoc.UpdatedBy = user;
 
-            if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null)
-                realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
-            else if (!_editDoc.IsBorrowed)
-                realDoc.BorrowedAt = null;
+            // Manage Borrowing Dates
+            if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null) realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
+            if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; }
 
-            
-            _context.TransactionLogs.Add(new TransactionLog
-            {
-                FullName = currentAdmin,
-                EventName = "Document Updated",
-                Description = $"Updated data for '{realDoc.Title}'. " + (_selectedFile != null ? "New digital copy uploaded." : ""),
+            // 1. Audit Trail (Detailed JSON)
+            _context.AuditTrails.Add(new AuditTrails {
+                FullName = user,
+                Action = "Modified",
+                TableName = "Documents",
+                RecordId = realDoc.Id.ToString(),
+                OldValues = _oldValuesJson,
+                NewValues = JsonSerializer.Serialize(_editDoc, _jsonOptions),
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+
+            // 2. Transaction Log (Friendly)
+            _context.TransactionLogs.Add(new TransactionLog {
+                FullName = user,
+                EventName = "Document Modified",
+                Description = $"{realDoc.Title}: {(changeLog.Any() ? string.Join(", ", changeLog) : "Metadata updated")}",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
-            Snackbar.Add("Changes saved successfully.", Severity.Success);
+            Snackbar.Add("Saved and Audit Trail created.", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add("Error: " + ex.Message, Severity.Error);
-        }
-        finally
-        {
-            _isUploading = false;
-        }
+        catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
+        finally { _isUploading = false; }
     }
+
     private async Task RemoveDigitalFile()
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Remove Digital Copy",
-            "Are you sure you want to delete the digital file from the cloud? The document record will remain, but the file will be gone.",
-            yesText: "Remove", cancelText: "Cancel");
-
+        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Delete the cloud file?", yesText: "Remove", cancelText: "Cancel");
         if (confirmed == true)
         {
             try
@@ -222,36 +256,22 @@
                 var realDoc = await _context.Documents.FindAsync(_editDoc.Id);
                 if (realDoc == null || string.IsNullOrEmpty(realDoc.FilePath)) return;
 
-                // 1. Delete from Azure Blob Storage
-                string connectionString = _config.GetConnectionString("AzureStorage");
-                var blobServiceClient = new BlobServiceClient(connectionString);
-                var containerClient = blobServiceClient.GetBlobContainerClient("documents");
+                string conn = _config.GetConnectionString("AzureStorage");
+                var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
+                string blobName = Path.GetFileName(new Uri(realDoc.FilePath).LocalPath);
+                await container.GetBlobClient(blobName).DeleteIfExistsAsync();
 
-                // Extract the filename from the URL
-                Uri uri = new Uri(realDoc.FilePath);
-                string blobName = Path.GetFileName(uri.LocalPath);
-                var blobClient = containerClient.GetBlobClient(blobName);
-
-                await blobClient.DeleteIfExistsAsync();
-
-                // 2. Clear the path in Database
                 realDoc.FilePath = null;
-                DocumentToEdit.FilePath = null; // Update the UI parameter too
+                realDoc.FileName = null;
+                _editDoc.FilePath = null;
 
                 await _context.SaveChangesAsync();
-
-                Snackbar.Add("Digital copy removed successfully.", Severity.Success);
+                Snackbar.Add("Digital copy removed.", Severity.Warning);
                 StateHasChanged();
             }
-            catch (Exception ex)
-            {
-                Snackbar.Add("Error removing file: " + ex.Message, Severity.Error);
-            }
+            catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
         }
     }
-    
-        
-    
 
     private void Cancel() => MudDialog.Cancel();
 }

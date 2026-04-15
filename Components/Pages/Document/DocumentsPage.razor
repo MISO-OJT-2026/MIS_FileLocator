@@ -115,12 +115,12 @@ RowClick = "OnRowClicked">
                         </MudSelect>
 
                         @* Year Filter *@
-                        <MudSelect T="string" Label="Year" @bind-Value="_selectedYear"
+                        <MudSelect T="string" Label="DocumentDate" @bind-Value="_selectedDocumentDate"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
                             <MudSelectItem Value="@("")">All Years</MudSelectItem>
-                            @foreach (var year in GetAvailableYears())
+                            @foreach (var date in GetAvailableDocumentDate())
                             {
-                                <MudSelectItem Value="@year">@year</MudSelectItem>
+                                <MudSelectItem Value="@date">@date</MudSelectItem>
                             }
                         </MudSelect>
                         
@@ -143,7 +143,7 @@ RowClick = "OnRowClicked">
 
     <Columns>
         <PropertyColumn Property="x => x.Title" Title="Document Title" />
-        <PropertyColumn Property="x => x.Year" Title="Year" Sortable="true" />
+        <PropertyColumn Property="x => x.DocumentDate" Title="DocumentDate" Sortable="true" />
 
       
         <TemplateColumn Title="Physical Location">
@@ -207,7 +207,7 @@ RowClick = "OnRowClicked">
     private string _selectedBox = "";
     private string _selectedFolder = "";
     private string _selectedConfidentiality = "";
-    private string _selectedYear = "";
+    private string _selectedDocumentDate = "";
 
     protected override async Task OnInitializedAsync() 
     {
@@ -270,16 +270,16 @@ RowClick = "OnRowClicked">
         }
 
         // Filter by Year
-        if (!string.IsNullOrWhiteSpace(_selectedYear))
+        if (!string.IsNullOrWhiteSpace(_selectedDocumentDate))
         {
-            if (x.Year?.ToString() != _selectedYear) return false;
+            if (x.DocumentDate?.ToString() != _selectedDocumentDate) return false;
         }
 
         // Search text
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-            if (x.Year?.ToString().Contains(_searchString) == true) return true;
+            if (x.DocumentDate?.ToString().Contains(_searchString) == true) return true;
             if (x.Folder?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
             return false;
         }
@@ -308,7 +308,7 @@ RowClick = "OnRowClicked">
         _selectedBox = "";
         _selectedFolder = "";
         _selectedConfidentiality = "";
-        _selectedYear = "";
+        _selectedDocumentDate = "";
         _searchString = "";
     }
 
@@ -365,13 +365,13 @@ RowClick = "OnRowClicked">
             .OrderBy(level => level);
     }
 
-    private IEnumerable<string> GetAvailableYears()
+    private IEnumerable<string> GetAvailableDocumentDate()
     {
         return _allDocuments
-            .Where(d => d.Year.HasValue)
-            .Select(d => d.Year.Value.ToString())
+            .Where(d => d.DocumentDate.HasValue)
+            .Select(d => d.DocumentDate.Value.ToString("yyyy"))
             .Distinct()
-            .OrderByDescending(year => year);
+            .OrderByDescending(date => date);
     }
 
     private Color GetConfidentialityColor(string? name) => name?.ToLower() switch

@@ -6,6 +6,7 @@
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using Microsoft.EntityFrameworkCore
+@using static MudBlazor.CategoryTypes
 
 
 @inject NavigationManager Nav
@@ -105,7 +106,7 @@
             </MudTd>
             <MudTd DataLabel="Category">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Label="true">@context.Category</MudChip>
-            </MudTd>
+            </MudTd> 
             <MudTd DataLabel="Added By">@context.AddedBy</MudTd>
             <MudTd DataLabel="Action" Style="text-align: center;">
                 <MudStack Row="true" Justify="Justify.Center" Spacing="1">
@@ -113,12 +114,14 @@
                         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" 
                                        Color="Color.Primary" 
                                        Href="@context.PdfUrl" 
-                                       Target="_blank" />
+                                       Target="_blank" 
+                                       Size="Size.Small"/>
                     </MudTooltip>
-                    <MudTooltip Text="Edit Metadata">
+                    <MudTooltip Text="Edit Form">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
-                                       Color="Color.Default" 
-                                       Size="Size.Small" />
+                                       Color="Color.Warning" 
+                                        Size="Size.Small"
+                                        OnClick="@(() =>OpenEditDialog(context) )"/>
                     </MudTooltip>
                 </MudStack>
             </MudTd>
@@ -179,6 +182,35 @@
             (string.IsNullOrEmpty(_selectedCategory) || f.Category == _selectedCategory)
         );
 
+    //OPEN EDIT DIALOG
+
+    private async Task OpenEditDialog(FormTemplate form)
+    {
+        
+        var parameters = new DialogParameters<EditFormDialog>();
+        parameters.Add(x => x.FormToEdit, form);
+
+        
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        
+        var dialog = await DialogService.ShowAsync<EditFormDialog>("Edit Form Information", parameters, options);
+
+       
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+
     private void ResetFilters()
     {
         _searchString = "";
@@ -193,7 +225,7 @@
 
         if (!result.Canceled)
         {
-            await LoadData(); // Refresh the list and filters after adding a new entry
+            await LoadData(); 
         }
     }
 }

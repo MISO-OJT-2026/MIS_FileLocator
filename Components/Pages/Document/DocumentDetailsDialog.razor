@@ -30,14 +30,38 @@
 
                 <MudStack Row="true" Spacing="4">
                     <div>
-                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">YEAR</MudText>
-                        <MudText Typo="Typo.h6">@SelectedDoc.Year</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT DATE</MudText>
+                        <MudText Typo="Typo.h6">@SelectedDoc.DocumentDate?.ToString("MMM dd, yyyy")</MudText>
                     </div>
                     <div>
                         <MudText Typo="Typo.subtitle2" Color="Color.Primary">CONFIDENTIALITY</MudText>
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning">@SelectedDoc.ConfidentialityLevel?.Name</MudChip>
                     </div>
                 </MudStack>
+
+                @* --- ADDED: BORROWING DETAILS SECTION --- *@
+                @if (SelectedDoc.IsBorrowed)
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-6 border-dashed" Style="border-color: var(--mud-palette-error); background-color: #fff8f8;">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">BORROWING DETAILS</MudText>
+                        <MudGrid Spacing="1">
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Class="d-block">Borrower Name</MudText>
+                                <MudText Typo="Typo.body2"><b>@SelectedDoc.CurrentBorrower</b></MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Class="d-block">Date Borrowed</MudText>
+                                <MudText Typo="Typo.body2">@SelectedDoc.BorrowedAt?.ToString("MMM dd, yyyy")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" Class="mt-2">
+                                <MudText Typo="Typo.caption" Class="d-block">Remarks</MudText>
+                                <MudText Typo="Typo.body2" Style="font-style: italic;">
+                                    @(string.IsNullOrEmpty(SelectedDoc.BorrowRemarks) ? "No remarks provided." : SelectedDoc.BorrowRemarks)
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
             </MudItem>
 
             @* Right Side: Status, Digital Copy & Metadata *@
@@ -48,9 +72,11 @@
                     @if (SelectedDoc.IsBorrowed)
                     {
                         <MudAlert Severity="Severity.Error" Dense="true" Icon="@Icons.Material.Filled.Outbound" Class="mb-2">
-                            Borrowed by <b>@SelectedDoc.CurrentBorrower</b>
+                            Borrowed / Out of Office
                         </MudAlert>
-                        <MudText Typo="Typo.caption">Due: @SelectedDoc.ExpectedReturnDate?.ToString("MMM dd, yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Error" Class="ml-2">
+                            <b>Expected Return:</b> @SelectedDoc.ExpectedReturnDate?.ToString("MMM dd, yyyy")
+                        </MudText>
                     }
                     else
                     {
@@ -61,7 +87,7 @@
 
                     <MudDivider Class="my-4" />
 
-                    @* --- NEW: DIGITAL COPY VIEW BUTTON --- *@
+                    @* --- DIGITAL COPY VIEW BUTTON --- *@
                     <MudText Typo="Typo.button" Class="mb-2 d-block">Digital Assets</MudText>
                     @if (!string.IsNullOrEmpty(SelectedDoc.FilePath))
                     {
@@ -84,9 +110,16 @@
 
                     <MudDivider Class="my-4" />
 
-                    <MudText Typo="Typo.caption" Class="d-block"><b>Filed At:</b> @SelectedDoc.FiledAt.ToString("MMM dd, yyyy hh:mm tt")</MudText>
-                    <MudText Typo="Typo.caption" Class="d-block"><b>Filed By:</b> @SelectedDoc.FiledBy</MudText>
-                    <MudText Typo="Typo.caption" Class="d-block"><b>Retention Policy:</b> Disposal on @SelectedDoc.DateOfDisposal?.ToString("yyyy")</MudText>
+                    @* Metadata Footer *@
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.caption"><b>Filed At:</b> @SelectedDoc.FiledAt.ToString("MMM dd, yyyy")</MudText>
+                        <MudText Typo="Typo.caption"><b>Filed By:</b> @SelectedDoc.FiledBy</MudText>
+                        <MudText Typo="Typo.caption"><b>Retention:</b> Disposal on @SelectedDoc.DateOfDisposal?.ToString("MMM dd, yyyy")</MudText>
+                        @if (!string.IsNullOrEmpty(SelectedDoc.UpdatedBy))
+                        {
+                            <MudText Typo="Typo.caption"><b>Last Modified By:</b> @SelectedDoc.UpdatedBy</MudText>
+                        }
+                    </MudStack>
                 </MudPaper>
             </MudItem>
         </MudGrid>

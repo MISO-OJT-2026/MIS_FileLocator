@@ -28,7 +28,7 @@
                                 <MudStack Spacing="0">
                                     <MudText Typo="Typo.body1">@doc.Title</MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        Filed on: @doc.FiledAt.ToString("MMM dd, yyyy") | Year: @(doc.Year?.ToString() ?? "N/A")
+                                        Filed on: @doc.FiledAt.ToString("MMM dd, yyyy") | Year: @(doc.DocumentDate?.ToString() ?? "N/A")
                                     </MudText>
                                 </MudStack>
 

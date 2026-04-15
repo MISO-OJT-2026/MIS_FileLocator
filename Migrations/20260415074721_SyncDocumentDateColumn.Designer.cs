@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MIS_FileLocator.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260406091857_ahhhhhh")]
-    partial class ahhhhhh
+    [Migration("20260415074721_SyncDocumentDateColumn")]
+    partial class SyncDocumentDateColumn
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -137,8 +137,17 @@ namespace MIS_FileLocator.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DocumentDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("ExpectedReturnDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilePath")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("FiledAt")
                         .HasColumnType("datetime2");
@@ -164,9 +173,6 @@ namespace MIS_FileLocator.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("Year")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

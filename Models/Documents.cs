@@ -8,7 +8,7 @@
 
         public string? Description { get; set; } 
 
-        public int? Year { get; set; }
+        public DateTime? DocumentDate { get; set; }
 
         public DateTime FiledAt { get; set; } = DateTime.UtcNow; //when docs physically filed sa cabinet
 

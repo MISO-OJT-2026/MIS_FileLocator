@@ -1,29 +1,122 @@
 ﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Threading
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
+@inject IConfiguration _config
+@inject IDialogService DialogService
 
-<MudDialog>
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
     <DialogContent>
-        <MudStack Spacing="4">
-            <MudTextField @bind-Value="_editForm.FormName" Label="Form Name" Variant="Variant.Outlined" Required="true" />
-            <MudTextField @bind-Value="_editForm.FormNumber" Label="Form Number" Variant="Variant.Outlined" />
+        <MudGrid Spacing="3">
+            @* --- Form Identification --- *@
+            <MudItem xs="12" sm="8">
+                <MudTextField @bind-Value="_editForm.FormName" 
+                              Label="Form Name" 
+                              Variant="Variant.Outlined" 
+                              Required="true" />
+            </MudItem>
 
-            <MudSelect T="string" Label="Category" @bind-Value="_editForm.Category" Variant="Variant.Outlined">
-                <MudSelectItem Value="@("Registrar")">Registrar</MudSelectItem>
-                <MudSelectItem Value="@("Admissions")">Admissions</MudSelectItem>
-                <MudSelectItem Value="@("CCS")">CCS</MudSelectItem>
-                <MudSelectItem Value="@("Scholarship")">Scholarship</MudSelectItem>
-            </MudSelect>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_editForm.FormNumber" 
+                              Label="Form Number" 
+                              Placeholder="TSU-OAR-SF-22"
+                              Variant="Variant.Outlined" />
+            </MudItem>
 
-            <MudTextField @bind-Value="_editForm.PdfUrl" Label="PDF Link" Variant="Variant.Outlined" Required="true" />
-        </MudStack>
+            @* --- Responsive Category (Dynamic) --- *@
+            <MudItem xs="12">
+                <MudAutocomplete T="string" Label="Issuing Office / Category" 
+                                 @bind-Value="_editForm.Category" 
+                                 SearchFunc="@SearchCategories"
+                                 Placeholder="Select or type a new office..."
+                                 Variant="Variant.Outlined" 
+                                 Required="true"
+                                 CoerceText="true" 
+                                 CoerceValue="true"
+                                 AdornmentIcon="@Icons.Material.Filled.Business" />
+            </MudItem>
+
+            @* --- Digital Asset Section --- *@
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy</MudText>
+                <MudPaper Variant="Variant.Outlined" Class="pa-4">
+                    <MudStack Spacing="4">
+                        
+                        @* 1. Display Current File if exists *@
+                        @if (!string.IsNullOrEmpty(_editForm.PdfUrl))
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" NoIcon="false">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width:100%">
+                                    <MudText>
+                                        Current: <MudLink Href="@_editForm.PdfUrl" Target="_blank" style="color:aliceblue;"><b>View File</b></MudLink>
+                                    </MudText>
+                                    <MudSpacer/>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                   Color="Color.Error" 
+                                                   OnClick="RemoveDigitalFile" 
+                                                   Size="Size.Small"
+                                                   Variant="Variant.Filled"
+                                                   Title="Delete file from cloud" />
+                                </MudStack>
+                            </MudAlert>
+                        }  
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">No digital file attached to this form.</MudAlert>
+                        }
+
+                        <MudDivider />
+
+                        @* 2. Replace/Upload New File *@
+                        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Secondary" 
+                                           FullWidth="true"
+                                           StartIcon="@Icons.Material.Filled.CloudUpload">
+                                    @(_selectedFile == null ? "Replace/Upload File" : _selectedFile.Name)
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+
+                        @if (_selectedFile != null)
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="@(() => _selectedFile = null)">
+                                New File: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
+                            </MudAlert>
+                        }
+
+                        @* 3. Edit/Provide Link *@
+                        <MudTextField @bind-Value="_editForm.PdfUrl" 
+                                      Label="Manual URL Link" 
+                                      Variant="Variant.Outlined" 
+                                      Placeholder="https://tsu.edu.ph/..."
+                                      Disabled="@(_selectedFile != null)"
+                                      HelperText="@(_selectedFile != null ? "File upload takes priority" : "Edit the direct link here")" />
+                    </MudStack>
+                </MudPaper>
+
+                @if (_isUploading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2" />
+                }
+            </MudItem>
+        </MudGrid>
     </DialogContent>
     <DialogActions>
+        @* Delete whole record button pushed to left *@
+        <MudButton Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever" OnClick="DeleteForm" Class="mr-auto">Delete Form</MudButton>
+        
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Update Form</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@_isUploading">
+            @(_isUploading ? "Updating..." : "Update Form")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -32,10 +125,23 @@
     [Parameter] public FormTemplate FormToEdit { get; set; } = new();
 
     private FormTemplate _editForm = new();
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading = false;
+    private List<string> _existingCategories = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Clone the data to prevent live-editing the list
+        // Load categories for the autocomplete
+        var defaults = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
+        var dbCats = await _context.FormTemplates
+            .Where(f => !string.IsNullOrEmpty(f.Category))
+            .Select(f => f.Category)
+            .Distinct()
+            .ToListAsync();
+
+        _existingCategories = defaults.Union(dbCats).OrderBy(x => x).ToList();
+
+        // Clone the data
         _editForm.Id = FormToEdit.Id;
         _editForm.FormName = FormToEdit.FormName;
         _editForm.FormNumber = FormToEdit.FormNumber;
@@ -43,31 +149,125 @@
         _editForm.PdfUrl = FormToEdit.PdfUrl;
     }
 
+    private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return _existingCategories;
+        return _existingCategories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+    }
+
+    private async Task RemoveDigitalFile()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Delete the digital copy from Azure storage?", yesText: "Delete", cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_editForm.PdfUrl) && _editForm.PdfUrl.Contains("blob.core.windows.net"))
+                {
+                    string conn = _config.GetConnectionString("AzureStorage");
+                    var client = new BlobServiceClient(conn).GetBlobContainerClient("templates");
+                    string blobName = Path.GetFileName(new Uri(_editForm.PdfUrl).LocalPath);
+                    await client.GetBlobClient(blobName).DeleteIfExistsAsync();
+                }
+                _editForm.PdfUrl = "";
+                Snackbar.Add("Digital copy cleared.", Severity.Info);
+            }
+            catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
+        }
+    }
+
     private async Task Save()
     {
-        var dbEntry = await _context.FormTemplates.FindAsync(_editForm.Id);
-        if (dbEntry != null)
+        try
         {
+            _isUploading = true;
+            var dbEntry = await _context.FormTemplates.FindAsync(_editForm.Id);
+            if (dbEntry == null) return;
+
+            List<string> changes = new();
+
+            if (dbEntry.FormName != _editForm.FormName)
+                changes.Add($"Name: '{dbEntry.FormName}' → '{_editForm.FormName}'");
+
+            if (dbEntry.FormNumber != _editForm.FormNumber)
+                changes.Add($"Number: '{dbEntry.FormNumber}' → '{_editForm.FormNumber}'");
+
+            if (dbEntry.Category != _editForm.Category)
+                changes.Add($"Category: '{dbEntry.Category}' → '{_editForm.Category}'");
+
+            
+            if (_selectedFile != null)
+            {
+                string conn = _config.GetConnectionString("AzureStorage");
+                var container = new BlobServiceClient(conn).GetBlobContainerClient("templates");
+                await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+                
+                string fileName = $"TEMPLATE_UPD_{Guid.NewGuid()}_{_selectedFile.Name}";
+                var blob = container.GetBlobClient(fileName);
+
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
+                await blob.UploadAsync(stream, new BlobHttpHeaders
+                {
+                    ContentType = _selectedFile.ContentType,
+                    ContentDisposition = "inline"
+                });
+
+                
+                _editForm.PdfUrl = blob.Uri.ToString();
+                changes.Add("Replaced Digital File");
+            }
+            else if (dbEntry.PdfUrl != _editForm.PdfUrl)
+            {
+                changes.Add("Updated Manual Link");
+            }
+
+        
             dbEntry.FormName = _editForm.FormName;
             dbEntry.FormNumber = _editForm.FormNumber;
             dbEntry.Category = _editForm.Category;
             dbEntry.PdfUrl = _editForm.PdfUrl;
 
             var user = await _currentUserService.GetCurrentFullNameAsync();
+            string detailSummary = changes.Count > 0 ? string.Join(", ", changes) : "No changes made to details";
 
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
-                EventName = "Repository Updated",
-                Description = $"Updated info for form: {dbEntry.FormName}",
+                EventName = "Form Updated",
+                Description = $"Edited '{dbEntry.FormName}': {detailSummary}",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
-            Snackbar.Add("Form updated!", Severity.Success);
+            Snackbar.Add("Updated successfully", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
+        catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
+        finally { _isUploading = false; }
     }
+
+    private async Task DeleteForm()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync("Confirm Delete", "Permanently remove this form from the repository?", yesText: "Delete", cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            var doc = await _context.FormTemplates.FindAsync(_editForm.Id);
+            if (doc != null)
+            {
+                _context.FormTemplates.Remove(doc);
+                await _context.SaveChangesAsync();
+                Snackbar.Add("Form removed from repository.", Severity.Warning);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        }
+    }
+
     private void Cancel() => MudDialog.Cancel();
 }

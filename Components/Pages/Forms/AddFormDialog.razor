@@ -181,20 +181,20 @@
                 _newForm.PdfUrl = blobClient.Uri.ToString();
             }
 
-            // 3. Metadata
+            
             var user = await _currentUserService.GetCurrentFullNameAsync();
             _newForm.AddedBy = user;
             _newForm.DateAdded = DateTime.UtcNow.AddHours(8);
-
-            // 4. Database Persistence
+            string source = _selectedFile != null ? "Uploaded File" : "Manual Link";
+            
             _context.FormTemplates.Add(_newForm);
 
-            // 5. Audit Logging
+           
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
-                EventName = "Form Template Added",
-                Description = $"New form: {_newForm.FormName} ({_newForm.Category})",
+                EventName = "Form Created",
+                Description = $"Added new form: '{_newForm.FormName}'. [No: {_newForm.FormNumber}, Category: {_newForm.Category}, Source: {source}]",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });

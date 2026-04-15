@@ -54,7 +54,7 @@
             <Columns>
                 <SelectColumn T="Documents" />
                 <PropertyColumn Property="x => x.Title" Title="Document" />
-                <PropertyColumn Property="x => x.Year" Title="Year" />
+                <PropertyColumn Property="x => x.DocumentDate" Title="Year" />
                 <TemplateColumn Title="Scheduled Date">
                     <CellTemplate>
                         @context.Item.DateOfDisposal?.ToString("MMM dd, yyyy")
@@ -105,7 +105,7 @@
                             </MudText>
                         </CellTemplate>
                     </TemplateColumn>
-                    <PropertyColumn Property="x => x.Year" Title="Original Year" />
+                    <PropertyColumn Property="x => x.DocumentDate" Title="Original Year" />
                     <PropertyColumn Property="x => x.UpdatedBy" Title="Handled By" />
 
                    
@@ -220,7 +220,7 @@
         foreach (var doc in _disposedHistory)
         {
             var location = $"{doc.Folder?.FileBox?.FillingCabinet?.Name} > {doc.Folder?.FileBox?.Name}";
-            csvBuilder.AppendLine($"\"{doc.Title}\",{doc.Year},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")},{doc.UpdatedBy},\"{location}\"");
+            csvBuilder.AppendLine($"\"{doc.Title}\",{doc.DocumentDate},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")},{doc.UpdatedBy},\"{location}\"");
         }
 
         var fileName = $"Disposal_Report_{DateTime.Now:yyyyMMdd}.csv";
@@ -243,7 +243,7 @@
             var box = doc.Folder?.FileBox?.Name ?? "N/A";
             var folder = doc.Folder?.Name ?? "N/A";
 
-            csvBuilder.AppendLine($"\"{cab}\",\"{box}\",\"{folder}\",\"{doc.Title}\",{doc.Year},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")}");
+            csvBuilder.AppendLine($"\"{cab}\",\"{box}\",\"{folder}\",\"{doc.Title}\",{doc.DocumentDate},{doc.DateOfDisposal?.ToString("yyyy-MM-dd")}");
         }
 
         var fileName = $"Pending_Disposal_List_{DateTime.Now:yyyyMMdd}.csv";
