@@ -30,7 +30,7 @@
                      Filterable="true">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Eligible for Disposal</MudText>
-                <MudSpacer />
+
                 <MudTooltip Text="Export Pending Disposal">
                 <MudIconButton Variant="Variant.Outlined" 
                Color="Color.Success" 
@@ -50,6 +50,19 @@
                         Dispose Officialy (@_selectedItems.Count)
                     </MudButton>
                 }
+
+                <MudSpacer/>
+
+                <MudTextField @bind-Value="_search"
+                              Placeholder="Search..."
+                              Adornment="Adornment.Start"
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Style="width: 300px;">
+
+                </MudTextField>
             </ToolBarContent>
             <Columns>
                 <SelectColumn T="Documents" />
@@ -92,6 +105,12 @@
 							   Disabled = "@(!_disposedHistory.Any())"/>
 
                     </MudTooltip>
+
+					<MudSpacer />
+
+                    <MudTextField>
+
+                    </MudTextField>
 						
 
                 </ToolBarContent>
@@ -129,6 +148,7 @@
     private List<Documents> _disposedHistory = new();
     private List<Documents> _pendingDisposal = new();
     private HashSet<Documents> _selectedItems = new();
+	private string _search = "";
 
     protected override async Task OnInitializedAsync()
     {

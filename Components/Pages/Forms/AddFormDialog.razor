@@ -53,7 +53,8 @@
                             <ActivatorContent>
                                 <MudButton Variant="Variant.Filled" 
                                            Color="Color.Info" 
-                                           StartIcon="@Icons.Material.Filled.CloudUpload">
+                                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                                           FullWidth="true">
                                     @(_selectedFile == null ? "Upload File (PDF, Word, Excel)" : _selectedFile.Name)
                                 </MudButton>
                             </ActivatorContent>
@@ -103,24 +104,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Start with your default university offices
         var defaultCategories = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
 
-        // 2. Load any additional categories currently used in the database
         var dbCategories = await _context.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
             .Select(f => f.Category)
             .Distinct()
             .ToListAsync();
 
-        // 3. Combine them and remove duplicates
         _existingCategories = defaultCategories
             .Union(dbCategories)
             .OrderBy(x => x)
             .ToList();
     }
 
-    // FIX: Added CancellationToken to match MudAutocomplete requirements
     private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value)) return _existingCategories;
@@ -130,7 +127,6 @@
     private void OnFileSelected(IBrowserFile file)
     {
         _selectedFile = file;
-        // Auto-fill form name from the file name if it's currently empty
         if (string.IsNullOrWhiteSpace(_newForm.FormName))
         {
             _newForm.FormName = Path.GetFileNameWithoutExtension(file.Name);
@@ -146,6 +142,7 @@
             return;
         }
 
+       
         if (_selectedFile == null && string.IsNullOrEmpty(_newForm.PdfUrl))
         {
             Snackbar.Add("Please either upload a file or provide a manual link.", Severity.Warning);
@@ -166,22 +163,24 @@
                 
                 await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-                string fileName = $"TEMPLATE_{Guid.NewGuid()}_{_selectedFile.Name}";
+                // FIX: Sanitize filename to prevent BlobNotFound/404 errors
+                string safeFileName = _selectedFile.Name.Replace(" ", "_");
+                string fileName = $"TEMPLATE_{Guid.NewGuid()}_{safeFileName}";
+                
                 var blobClient = containerClient.GetBlobClient(fileName);
 
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
                 
-                // Set ContentType dynamically (PDF, DOCX, XLSX, etc.)
+                // FIX: Force Download Header to prevent XML tree errors
                 var headers = new BlobHttpHeaders { 
                     ContentType = _selectedFile.ContentType,
-                    ContentDisposition = "inline" 
+                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
                 };
 
                 await blobClient.UploadAsync(stream, headers);
                 _newForm.PdfUrl = blobClient.Uri.ToString();
             }
 
-            
             var user = await _currentUserService.GetCurrentFullNameAsync();
             _newForm.AddedBy = user;
             _newForm.DateAdded = DateTime.UtcNow.AddHours(8);
@@ -189,7 +188,6 @@
             
             _context.FormTemplates.Add(_newForm);
 
-           
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
