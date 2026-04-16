@@ -21,7 +21,10 @@
         <MudText Typo="Typo.h6">Currently Out</MudText>
         <MudSpacer />
         <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
-                      Adornment="Adornment.Start" Immediate="true"
+                      Adornment="Adornment.Start"
+					  Variant="Variant.Filled"
+                       Immediate ="true"
+                      Margin="Margin.Dense"
                       AdornmentIcon="@Icons.Material.Filled.Search" />
     </ToolBarContent>
     <Columns>

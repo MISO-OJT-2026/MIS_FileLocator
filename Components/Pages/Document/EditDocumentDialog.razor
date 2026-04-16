@@ -187,18 +187,47 @@
             _isUploading = true;
             StateHasChanged();
             var user = await _currentUserService.GetCurrentFullNameAsync();
+            
+            // --- DETAILED LOGGING LOGIC ---
             List<string> changeLog = new();
+
+            if (DocumentToEdit.Title != _editDoc.Title) 
+                changeLog.Add($"Title: '{DocumentToEdit.Title}' → '{_editDoc.Title}'");
+
+            if (DocumentToEdit.DocumentDate != _editDoc.DocumentDate) 
+                changeLog.Add($"Date: {DocumentToEdit.DocumentDate?.ToString("MMM dd, yyyy")} → {_editDoc.DocumentDate?.ToString("MMM dd, yyyy")}");
+
+            if (DocumentToEdit.ConfidentialityLevelId != _editDoc.ConfidentialityLevelId)
+            {
+                var oldLevel = _levels.FirstOrDefault(l => l.Id == DocumentToEdit.ConfidentialityLevelId)?.Name;
+                var newLevel = _levels.FirstOrDefault(l => l.Id == _editDoc.ConfidentialityLevelId)?.Name;
+                changeLog.Add($"Security: '{oldLevel}' → '{newLevel}'");
+            }
+
+            if (DocumentToEdit.Description != _editDoc.Description) 
+                changeLog.Add("Description updated");
+            // --- END DETAILED LOGGING LOGIC ---
+
 
             // Handle New File Upload
             if (_selectedFile != null)
             {
                 string conn = _config.GetConnectionString("AzureStorage");
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
-                string fileName = $"{Guid.NewGuid()}_{_selectedFile.Name}";
+                
+                // SAFE FILENAME & FORCED DOWNLOAD HEADERS FIX
+                string safeFileName = _selectedFile.Name.Replace(" ", "_");
+                string fileName = $"{Guid.NewGuid()}_{safeFileName}";
                 var blob = container.GetBlobClient(fileName);
 
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                await blob.UploadAsync(stream, new BlobHttpHeaders { ContentType = _selectedFile.ContentType });
+                
+                var headers = new BlobHttpHeaders { 
+                    ContentType = _selectedFile.ContentType,
+                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
+                };
+
+                await blob.UploadAsync(stream, headers);
 
                 realDoc.FilePath = blob.Uri.ToString();
                 realDoc.FileName = _selectedFile.Name;
@@ -216,7 +245,7 @@
 
             // Manage Borrowing Dates
             if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null) realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
-            if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; }
+            if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; realDoc.ExpectedReturnDate = null; realDoc.BorrowRemarks = null; }
 
             // 1. Audit Trail (Detailed JSON)
             _context.AuditTrails.Add(new AuditTrails {
@@ -229,11 +258,11 @@
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
-            // 2. Transaction Log (Friendly)
+            // 2. Transaction Log (Friendly & Highly Specified)
             _context.TransactionLogs.Add(new TransactionLog {
                 FullName = user,
                 EventName = "Document Modified",
-                Description = $"{realDoc.Title}: {(changeLog.Any() ? string.Join(", ", changeLog) : "Metadata updated")}",
+                Description = $"{realDoc.Title}: {(changeLog.Any() ? string.Join(" | ", changeLog) : "No major changes")}",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
@@ -264,6 +293,16 @@
                 realDoc.FilePath = null;
                 realDoc.FileName = null;
                 _editDoc.FilePath = null;
+
+                // Add to transaction log for deletion
+                var user = await _currentUserService.GetCurrentFullNameAsync();
+                _context.TransactionLogs.Add(new TransactionLog {
+                    FullName = user,
+                    EventName = "Digital Copy Removed",
+                    Description = $"Removed cloud file from document '{realDoc.Title}'",
+                    Status = "Warning",
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
+                });
 
                 await _context.SaveChangesAsync();
                 Snackbar.Add("Digital copy removed.", Severity.Warning);

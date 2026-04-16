@@ -27,7 +27,7 @@
                  Icon="@Icons.Material.Filled.Folder" >
         <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => !c.IsArchived)" Filterable="false" QuickFilter="@_quickFilter" Dense="true" Hover="true">
             <ToolBarContent>
-                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="4" AlignItems="AlignItems.Center" Class="w-100 py-2">
+                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="4" AlignItems="AlignItems.Center" Class="w-100 py-2" Style="width:100%;">
                     @* Action Buttons Group *@
                     <MudStack Row="true" Spacing="2">
                         <MudButton Variant="Variant.Filled"
