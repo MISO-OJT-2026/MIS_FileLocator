@@ -105,7 +105,7 @@
                 </MudPaper>
             </MudItem>
 
-            @* --- Metadata Section --- *@
+            @* --- other info Section --- *@
             <MudItem xs="12" md="8">
                 <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" Immediate="true" />
             </MudItem>
@@ -114,7 +114,7 @@
                 <MudDatePicker Label="Document Date" Date="_newDoc.DocumentDate" DateChanged="OnDocumentDateChanged" Variant="Variant.Outlined" Required="true" />
             </MudItem>
 
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="4">
                 <MudSelect T="int" Label="Confidentiality Level" @bind-Value="_newDoc.ConfidentialityLevelId" Variant="Variant.Outlined" Required="true">
                     @foreach (var level in _levels)
                     {
@@ -127,10 +127,14 @@
             <MudItem xs="12" md="3">
                 <MudSelect T="int?" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
                     <MudSelectItem T="int?" Value="null">Permanent (No Disposal)</MudSelectItem>
-                    @for (int i = 1; i <= 10; i++) { <MudSelectItem T="int?" Value="@i">@i Years</MudSelectItem> }
+                    @for (int i = 1; i <= 10; i++) 
+                    {
+                        var years = i;
+                        <MudSelectItem T="int?" Value="@years">@years Years</MudSelectItem> 
+                    }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="5">
                 <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" DateFormat="MMM dd, yyyy" Placeholder="Permanent Record" />
             </MudItem>
         </MudGrid>

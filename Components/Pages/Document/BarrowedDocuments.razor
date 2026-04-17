@@ -16,14 +16,15 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Borrowed Inventory Tracking</MudText>
 
-<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="true" Hover="true" RowClick ="OnRowClicked" >
+<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="false" Hover="true" RowClick ="OnRowClicked" Dense="true" >
     <ToolBarContent>
         <MudText Typo="Typo.h6">Currently Out</MudText>
         <MudSpacer />
         <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
                       Adornment="Adornment.Start"
-					  Variant="Variant.Filled"
+					  Variant="Variant.Outlined"
                        Immediate ="true"
+                       
                       Margin="Margin.Dense"
                       AdornmentIcon="@Icons.Material.Filled.Search" />
     </ToolBarContent>

@@ -19,11 +19,11 @@
 
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Document Inventory</MudText>
-
 <MudDataGrid T="Documents"
              Items="@_allDocuments.Where(d => !d.IsDeleted && !d.IsDisposal)"
              Filterable="false"
              Hover="true"
+             Dense="true"
              QuickFilter="@_quickFilter"
              Hideable="true"
 RowClick = "OnRowClicked">
@@ -137,14 +137,14 @@ RowClick = "OnRowClicked">
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               AdornmentIcon="@Icons.Material.Filled.Search"
-                              Style="width: 200px;" />
+                              Style="width: 300px;" />
             </MudStack>
         </MudStack>
     </ToolBarContent>
 
     <Columns>
         <PropertyColumn Property="x => x.Title" Title="Document Title" />
-        <PropertyColumn Property="x => x.DocumentDate" Title="DocumentDate" Sortable="true" />
+        <PropertyColumn Property="x => x.DocumentDate" Title="Document Date" Sortable="true" />
 
       
         <TemplateColumn Title="Physical Location">
