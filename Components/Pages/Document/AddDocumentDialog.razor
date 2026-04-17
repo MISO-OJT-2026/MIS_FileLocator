@@ -1,151 +1,260 @@
 ﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
+@using MIS_FileLocator.Services
+@using Microsoft.EntityFrameworkCore
 @using Azure.Storage.Blobs
 @using Azure.Storage.Blobs.Models
-@using Microsoft.EntityFrameworkCore
-@using System.Threading
 @using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.IO
+@using System.Text.RegularExpressions
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
-@inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
+@inject ICurrentUserService _currentUserService
 @inject IConfiguration _config
 
 <MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.NoteAdd" Class="mr-3 mb-n1" />
+            File New Document Record
+        </MudText>
+    </TitleContent>
     <DialogContent>
-        <MudGrid Spacing="3">
-            @* --- Basic Info --- *@
-            <MudItem xs="12" sm="8">
-                <MudTextField @bind-Value="_newForm.FormName" 
-                              Label="Form Name (e.g., Adding/Changing Form)" 
-                              Variant="Variant.Outlined" 
-                              Required="true" />
+        <MudGrid Spacing="2">
+            @* --- Physical Location Section --- *@
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged"
+                           Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var cab in _cabinets)
+                    {
+                        <MudSelectItem Value="@((int?)cab.Id)">@cab.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Box" ValueChanged="OnBoxChanged"
+                           Disabled="@(!_boxes.Any())" Placeholder="Choose Box" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var box in _boxes)
+                    {
+                        <MudSelectItem Value="@((int?)box.Id)">@box.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int" Label="Folder" @bind-Value="_newDoc.FolderId"
+                           Disabled="@(!_folders.Any())" Placeholder="Choose Folder" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var folder in _folders)
+                    {
+                        <MudSelectItem Value="@folder.Id">@folder.Name</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
 
-            <MudItem xs="12" sm="4">
-                <MudTextField @bind-Value="_newForm.FormNumber" 
-                              Label="Form Number" 
-                              Placeholder="TSU-OAR-SF-22"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-
-            @* --- DYNAMIC CATEGORY --- *@
+            @* --- UNRESTRICTED FILE ATTACHMENT SECTION --- *@
             <MudItem xs="12">
-                <MudAutocomplete T="string" Label="Issuing Office / Category" 
-                                 @bind-Value="_newForm.Category" 
-                                 SearchFunc="@SearchCategories"
-                                 Placeholder="Select or type a new office..."
-                                 Variant="Variant.Outlined" 
-                                 Required="true"
-                                 CoerceText="true" 
-                                 CoerceValue="true"
-                                 ResetValueOnEmptyText="false"
-                                 AdornmentIcon="@Icons.Material.Filled.Business" 
-                                 HelperText="New offices typed here will be saved to the database." />
-            </MudItem>
+                <MudPaper Variant="Variant.Outlined" Class="pa-4 d-flex flex-column align-center border-dashed" Style="min-height: 120px; background-color: #fafafa;">
+                    
+                    @if (_selectedFile != null)
+                    {
+                        @* File Identity Card (Professional Look) *@
+                        <MudPaper Elevation="2" Class="pa-3 rounded-lg d-flex align-center gap-4 w-100 mb-2" Style="max-width: 600px; border-left: 6px solid; border-color: var(--file-color, #9e9e9e);">
+                            <MudIcon Icon="@_fileIcon" Color="@_fileColor" Size="Size.Large" />
+                            <div class="flex-grow-1 overflow-hidden">
+                                <MudText Typo="Typo.subtitle2" Class="text-truncate">@_selectedFile.Name</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@((_selectedFile.Size / 1024.0 / 1024.0).ToString("0.00")) MB</MudText>
+                            </div>
+                            
+                            <MudStack Row="true" Spacing="1">
+                                @if (_canPreview)
+                                {
+                                    <MudTooltip Text="@(_showPreview ? "Hide Preview" : "Show Preview")">
+                                        <MudIconButton Icon="@(_showPreview ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" 
+                                                       Color="Color.Primary" Size="Size.Small" OnClick="TogglePreview" />
+                                    </MudTooltip>
+                                }
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="ClearFile" />
+                            </MudStack>
+                        </MudPaper>
 
-            @* --- HYBRID DIGITAL ASSET SECTION --- *@
-            <MudItem xs="12">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Template (Optional Upload or Link)</MudText>
-                <MudPaper Variant="Variant.Outlined" Class="pa-4">
-                    <MudStack Spacing="4">
-                        <MudFileUpload T="IBrowserFile" 
-                                       FilesChanged="OnFileSelected" 
-                                       Accept=".pdf,.doc,.docx,.xls,.xlsx">
-                            <ActivatorContent>
-                                <MudButton Variant="Variant.Filled" 
-                                           Color="Color.Info" 
-                                           StartIcon="@Icons.Material.Filled.CloudUpload"
-                                           FullWidth="true">
-                                    @(_selectedFile == null ? "Upload Template (Word/Excel/PDF)" : _selectedFile.Name)
-                                </MudButton>
-                            </ActivatorContent>
-                        </MudFileUpload>
-
-                        @if (_selectedFile != null)
+                        @* CONDITIONAL PREVIEW AREA (Hidden by default) *@
+                        @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
                         {
-                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="@(() => _selectedFile = null)">
-                                File Selected: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
-                            </MudAlert>
+                            <MudPaper Outlined="true" Class="w-100 mt-2 rounded-lg overflow-hidden" Style="height: 450px; background: white;">
+                                <iframe src="@_previewUrl" style="width:100%; height:100%; border:none;" allow="fullscreen"></iframe>
+                            </MudPaper>
+                            <MudText Typo="Typo.caption" Align="Align.Center" Class="d-block mt-1">If preview is blank, your browser may have blocked the local data stream. It will work once saved.</MudText>
                         }
+                    }
+                    else
+                    {
+                        <div class="text-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Attach a digital copy to this record</MudText>
+                        </div>
+                    }
 
-                        <MudDivider />
-
-                        <MudTextField @bind-Value="_newForm.PdfUrl"
-                                      Label="Or Paste External URL"
-                                      Placeholder="https://tsu.edu.ph/..."
-                                      Variant="Variant.Outlined"
-                                      Clearable="true"
-                                      Disabled="@(_selectedFile != null)"
-                                      HelperText="@(_selectedFile != null ? "File upload takes priority." : "Use this if the form is already hosted elsewhere.")" />
-                    </MudStack>
+                    <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept="*/*" Class="mt-2">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Filled" Color="Color.Dark" StartIcon="@Icons.Material.Filled.AttachFile">
+                                @(_selectedFile == null ? "BROWSE FILES" : "REPLACE FILE")
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
                 </MudPaper>
+            </MudItem>
 
-                @if (_isUploading)
-                {
-                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2" />
-                }
+            @* --- Metadata Section --- *@
+            <MudItem xs="12" md="8">
+                <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" Immediate="true" />
+            </MudItem>
+            
+            <MudItem xs="12" md="4">
+                <MudDatePicker Label="Document Date" Date="_newDoc.DocumentDate" DateChanged="OnDocumentDateChanged" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" Label="Confidentiality Level" @bind-Value="_newDoc.ConfidentialityLevelId" Variant="Variant.Outlined" Required="true">
+                    @foreach (var level in _levels)
+                    {
+                        <MudSelectItem Value="@level.Id">@level.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* --- Retention Policy --- *@
+            <MudItem xs="12" md="3">
+                <MudSelect T="int?" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
+                    <MudSelectItem T="int?" Value="null">Permanent (No Disposal)</MudSelectItem>
+                    @for (int i = 1; i <= 10; i++) { <MudSelectItem T="int?" Value="@i">@i Years</MudSelectItem> }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudDatePicker Label="Scheduled Disposal" @bind-Date="_newDoc.DateOfDisposal" ReadOnly="true" Variant="Variant.Outlined" Color="Color.Secondary" DateFormat="MMM dd, yyyy" Placeholder="Permanent Record" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@_isUploading">
-            @(_isUploading ? "Saving..." : "Save to Repository")
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@(_isUploading)">
+            @(_isUploading ? "Processing..." : "Save Record")
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    private FormTemplate _newForm = new();
+    private Documents _newDoc = new();
     private IBrowserFile? _selectedFile;
+    private string? _previewUrl;
+    private bool _showPreview = false;
+    private bool _canPreview = false;
+    
+    private string _fileIcon = Icons.Material.Filled.InsertDriveFile;
+    private Color _fileColor = Color.Default;
     private bool _isUploading = false;
-    private List<string> _existingCategories = new();
+
+    private List<FillingCabinet> _cabinets = new();
+    private List<FileBoxes> _boxes = new();
+    private List<Folder> _folders = new();
+    private List<ConfidentialityLevel> _levels = new();
+    private int? _disposalYears = 2;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load distinct categories for the autocomplete search
-        _existingCategories = await _context.FormTemplates
-            .Where(f => !string.IsNullOrEmpty(f.Category))
-            .Select(f => f.Category)
-            .Distinct()
-            .ToListAsync();
-            
-        if (!_existingCategories.Any())
-        {
-            _existingCategories.AddRange(new[] { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" });
-        }
+        _cabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
+        _levels = await _context.ConfidentialityLevels.ToListAsync();
+        _newDoc.DocumentDate = DateTime.Today;
+        CalculateDisposal();
     }
 
-    // FIX: Added CancellationToken to match MudAutocomplete delegate requirement
-    private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
+    private async Task OnFileSelected(IBrowserFile file)
     {
-        if (string.IsNullOrEmpty(value)) return _existingCategories;
-        return _existingCategories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
-    }
+        if (file == null) { ClearFile(); return; }
 
-    private void OnFileSelected(IBrowserFile file)
-    {
         _selectedFile = file;
-        if (string.IsNullOrWhiteSpace(_newForm.FormName))
+        _previewUrl = null;
+        _showPreview = false; // Always hide preview when a new file is picked
+
+        // Sync Title with Filename automatically
+        _newDoc.Title = Path.GetFileNameWithoutExtension(file.Name);
+
+        string ext = Path.GetExtension(file.Name).ToLower();
+        _canPreview = (ext == ".pdf" || ext == ".jpg" || ext == ".jpeg" || ext == ".png");
+
+        switch (ext)
         {
-            _newForm.FormName = Path.GetFileNameWithoutExtension(file.Name);
+            case ".pdf": _fileIcon = Icons.Material.Filled.PictureAsPdf; _fileColor = Color.Error; break;
+            case ".doc": case ".docx": _fileIcon = Icons.Material.Filled.Description; _fileColor = Color.Info; break;
+            case ".xls": case ".xlsx": _fileIcon = Icons.Custom.FileFormats.FileExcel; _fileColor = Color.Success; break;
+            case ".jpg": case ".jpeg": case ".png": _fileIcon = Icons.Material.Filled.Image; _fileColor = Color.Warning; break;
+            default: _fileIcon = Icons.Material.Filled.InsertDriveFile; _fileColor = Color.Default; break;
         }
+
+        StateHasChanged();
+    }
+
+    private async Task TogglePreview()
+    {
+        _showPreview = !_showPreview;
+        
+        // Only generate the expensive Base64 string if the user actually wants to see the preview
+        if (_showPreview && _selectedFile != null && string.IsNullOrEmpty(_previewUrl))
+        {
+            try 
+            {
+                // Note: Large files might still cause a white screen in iframes due to browser memory limits
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                _previewUrl = $"data:{_selectedFile.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+            } 
+            catch { Snackbar.Add("File too large for instant preview.", Severity.Warning); _showPreview = false; }
+        }
+        StateHasChanged();
+    }
+
+    private void ClearFile() 
+    { 
+        _selectedFile = null; 
+        _previewUrl = null; 
+        _showPreview = false;
+        _newDoc.Title = ""; // Clear title field when file is removed
+        _fileIcon = Icons.Material.Filled.InsertDriveFile;
+        _fileColor = Color.Default;
+        StateHasChanged();
+    }
+
+    private async Task OnCabinetChanged(int? id)
+    {
+        _boxes.Clear(); _folders.Clear(); _newDoc.FolderId = 0;
+        if (id == null) return;
+        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+    }
+
+    private async Task OnBoxChanged(int? id)
+    {
+        _folders.Clear(); _newDoc.FolderId = 0;
+        if (id == null) return;
+        _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
+    }
+
+    private void OnDocumentDateChanged(DateTime? newDate) { _newDoc.DocumentDate = newDate; CalculateDisposal(); }
+
+    private void CalculateDisposal()
+    {
+        if (_newDoc.DocumentDate.HasValue && _disposalYears.HasValue)
+            _newDoc.DateOfDisposal = _newDoc.DocumentDate.Value.AddYears(_disposalYears.Value);
+        else
+            _newDoc.DateOfDisposal = null;
     }
 
     private async Task Save()
     {
-        // Validation
-        if (string.IsNullOrEmpty(_newForm.FormName) || string.IsNullOrEmpty(_newForm.Category))
+        if (_newDoc.FolderId == 0 || string.IsNullOrEmpty(_newDoc.Title))
         {
-            Snackbar.Add("Please fill in Name and Category.", Severity.Error);
-            return;
-        }
-
-        if (_selectedFile == null && string.IsNullOrEmpty(_newForm.PdfUrl))
-        {
-            Snackbar.Add("Please upload a file or provide a manual link.", Severity.Warning);
+            Snackbar.Add("Please complete physical location and title.", Severity.Error);
             return;
         }
 
@@ -154,63 +263,47 @@
             _isUploading = true;
             StateHasChanged();
 
-            var user = await _currentUserService.GetCurrentFullNameAsync();
-
-            // 1. Handle Azure Blob Storage Upload
             if (_selectedFile != null)
             {
-                string connectionString = _config.GetConnectionString("AzureStorage");
-                var blobServiceClient = new BlobServiceClient(connectionString);
-                var containerClient = blobServiceClient.GetBlobContainerClient("templates");
+                string conn = _config.GetConnectionString("AzureStorage");
+                var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
                 
-                await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+                // SANITIZATION: Replaces spaces with underscores to fix the "BlobNotFound" error
+                string safeName = Regex.Replace(_selectedFile.Name, @"[^a-zA-Z0-9\._-]", "_");
+                string fileName = $"{Guid.NewGuid()}_{safeName}";
+                var blob = container.GetBlobClient(fileName);
 
-                string fileName = $"TEMPLATE_{Guid.NewGuid()}_{_selectedFile.Name}";
-                var blobClient = containerClient.GetBlobClient(fileName);
-
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
                 
-                var headers = new BlobHttpHeaders { 
-                    ContentType = _selectedFile.ContentType, // Accurately set for Word/Excel/PDF
-                    ContentDisposition = "inline" 
-                };
+                await blob.UploadAsync(stream, new BlobHttpHeaders { 
+                    ContentType = _selectedFile.ContentType,
+                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\""
+                });
 
-                await blobClient.UploadAsync(stream, headers);
-                _newForm.PdfUrl = blobClient.Uri.ToString();
+                _newDoc.FilePath = blob.Uri.ToString();
+                _newDoc.FileName = _selectedFile.Name;
             }
 
-            // 2. Set Metadata
-            _newForm.AddedBy = user;
-            _newForm.DateAdded = DateTime.UtcNow.AddHours(8);
+            var user = await _currentUserService.GetCurrentFullNameAsync();
+            _newDoc.FiledBy = user;
+            _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
+            _newDoc.CreatedBy = user;
+            
+            _context.Documents.Add(_newDoc);
 
-            // 3. Save Record to FormTemplates
-            _context.FormTemplates.Add(_newForm);
-            await _context.SaveChangesAsync();
-
-            // 4. Save Detailed Audit Trail
-            _context.AuditTrails.Add(new AuditTrails
-            {
-                FullName = user,
-                Action = "Added",
-                TableName = "FormTemplates",
-                RecordId = _newForm.Id.ToString(),
-                NewValues = JsonSerializer.Serialize(_newForm), // JSON Snapshot of the new record
-                PerformedAt = DateTime.UtcNow.AddHours(8)
+            // Audit Trail
+            var jsonOptions = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles };
+            _context.AuditTrails.Add(new AuditTrails {
+                FullName = user, Action = "Added", TableName = "Documents", RecordId = "NEW",
+                NewValues = JsonSerializer.Serialize(_newDoc, jsonOptions), PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
-            
-            Snackbar.Add("Form saved successfully!", Severity.Success);
+            Snackbar.Add("Document filed successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add("Error: " + ex.Message, Severity.Error);
-        }
-        finally
-        {
-            _isUploading = false;
-        }
+        catch (Exception ex) { Snackbar.Add("Upload Error: " + ex.Message, Severity.Error); }
+        finally { _isUploading = false; }
     }
 
     private void Cancel() => MudDialog.Cancel();

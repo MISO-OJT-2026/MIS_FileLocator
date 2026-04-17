@@ -24,7 +24,7 @@
         <MudDataGrid T="Folder"
                      Items="@_folders.Where(f => !f.IsArchived)"
                      Context="folder"
-                     Filterable="true"
+                     Filterable="false"
                      QuickFilter="@_quickFilter"
                     Dense="true"
                     Hover="true">

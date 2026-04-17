@@ -197,15 +197,25 @@
     {
         _isProcessing = true;
         errorMessage = null;
-        StateHasChanged(); // Force the spinner to start showing
+        StateHasChanged(); 
+
 
         var user = await UserManager.Users
             .FirstOrDefaultAsync(u => u.EmployeeId == Input.EmployeeId);
 
+        bool IsDisabled = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         if (user == null)
         {
             errorMessage = "User not found.";
             ClearFields(); // Reset the UI
+            _isProcessing = false;
+            return;
+        }
+
+        if (IsDisabled)
+        {
+            errorMessage = "You are currently disabled by the admin.";
+            ClearFields();
             _isProcessing = false;
             return;
         }
@@ -232,8 +242,7 @@
     {
         Input.Password = "";
         Input.RememberMe = false;
-        // Optional: Keep EmployeeId if you want them to just re-type the password
-        // Input.EmployeeId = ""; 
+       
     }
 
     private sealed class InputModel
