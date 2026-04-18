@@ -22,112 +22,91 @@
     @* --- ACTIVE FOLDERS TAB --- *@
     <MudTabPanel Text="Active Folders" Icon="@Icons.Material.Filled.Folder">
         <MudDataGrid T="Folder"
-                     Items="@_folders.Where(f => !f.IsArchived)"
-                     Context="folder"
-                     Filterable="false"
+                     Items="@(_folders?.Where(f => !f.IsArchived) ?? Enumerable.Empty<Folder>())"
                      QuickFilter="@_quickFilter"
-                    Dense="true"
-                    Hover="true">
-
+                     Dense="true"
+                     Hover="true"
+                     >
             <ToolBarContent>
-                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
-                    @* Actions Group *@
-                    <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
-                            Add Folder
-                        </MudButton>
-                    </MudStack>
+                <MudGrid Spacing="2" AlignItems="AlignItems.Center" Class="w-100 py-1">
+                    @* 1. Action Buttons *@
+                    <MudItem>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="OpenAddDialog"
+                                       Size="Size.Small"
+                                       Style="height:40px;">
+                                Add Folder
+                            </MudButton>
+                            <MudIconButton Variant="Variant.Outlined"
+                                           Color="Color.Success"
+                                           Icon="@Icons.Material.Filled.Print"
+                                           OnClick="@(() => ExportToCSV(false))"
+                                           Style="height:40px; width:40px;" />
+                        </MudStack>
+                    </MudItem>
 
                     <MudSpacer />
 
-                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                        @* Unified Filter Menu *@
-                        <MudMenu Label="Filter Location"
-                                 Variant="Variant.Outlined"
-                                 AnchorOrigin="Origin.BottomRight"
-                                 TransformOrigin="Origin.TopRight"
-                                 Dense="true"
-                                 StartIcon="@Icons.Material.Filled.FilterList"
-                                 EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                                 Margin="Margin.Dense"
-                                 Style="width: 250px;">
-                            <div class="pa-4" style="min-width: 275px;">
-                                <MudText Typo="Typo.subtitle2" Class="mb-2">Filter by Location</MudText>
-                    
-                                @* Internal Cabinet Select *@
-                                <MudSelect T="string" Label="Cabinet" @bind-Value="_selectedCabinet"
-                                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
-                                    <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
-                                    @foreach (var cab in _folders.Where(f => f.FileBox?.FillingCabinet != null).Select(f => f.FileBox.FillingCabinet.Name).Distinct().OrderBy(n => n))
-                                    {
-                                        <MudSelectItem Value="@cab">@cab</MudSelectItem>
-                                    }
-                                </MudSelect>
+                    @* 2. Filter & Search Group *@
+                    <MudItem xs="12" sm="4" md="3">
+                        <MudSelect T="string"
+                                   @bind-Value="_selectedCabinet"
+                                   
+                                   Clearable="true"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Style="height: 40px; background: var(--mud-palette-background);"
+                                   AdornmentIcon="@Icons.Material.Filled.FilterList">
+                            <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                            @if (_folders != null)
+                            {
+                                @foreach (var cab in _folders.Where(f => f.FileBox?.FillingCabinet != null).Select(f => f.FileBox.FillingCabinet.Name).Distinct().OrderBy(n => n))
+                                {
+                                    <MudSelectItem Value="@cab">@cab</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
 
-                                @* Internal Box Select *@
-                                <MudSelect T="string" Label="Box" @bind-Value="_selectedBox"
-                                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
-                                    <MudSelectItem Value="@("")">All Boxes</MudSelectItem>
-                                    @foreach (var box in GetAvailableBoxes())
-                                    {
-                                        <MudSelectItem Value="@box">@box</MudSelectItem>
-                                    }
-                                </MudSelect>
-                    
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters">Reset</MudButton>
-                            </div>
-                        </MudMenu>
-
-                        @* Search Field *@
+                    <MudItem xs="12" sm="4" md="3">
                         <MudTextField @bind-Value="_searchString"
-                                      Placeholder="Search..."
+                                      Placeholder="Search folders..."
                                       Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Style="width: 300px;" />
-                    </MudStack>
-                </MudStack>
+                                      Style="height: 40px; background: var(--mud-palette-background);" />
+                    </MudItem>
+                </MudGrid>
             </ToolBarContent>
-
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Folder Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />
-
-                @* Shows which Box and Cabinet this folder is in *@
                 <TemplateColumn Title="Location">
-                    <CellTemplate Context="folder">
+                    <CellTemplate>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.body2"><b>Box:</b> @(folder.Item.FileBox?.Name ?? "N/A")</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary"><b>Cabinet:</b> @(folder.Item.FileBox?.FillingCabinet?.Name ?? "N/A")</MudText>
+                            <MudText Typo="Typo.body2"><b>Box:</b> @(context.Item.FileBox?.Name ?? "N/A")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary"><b>Cabinet:</b> @(context.Item.FileBox?.FillingCabinet?.Name ?? "N/A")</MudText>
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
-
                 <TemplateColumn Title="Contents">
-                    <CellTemplate Context="folder">
-                        <MudButton Variant="Variant.Text"
-                                   StartIcon="@Icons.Material.Filled.Description"
-                                   Color="Color.Info"
-                                   Size="Size.Small"
-                                   OnClick="@(() => OpenFolderExplorer(folder.Item))">
-                            @(folder.Item.Documents?.Count (d => !d.IsDeleted && !d.IsDisposal) ?? 0) Documents
+                    <CellTemplate>
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Description" Color="Color.Info" Size="Size.Small" OnClick="@(() => OpenFolderExplorer(context.Item))">
+                            @(context.Item.Documents?.Count(d => !d.IsDeleted && !d.IsDisposal) ?? 0) Documents
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
-
-                <TemplateColumn Title="Actions" HeaderClass="justify-center" CellClass="justify-center">
-                    <CellTemplate Context="folder">
-                        <MudIconButton Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Warning"
-                                       OnClick="@(() => OpenEditDialog(folder.Item))" />
-
-                        <MudIconButton Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Archive"
-                                       Color="Color.Error"
-                                       OnClick="@(() => ConfirmArchive(folder.Item))" />
+                <TemplateColumn Title="Actions" HeaderStyle="text-align: right;" CellStyle="text-align:;">
+                    <CellTemplate>
+                         <MudStack Spacing="2" Row="true" AlignItems="AlignItems.Center">
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" OnClick="@(() => OpenEditDialog(context.Item))" />
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Archive" Color="Color.Error" OnClick="@(() => ConfirmArchive(context.Item))" />
+                            </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>
@@ -137,51 +116,71 @@
 
     @* --- ARCHIVED FOLDERS TAB --- *@
     <MudTabPanel Text="Archived Folders" Icon="@Icons.Material.Filled.Archive">
-        <MudDataGrid T="Folder" Items="@_folders.Where(f => f.IsArchived)" Context="archivedFolder">
+        <MudDataGrid T="Folder" Items="@(_folders?.Where(f => f.IsArchived) ?? Enumerable.Empty<Folder>())" QuickFilter="@_quickFilter" Breakpoint="Breakpoint.Sm">
             <ToolBarContent>
-              
-                <MudTooltip Text="Print Archived Folders to CSV" Placement="Placement.Top">
-                    <MudIconButton Variant="Variant.Outlined"
-                                   Color="Color.Success"
-                                   Icon="@Icons.Material.Filled.Print"
-                                   OnClick="@(() => ExportToCSV(true))"
-                                   Class="mr-2" />
-                </MudTooltip>
-                <MudSpacer />
-                <MudTextField @bind-Value="_searchString" Placeholder="Search archived..." Adornment="Adornment.Start" Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search" Style="max-width: 300px;" />
+                <MudGrid Spacing="2" AlignItems="AlignItems.Center" Class="w-100 py-1">
+                    <MudItem>
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Success"
+                                       Icon="@Icons.Material.Filled.Print"
+                                       OnClick="@(() => ExportToCSV(true))"
+                                       Style="height:40px; width:40px;" />
+                    </MudItem>
+                    <MudSpacer />
+                    <MudItem xs="12" sm="4" md="3">
+                        <MudSelect T="string"
+                                   @bind-Value="_selectedCabinet"
+                                   
+                                   Clearable="true"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Style="height: 40px; background: var(--mud-palette-background);"
+                                   AdornmentIcon="@Icons.Material.Filled.FilterList">
+                            <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                            @if (_folders != null)
+                            {
+                                @foreach (var cab in _folders.Where(f => f.FileBox?.FillingCabinet != null).Select(f => f.FileBox.FillingCabinet.Name).Distinct().OrderBy(n => n))
+                                {
+                                    <MudSelectItem Value="@cab">@cab</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4" md="3">
+                        <MudTextField @bind-Value="_searchString"
+                                      Placeholder="Search archived..."
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Style="height: 40px; background: var(--mud-palette-background);" />
+                    </MudItem>
+                </MudGrid>
             </ToolBarContent>
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Folder Name" />
                 <TemplateColumn Title="Last Known Location">
-                    <CellTemplate Context="archivedFolder">
+                    <CellTemplate>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.body2">
-                                <b>Box:</b> @(archivedFolder.Item.FileBox?.Name ?? "Unknown")
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                <b>Cabinet:</b> @(archivedFolder.Item.FileBox?.FillingCabinet?.Name ?? "Unknown")
-                            </MudText>
+                            <MudText Typo="Typo.body2"><b>Box:</b> @(context.Item.FileBox?.Name ?? "Unknown")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary"><b>Cabinet:</b> @(context.Item.FileBox?.FillingCabinet?.Name ?? "Unknown")</MudText>
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
                 <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
                 <PropertyColumn Property="x => x.ArchivedAt" Title="Date Archived" Format="MMM dd, yyyy" />
-
-                <TemplateColumn Title="Actions" >
+                <TemplateColumn Title="Actions" CellClass="d-flex justify-end">
                     <CellTemplate>
-                        <MudButton Size="Size.Small"
-                                    Variant="Variant.Outlined"
-                                    Color="Color.Success"
-                                    StartIcon="@Icons.Material.Filled.Restore"
-                                    OnClick="@(() =>UnarchiveFolder(context.Item))">
-                            Restore 
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Restore" OnClick="@(() => UnarchiveFolder(context.Item))">
+                            Restore
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>
+            <PagerContent><MudDataGridPager T="Folder" /></PagerContent>
         </MudDataGrid>
     </MudTabPanel>
-
 </MudTabs>
 
 @code {
@@ -194,48 +193,22 @@
 
     private async Task LoadFolders()
     {
-        // Notice the ThenInclude—we go from Folder -> Box -> Cabinet
         _folders = await _context.Folders
+            .AsNoTracking()
             .Include(f => f.FileBox)
                 .ThenInclude(b => b.FillingCabinet)
             .Include(f => f.Documents)
             .ToListAsync();
-    }
-
-
-
-    private void ResetFilters()
-    {
-        _selectedCabinet = "";
-        _selectedBox = "";
-        _searchString = "";
-    }
-
-    private IEnumerable<string> GetAvailableBoxes()
-    {
-        var query = _folders.Where(f => f.FileBox != null);
-        if (!string.IsNullOrWhiteSpace(_selectedCabinet))
-        {
-            query = query.Where(f => f.FileBox.FillingCabinet?.Name == _selectedCabinet);
-        }
-        return query.Select(f => f.FileBox.Name).Distinct().OrderBy(n => n);
+        StateHasChanged();
     }
 
     private Func<Folder, bool> _quickFilter => x =>
     {
-        // Filter by Cabinet
         if (!string.IsNullOrWhiteSpace(_selectedCabinet))
         {
             if (x.FileBox?.FillingCabinet?.Name != _selectedCabinet) return false;
         }
 
-        // Filter by Box
-        if (!string.IsNullOrWhiteSpace(_selectedBox))
-        {
-            if (x.FileBox?.Name != _selectedBox) return false;
-        }
-
-        // Search text
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
@@ -246,18 +219,12 @@
         return true;
     };
 
-
     private async Task OpenAddDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<AddFolderDialog>("Add New Folder", options);
         var result = await dialog.Result;
-        if (!result.Canceled)
-        {
-            await LoadFolders(); 
-            StateHasChanged();  
-        }
-    
+        if (!result.Canceled) await LoadFolders();
     }
 
     private async Task OpenEditDialog(Folder folder)
@@ -277,20 +244,18 @@
 
     private async Task ConfirmArchive(Folder folder)
     {
-        // Integrity check: Can't archive if there are active documents inside
         if (folder.Documents?.Any(d => !d.IsDeleted) == true)
         {
             Snackbar.Add($"Cannot archive '{folder.Name}'. Please archive or move its documents first!", Severity.Error);
             return;
         }
 
-        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are your sure you want to archive  '{folder.Name}'?You won't be able to add new documents to it while it is archived ", yesText: "Archive", cancelText: "Cancel");
+        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are you sure?", yesText: "Archive", cancelText: "Cancel");
         if (result == true)
         {
             folder.IsArchived = true;
             folder.ArchivedAt = DateTime.UtcNow.AddHours(8);
             folder.ArchivedBy = await _currentUserService.GetCurrentFullNameAsync();
-
             _context.Folders.Update(folder);
             await _context.SaveChangesAsync();
             await LoadFolders();
@@ -300,78 +265,29 @@
 
     private async Task UnarchiveFolder(Folder folder)
     {
-        
-        bool? result = await DialogService.ShowMessageBoxAsync(
-            "Restore Folder",
-            $"Are you sure you want to restore '{folder.Name}' to active status?",
-            yesText: "Restore",
-            cancelText: "Cancel"
-        );
-
+        bool? result = await DialogService.ShowMessageBoxAsync("Restore Folder", $"Restore '{folder.Name}'?", yesText: "Restore", cancelText: "Cancel");
         if (result == true)
         {
-            try
-            {
-                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-                
-                var locationInfo = await _context.Folders
-        .Where(f => f.Id == folder.Id)
-        .Select(f => new
-        {
-            BoxName = f.FileBox.Name,
-            CabinetName = f.FileBox.FillingCabinet.Name
-        })
-        .FirstOrDefaultAsync();
-         
-                folder.IsArchived = false;
-                folder.ArchivedAt = null;
-                folder.ArchivedBy = null;
-
-                // Transaction Log
-                var log = new TransactionLog
-                {
-                    FullName = currentAdmin,
-                    EventName = "Folder Restored",
-                    Description = $"Restored folder '{folder.Name}' back to active status in {locationInfo?.CabinetName} > {locationInfo?.BoxName}.",
-                    Status = "Success",
-                    PerformedAt = DateTime.UtcNow.AddHours(8)
-                };
-
-              
-                _context.Folders.Update(folder);
-                _context.TransactionLogs.Add(log);
-                await _context.SaveChangesAsync();
-
-                // message 
-                Snackbar.Add($"Folder '{folder.Name}' has been restored.", Severity.Success);
-                await LoadFolders(); // Reloads the grid to move the folder back to the Active tab
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Error restoring folder: {ex.Message}", Severity.Error);
-            }
+            var admin = await _currentUserService.GetCurrentFullNameAsync();
+            folder.IsArchived = false;
+            folder.ArchivedAt = null;
+            folder.ArchivedBy = null;
+            _context.Folders.Update(folder);
+            await _context.SaveChangesAsync();
+            await LoadFolders();
+            Snackbar.Add("Restored.", Severity.Success);
         }
     }
 
     private async Task ExportToCSV(bool exportArchived)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("Folder Name, Box, Cabinet, Description, Status, Date Archived, Archived By");
-
+        builder.AppendLine("Folder Name,Box,Cabinet,Description,Status,Date Archived,Archived By");
         var foldersToExport = _folders.Where(f => f.IsArchived == exportArchived).ToList();
-
         foreach (var folder in foldersToExport)
         {
-            var boxName = folder.FileBox?.Name ?? "N/A";
-            var cabinetName = folder.FileBox?.FillingCabinet?.Name ?? "N/A";
-            var status = folder.IsArchived ? "Archived" : "Active";
-            var archivedDate = folder.ArchivedAt?.ToString("yyyy-MM-dd") ?? "N/A";
-            var archivedBy = folder.ArchivedBy ?? "N/A";
-
-            builder.AppendLine($"\"{folder.Name}\",\"{boxName}\",\"{cabinetName}\",\"{folder.Description}\",\"{status}\",\"{archivedDate}\",\"{archivedBy}\"");
+            builder.AppendLine($"\"{folder.Name}\",\"{folder.FileBox?.Name}\",\"{folder.FileBox?.FillingCabinet?.Name}\",\"{folder.Description}\",\"{(folder.IsArchived ? "Archived" : "Active")}\",\"{folder.ArchivedAt}\",\"{folder.ArchivedBy}\"");
         }
-
-        string fileName = (exportArchived ? "Archived" : "Active") + $"_Folders_{DateTime.Now:yyyyMMdd}.csv";
-        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, builder.ToString());
+        await JSRuntime.InvokeVoidAsync("downloadFile", (exportArchived ? "Archived" : "Active") + "_Folders.csv", builder.ToString());
     }
 }

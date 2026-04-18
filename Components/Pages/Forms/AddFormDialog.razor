@@ -5,6 +5,8 @@
 @using Azure.Storage.Blobs.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Threading
+@using System.IO
+@using System.Text.RegularExpressions
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
@@ -18,7 +20,8 @@
                 <MudTextField @bind-Value="_newForm.FormName"
                               Label="Form Name (e.g., Adding/Changing Form)"
                               Variant="Variant.Outlined"
-                              Required="true" />
+                              Required="true"
+                              Immediate="true" />
             </MudItem>
 
             <MudItem xs="12" sm="4">
@@ -28,7 +31,7 @@
                               Variant="Variant.Outlined" />
             </MudItem>
 
-            @* --- DYNAMIC CATEGORY (Type to Add New) --- *@
+            @* --- DYNAMIC CATEGORY --- *@
             <MudItem xs="12">
                 <MudAutocomplete T="string" Label="Issuing Office / Category" 
                                  @bind-Value="_newForm.Category" 
@@ -40,32 +43,57 @@
                                  CoerceValue="true"
                                  ResetValueOnEmptyText="false"
                                  AdornmentIcon="@Icons.Material.Filled.Business" 
-                                 HelperText="New offices typed here will be saved to the list automatically."/>
+                                 HelperText="New offices typed here will be saved automatically."/>
             </MudItem>
 
-            @* --- HYBRID DIGITAL ASSET SECTION --- *@
+            @* --- HYBRID DIGITAL ASSET SECTION WITH PREVIEW --- *@
             <MudItem xs="12">
                 <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy (Optional Upload or Link)</MudText>
-                <MudPaper Variant="Variant.Outlined" Class="pa-4">
-                    <MudStack Spacing="4">
-                        @* Path 1: File Upload (Supports PDF and Office Files) *@
+                <MudPaper Variant="Variant.Outlined" Class="pa-4 bg-light">
+                    <MudStack Spacing="3">
+                        
+                        @if (_selectedFile != null)
+                        {
+                            @* File Identity Card *@
+                            <MudPaper Elevation="2" Class="pa-3 rounded-lg d-flex align-center gap-4 w-100" Style="max-width: 100%; border-left: 6px solid; border-color: var(--file-color, #9e9e9e);">
+                                <MudIcon Icon="@_fileIcon" Color="@_fileColor" Size="Size.Large" />
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <MudText Typo="Typo.subtitle2" Class="text-truncate">@_selectedFile.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@((_selectedFile.Size / 1024.0 / 1024.0).ToString("0.00")) MB</MudText>
+                                </div>
+                                
+                                <MudStack Row="true" Spacing="1">
+                                    @if (_canPreview)
+                                    {
+                                        <MudTooltip Text="@(_showPreview ? "Hide Preview" : "Show Preview")">
+                                            <MudIconButton Icon="@(_showPreview ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" 
+                                                           Color="Color.Primary" Size="Size.Small" OnClick="TogglePreview" />
+                                        </MudTooltip>
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="ClearFile" />
+                                </MudStack>
+                            </MudPaper>
+
+                            @* PREVIEW AREA *@
+                            @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
+                            {
+                                <MudPaper Outlined="true" Class="w-100 mt-2 rounded-lg overflow-hidden shadow-inner" Style="height: 400px; background: white;">
+                                    <iframe src="@_previewUrl" style="width:100%; height:100%; border:none;"></iframe>
+                                </MudPaper>
+                            }
+                        }
+
+                        @* Path 1: File Upload *@
                         <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
                             <ActivatorContent>
                                 <MudButton Variant="Variant.Filled" 
                                            Color="Color.Info" 
                                            StartIcon="@Icons.Material.Filled.CloudUpload"
                                            FullWidth="true">
-                                    @(_selectedFile == null ? "Upload File (PDF, Word, Excel)" : _selectedFile.Name)
+                                    @(_selectedFile == null ? "Upload File (PDF, Word, Excel)" : "Replace Selected File")
                                 </MudButton>
                             </ActivatorContent>
                         </MudFileUpload>
-
-                        @if (_selectedFile != null)
-                        {
-                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="@(() => _selectedFile = null)">
-                                Selected: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
-                            </MudAlert>
-                        }
 
                         <MudDivider />
 
@@ -99,23 +127,26 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private FormTemplate _newForm = new();
     private IBrowserFile? _selectedFile;
+    
+    private string? _previewUrl;
+    private bool _showPreview = false;
+    private bool _canPreview = false;
+    private string _fileIcon = Icons.Material.Filled.InsertDriveFile;
+    private Color _fileColor = Color.Default;
+
     private bool _isUploading = false;
     private List<string> _existingCategories = new();
 
     protected override async Task OnInitializedAsync()
     {
         var defaultCategories = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
-
         var dbCategories = await _context.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
             .Select(f => f.Category)
             .Distinct()
             .ToListAsync();
 
-        _existingCategories = defaultCategories
-            .Union(dbCategories)
-            .OrderBy(x => x)
-            .ToList();
+        _existingCategories = defaultCategories.Union(dbCategories).OrderBy(x => x).ToList();
     }
 
     private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
@@ -124,25 +155,70 @@
         return _existingCategories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private void OnFileSelected(IBrowserFile file)
+    private async Task OnFileSelected(IBrowserFile file)
     {
+        if (file == null) { ClearFile(); return; }
+
         _selectedFile = file;
+        _previewUrl = null;
+        _showPreview = false;
+
+        // Auto-fill form name
         if (string.IsNullOrWhiteSpace(_newForm.FormName))
-        {
             _newForm.FormName = Path.GetFileNameWithoutExtension(file.Name);
+
+        // UI Logic
+        string ext = Path.GetExtension(file.Name).ToLower();
+        _canPreview = (ext == ".pdf" || ext == ".jpg" || ext == ".jpeg" || ext == ".png");
+
+        switch (ext)
+        {
+            case ".pdf": _fileIcon = Icons.Material.Filled.PictureAsPdf; _fileColor = Color.Error; break;
+            case ".doc": case ".docx": _fileIcon = Icons.Material.Filled.Description; _fileColor = Color.Info; break;
+            case ".xls": case ".xlsx": _fileIcon = Icons.Custom.FileFormats.FileExcel; _fileColor = Color.Success; break;
+            default: _fileIcon = Icons.Material.Filled.InsertDriveFile; _fileColor = Color.Default; break;
         }
+
+        StateHasChanged();
+    }
+
+    private async Task TogglePreview()
+    {
+        _showPreview = !_showPreview;
+        
+        if (_showPreview && _selectedFile != null && string.IsNullOrEmpty(_previewUrl))
+        {
+            try 
+            {
+                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                _previewUrl = $"data:{_selectedFile.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+            } 
+            catch { _showPreview = false; Snackbar.Add("Preview generation failed.", Severity.Warning); }
+        }
+        StateHasChanged();
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _previewUrl = null;
+        _showPreview = false;
+        _newForm.FormName = "";
+        _fileIcon = Icons.Material.Filled.InsertDriveFile;
+        _fileColor = Color.Default;
+        StateHasChanged();
     }
 
     private async Task Save()
     {
-        // 1. Validation
         if (string.IsNullOrEmpty(_newForm.FormName) || string.IsNullOrEmpty(_newForm.Category))
         {
             Snackbar.Add("Please fill in the Form Name and Office Category.", Severity.Error);
             return;
         }
 
-       
         if (_selectedFile == null && string.IsNullOrEmpty(_newForm.PdfUrl))
         {
             Snackbar.Add("Please either upload a file or provide a manual link.", Severity.Warning);
@@ -154,24 +230,20 @@
             _isUploading = true;
             StateHasChanged();
 
-            // 2. Handle Azure Upload
             if (_selectedFile != null)
             {
                 string connectionString = _config.GetConnectionString("AzureStorage");
                 var blobServiceClient = new BlobServiceClient(connectionString);
                 var containerClient = blobServiceClient.GetBlobContainerClient("templates");
-                
                 await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
                 // FIX: Sanitize filename to prevent BlobNotFound/404 errors
-                string safeFileName = _selectedFile.Name.Replace(" ", "_");
+                string safeFileName = Regex.Replace(_selectedFile.Name, @"\s+", "_");
                 string fileName = $"TEMPLATE_{Guid.NewGuid()}_{safeFileName}";
-                
                 var blobClient = containerClient.GetBlobClient(fileName);
 
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
                 
-                // FIX: Force Download Header to prevent XML tree errors
                 var headers = new BlobHttpHeaders { 
                     ContentType = _selectedFile.ContentType,
                     ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 

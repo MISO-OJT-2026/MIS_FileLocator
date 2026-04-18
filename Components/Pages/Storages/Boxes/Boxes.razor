@@ -21,168 +21,160 @@
 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" SliderColor="Color.Primary">
 
     <MudTabPanel Text="Active Boxes" Icon="@Icons.Material.Filled.Inventory">
-
         <MudDataGrid T="FileBoxes"
-                     Items="@_boxes.Where(b => !b.IsArchived)"
-                     Context="box"
-                     Filterable="false"
+                     Items="@(_boxes?.Where(b => !b.IsArchived) ?? Enumerable.Empty<FileBoxes>())"
                      QuickFilter="@_quickFilter"
-                    Dense="true"
-                    Hover="true">
-
+                     Dense="false"
+                     Hover="true"
+                     Breakpoint="Breakpoint.Sm">
             <ToolBarContent>
-                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
-                    @* Actions *@
-                    <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">
-                            Add Box
-                        </MudButton>
-                        <MudTooltip Text="Export Active Boxes to CSV">
-                            <MudIconButton Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.Print" OnClick="@(() => ExportToCSV(false))" />
-                        </MudTooltip>
-                    </MudStack>
+                @* We use a standard MudGrid for alignment instead of a complex ToolBar wrapper for now *@
+                <MudGrid Spacing="2" AlignItems="AlignItems.Center" Class="w-100 py-1">
+
+                    @* 1. Left Side: Action Buttons *@
+                    <MudItem>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="OpenAddDialog"
+                                       Size="Size.Small"
+                                       Style="height:40px;">
+                                Add Box
+                            </MudButton>
+                            <MudIconButton Variant="Variant.Outlined"
+                                           Color="Color.Success"
+                                           Icon="@Icons.Material.Filled.Print"
+                                           OnClick="@(() => ExportToCSV(false))"
+                                           Style="height:40px; width:40px;" />
+                        </MudStack>
+                    </MudItem>
 
                     <MudSpacer />
 
-                    @* Filter Options *@
-                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" Class="flex-grow-1 justify-end">
-                        @* Option 1: Cabinet Filter *@
+                    @* 2. Right Side: Search and Filter *@
+                    <MudItem xs="12" sm="4" md="3">
                         <MudSelect T="string"
                                    @bind-Value="_selectedCabinet"
-                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FilterList"
+                                   AdornmentIcon="@Icons.Material.Filled.FilterList"
+                                   Clearable="true"
                                    Variant="Variant.Outlined"
-                                   Dense="true"
                                    Margin="Margin.Dense"
-                                   Style="width: 200px;"
-                                   Clearable="true">
-                            <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
-                            @foreach (var cabinetName in _cabinetNames)
-                            {
-                                <MudSelectItem Value="@cabinetName">@cabinetName</MudSelectItem>
-                            }
-                            <MudSelectItem Value="@("Unassigned")">Unassigned Only</MudSelectItem>
-                        </MudSelect>
+                                   Style="height: 40px; background: var(--mud-palette-background);">
 
-                        @* Option 2: Name/Description Search *@
+                        
+                            <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                            @* NOTE: Keeping logic simple here to avoid render crashes *@
+                            @if (_cabinetNames != null)
+                            {
+                                @foreach (var name in _cabinetNames)
+                                {
+                                    <MudSelectItem Value="@name">@name</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="4" md="3">
                         <MudTextField @bind-Value="_searchString"
-                                      Placeholder="Search..."
+                                      Placeholder="Search boxes..."
                                       Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Style="width: 300px;"
-                                      Clearable="true" />
-                    </MudStack>
-                </MudStack>
+                                      Style="height: 40px; background: var(--mud-palette-background);" />
+                    </MudItem>
+                </MudGrid>
             </ToolBarContent>
-
             <Columns>
-
                 <PropertyColumn Property="x => x.Name" Title="Box Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />
-
                 <TemplateColumn Title="Cabinet">
-                    <CellTemplate Context="box">
+                    <CellTemplate>
                         <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Text">
-                            @(box.Item.FillingCabinet?.Name ?? "Unassigned")
+                            @(context.Item.FillingCabinet?.Name ?? "Unassigned")
                         </MudChip>
                     </CellTemplate>
                 </TemplateColumn>
-
-                <TemplateColumn Title="Contents">
-                    <CellTemplate Context="box">
-                        <MudButton Variant="Variant.Text"
-                                   StartIcon="@Icons.Material.Filled.Inventory"
-                                   Color="Color.Info"
-                                   Size="Size.Small"
-                                   OnClick="@(() => OpenBoxExplorer(box.Item))">
-                            @(box.Item.Folders?.Count(f => !f.IsArchived) ?? 0) Folders
-                        </MudButton>
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <TemplateColumn Title="Actions">
-                    <CellTemplate  Context="box">
-
-                        <MudIconButton Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Warning"
-                                       OnClick="@(() => OpenEditDialog(box.Item))" />
-
-                        <MudIconButton Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Archive"
-                                       Color="Color.Error"
-                                       OnClick="@(() => ConfirmArchive(box.Item))" />
-                    </CellTemplate>
-                </TemplateColumn>
-
-            </Columns>
-
-            <PagerContent>
-                <MudDataGridPager T="FileBoxes" />
-            </PagerContent>
-
-        </MudDataGrid>
-
-    </MudTabPanel>
-
-
-    <MudTabPanel Text="Archived Boxes" Icon="@Icons.Material.Filled.Archive">
-
-        <MudDataGrid T="FileBoxes"
-                     Items="@_boxes.Where(b => b.IsArchived)"
-                     Context="archivedBox">
-
-            <ToolBarContent>
-
-                <MudTooltip Text="Export Archived Boxes to CSV" Placement="Placement.Top">
-                    <MudIconButton Variant="Variant.Outlined"
-                                   Color="Color.Success"
-                                   Icon="@Icons.Material.Filled.Print"
-                                   OnClick="@(() => ExportToCSV(true))"
-                                   Class="mr-2" />
-                </MudTooltip>
-                <MudSpacer />
-                <MudTextField @bind-Value="_searchString" Placeholder="Search archived cabinets..." Adornment="Adornment.Start" Immediate="true"
-                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
-
-            </ToolBarContent>
-            <Columns>
-
-                <PropertyColumn Property="x => x.Name" Title="Box Name" />
-                <TemplateColumn Title="Assigned Cabinet">
-                    <CellTemplate Context="archivedBox">
-                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Small" Color="Color.Info" />
-                            <MudText Typo="Typo.body2">
-                                @(archivedBox.Item.FillingCabinet?.Name ?? "Unassigned/General Storage")
-                            </MudText>
+                <TemplateColumn Title="Actions" CellStyle="text-align:;">
+                    <CellTemplate>
+                        <MudStack Spacing="2" Row="true" AlignItems="AlignItems.Center">
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" OnClick="@(() => OpenEditDialog(context.Item))" />
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Archive" Color="Color.Error" OnClick="@(() => ConfirmArchive(context.Item))" />
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
-                <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
+            </Columns>
+        </MudDataGrid>
+    </MudTabPanel>
 
-                <PropertyColumn Property="x => x.ArchivedAt"
-                                Title="Date Archived"
-                                Format="MMM dd, yyyy" />
 
-                <TemplateColumn Title="Actions">
-                    <CellTemplate Context="archivedBox">
-                        <MudButton Size="Size.Small"
+    @* --- ARCHIVED BOXES PANEL --- *@
+    <MudTabPanel Text="Archived Boxes" Icon="@Icons.Material.Filled.Archive">
+        <MudDataGrid T="FileBoxes"
+                     Items="@(_boxes?.Where(b => b.IsArchived) ?? Enumerable.Empty<FileBoxes>())"
+                     QuickFilter="@_quickFilter"
+                     Dense="false"
+                     Hover="true"
+                     Breakpoint="Breakpoint.Sm">
+            <ToolBarContent>
+                <MudGrid Spacing="2" AlignItems="AlignItems.Center" Class="w-100 py-1">
+                    <MudItem>
+                        <MudIconButton Variant="Variant.Outlined"
+                                       Color="Color.Success"
+                                       Icon="@Icons.Material.Filled.Print"
+                                       OnClick="@(() => ExportToCSV(true))"
+                                       Style="height:40px; width:40px;" />
+                    </MudItem>
+
+                    <MudSpacer />
+                    <MudItem xs="12" sm="4" md="3">
+                        <MudSelect T="string"
+                                   @bind-Value="_selectedCabinet"
+                                   Clearable="true"
                                    Variant="Variant.Outlined"
-                                   Color="Color.Success"
-                                   StartIcon="@Icons.Material.Filled.Restore"
-                                   OnClick="@(() => UnarchiveBox(archivedBox.Item))">
+                                   Margin="Margin.Dense"
+                                   Style="height: 40px; background: var(--mud-palette-background);">
+                            <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                            @* NOTE: Keeping logic simple here to avoid render crashes *@
+                            @if (_cabinetNames != null)
+                            {
+                                @foreach (var name in _cabinetNames)
+                                {
+                                    <MudSelectItem Value="@name">@name</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="5" md="4">
+                        <MudTextField @bind-Value="_searchString"
+                                      Placeholder="Search archived..."
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Style="height: 40px; background: var(--mud-palette-background);" />
+                    </MudItem>
+                </MudGrid>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.Name" Title="Box Name" />
+                <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
+                <PropertyColumn Property="x => x.ArchivedAt" Title="Date Archived" Format="MMM dd, yyyy" />
+                <TemplateColumn Title="Actions" HeaderStyle="text-align: right;" CellStyle="text-align:;">
+                    <CellTemplate>
+                        <MudStack Spacing="2" Row="true" AlignItems="AlignItems.Center">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Restore" OnClick="@(() => UnarchiveBox(context.Item))">
                             Restore
                         </MudButton>
+                        </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
-
             </Columns>
-
         </MudDataGrid>
-
     </MudTabPanel>
 
 </MudTabs>

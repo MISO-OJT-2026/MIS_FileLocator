@@ -106,27 +106,53 @@
     {
         @* MINI STATE *@
         <div class="d-flex flex-column align-center py-6 gap-4">
-            <MudIcon Icon="@Icons.Material.Filled.SdCard" Color="Color.Primary" Size="Size.Large" Class="mb-6" />
+            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Size="Size.Large" Class="mb-6" />
             @if (RoleService.CanAccessDashboard(_currentUserRole))
-            {
+
+            {   <MudTooltip Text="Dashboard">
                 <MudIconButton Icon="@Icons.Material.Filled.Dashboard" href="/dashboard" />
+                </MudTooltip>
+
+                <MudTooltip text="Profile">
+                <MudIconButton Icon="@Icons.Material.Filled.Person" Href="/profile"/>
+                </MudTooltip>
+
+                <MudTooltip Text="Forms">
+                <MudIconButton Icon="@Icons.Material.Filled.Assignment" Href="/forms" />
+                </MudTooltip>
             }
             @if (RoleService.CanAccessStorage(_currentUserRole))
             {
+                <MudTooltip Text="Storges">
                 <MudIconButton Icon="@Icons.Material.Filled.Inventory2" href="/storages/cabinets" />
+                </MudTooltip>
+
+                <MudTooltip Text="Documents">
+                <MudIconButton Icon="@Icons.Material.Filled.Description" href="/documentsPage" />
+                </MudTooltip>
             }
-            <MudIconButton Icon="@Icons.Material.Filled.Description" href="/documentsPage" />
-            @if (RoleService.CanAccessAdminTools(_currentUserRole))
-            {
-                <MudIconButton Icon="@Icons.Material.Filled.QrCode" href="/admin/qr-codes" />
-            }
+
+            
+            
             @if (RoleService.CanAccessUserManagement(_currentUserRole))
             {
+                <MudTooltip Text="Users Management">
                 <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" href="/admin/users" />
+                </MudTooltip>
             }
-            <div class="mt-auto">
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Error" />
-            </div>
+            @if (RoleService.CanAccessAdminTools(_currentUserRole))
+
+            {
+                <MudTooltip Text="QR Code">
+                <MudIconButton Icon="@Icons.Material.Filled.QrCode" href="/admin/qr-codes" />
+                </MudTooltip>
+
+                <MudTooltip Text="Transaction Logs">
+                <MudIconButton Icon="@Icons.Material.Filled.History" href="/transaction-logs" />
+                </MudTooltip>
+            }
+
+           
         </div>
     }
 </MudNavMenu>

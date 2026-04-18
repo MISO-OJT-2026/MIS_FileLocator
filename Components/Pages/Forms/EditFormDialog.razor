@@ -5,11 +5,14 @@
 @using Azure.Storage.Blobs.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Threading
+@using System.IO
+@using System.Text.RegularExpressions
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
 @inject IConfiguration _config
 @inject IDialogService DialogService
+@inject IJSRuntime JS
 
 <MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
     <DialogContent>
@@ -42,36 +45,48 @@
                                  AdornmentIcon="@Icons.Material.Filled.Business" />
             </MudItem>
 
-            @* --- Digital Asset Section --- *@
+            @* --- Digital Asset Section with Integrated Preview --- *@
             <MudItem xs="12">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Copy</MudText>
-                <MudPaper Variant="Variant.Outlined" Class="pa-4">
-                    <MudStack Spacing="4">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Digital Template Management</MudText>
+                <MudPaper Variant="Variant.Outlined" Class="pa-4 bg-light">
+                    <MudStack Spacing="3">
                         
-                        @* 1. Display Current File if exists *@
+                        @* 1. Display Current File / Preview Toggle *@
                         @if (!string.IsNullOrEmpty(_editForm.PdfUrl))
                         {
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" NoIcon="false">
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" NoIcon="false" Class="py-1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width:100%">
                                     <MudText>
-                                        Current: <MudLink Href="@_editForm.PdfUrl" Target="_blank" style="color:aliceblue;"><b>View File</b></MudLink>
+                                        Current: <b>@Path.GetFileName(new Uri(_editForm.PdfUrl).LocalPath).Split('_').Last()</b>
                                     </MudText>
-                                    <MudSpacer/>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                   Color="Color.Error" 
-                                                   OnClick="RemoveDigitalFile" 
-                                                   Size="Size.Small"
-                                                   Variant="Variant.Filled"
-                                                   Title="Delete file from cloud" />
+                                    <MudStack Row="true" Spacing="1">
+                                        @if (_canPreview)
+                                        {
+                                            <MudIconButton Icon="@(_showPreview ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" 
+                                                           Color="Color.Inherit" OnClick="TogglePreview" Title="Toggle Preview" />
+                                        }
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Color="Color.Error" 
+                                                       OnClick="RemoveDigitalFile" 
+                                                       Title="Delete file from cloud" />
+                                    </MudStack>
                                 </MudStack>
                             </MudAlert>
                         }  
                         else
                         {
-                            <MudAlert Severity="Severity.Warning" Dense="true">No digital file attached to this form.</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Dense="true">No digital template attached.</MudAlert>
                         }
 
-                        <MudDivider />
+                        @* INTERNAL IFRAME PREVIEW AREA *@
+                        @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
+                        {
+                            <MudPaper Outlined="true" Class="w-100 rounded-lg overflow-hidden border-2" Style="height: 450px; background: white; border-color: var(--mud-palette-primary);">
+                                <iframe src="@_previewUrl" style="width:100%; height:100%; border:none;"></iframe>
+                            </MudPaper>
+                        }
+
+                        <MudDivider Class="my-2" />
 
                         @* 2. Replace/Upload New File *@
                         <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
@@ -80,25 +95,25 @@
                                            Color="Color.Secondary" 
                                            FullWidth="true"
                                            StartIcon="@Icons.Material.Filled.CloudUpload">
-                                    @(_selectedFile == null ? "Replace/Upload File" : _selectedFile.Name)
+                                    @(_selectedFile == null ? "REPLACE / UPLOAD NEW FILE" : _selectedFile.Name)
                                 </MudButton>
                             </ActivatorContent>
                         </MudFileUpload>
 
                         @if (_selectedFile != null)
                         {
-                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="@(() => _selectedFile = null)">
-                                New File: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
+                            <MudAlert Severity="Severity.Success" Dense="true" OnClose="ClearSelectedFile">
+                                New Selection: @_selectedFile.Name (@(Math.Round(_selectedFile.Size / 1024.0 / 1024.0, 2)) MB)
                             </MudAlert>
                         }
 
                         @* 3. Edit/Provide Link *@
                         <MudTextField @bind-Value="_editForm.PdfUrl" 
-                                      Label="Manual URL Link" 
+                                      Label="Direct URL / Manual Link" 
                                       Variant="Variant.Outlined" 
                                       Placeholder="https://tsu.edu.ph/..."
                                       Disabled="@(_selectedFile != null)"
-                                      HelperText="@(_selectedFile != null ? "File upload takes priority" : "Edit the direct link here")" />
+                                      HelperText="@(_selectedFile != null ? "New file upload will overwrite this link." : "Edit the cloud storage path directly.")" />
                     </MudStack>
                 </MudPaper>
 
@@ -110,12 +125,10 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        @* Delete whole record button pushed to left *@
-        <MudButton Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever" OnClick="DeleteForm" Class="mr-auto">Delete Form</MudButton>
-        
+        <MudButton Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever" OnClick="DeleteForm" Class="mr-auto">Delete Record</MudButton>
         <MudButton OnClick="Cancel">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="@_isUploading">
-            @(_isUploading ? "Updating..." : "Update Form")
+            @(_isUploading ? "Updating..." : "Save Changes")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -126,12 +139,14 @@
 
     private FormTemplate _editForm = new();
     private IBrowserFile? _selectedFile;
+    private string? _previewUrl;
+    private bool _showPreview = false;
+    private bool _canPreview = false;
     private bool _isUploading = false;
     private List<string> _existingCategories = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Load categories for the autocomplete
         var defaults = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
         var dbCats = await _context.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
@@ -141,12 +156,21 @@
 
         _existingCategories = defaults.Union(dbCats).OrderBy(x => x).ToList();
 
-        // Clone the data
+        // Clone current data
         _editForm.Id = FormToEdit.Id;
         _editForm.FormName = FormToEdit.FormName;
         _editForm.FormNumber = FormToEdit.FormNumber;
         _editForm.Category = FormToEdit.Category;
         _editForm.PdfUrl = FormToEdit.PdfUrl;
+
+        CheckIfPreviewable(_editForm.PdfUrl);
+    }
+
+    private void CheckIfPreviewable(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) { _canPreview = false; return; }
+        string ext = Path.GetExtension(url).ToLower();
+        _canPreview = (ext == ".pdf" || ext == ".jpg" || ext == ".jpeg" || ext == ".png");
     }
 
     private async Task<IEnumerable<string>> SearchCategories(string value, CancellationToken token)
@@ -155,14 +179,54 @@
         return _existingCategories.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private void OnFileSelected(IBrowserFile file)
+    private async Task OnFileSelected(IBrowserFile file)
     {
+        if (file == null) return;
         _selectedFile = file;
+        _previewUrl = null;
+        _showPreview = false;
+        CheckIfPreviewable(file.Name);
+        StateHasChanged();
+    }
+
+    private void ClearSelectedFile()
+    {
+        _selectedFile = null;
+        _previewUrl = null;
+        _showPreview = false;
+        CheckIfPreviewable(_editForm.PdfUrl);
+    }
+
+    private async Task TogglePreview()
+    {
+        _showPreview = !_showPreview;
+
+        if (_showPreview && string.IsNullOrEmpty(_previewUrl))
+        {
+            try 
+            {
+                if (_selectedFile != null)
+                {
+                    // Generate local preview for newly selected file
+                    using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    _previewUrl = $"data:{_selectedFile.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+                }
+                else if (!string.IsNullOrEmpty(_editForm.PdfUrl))
+                {
+                    // Use existing Azure URL
+                    _previewUrl = _editForm.PdfUrl;
+                }
+            }
+            catch { _showPreview = false; Snackbar.Add("Preview failed.", Severity.Warning); }
+        }
+        StateHasChanged();
     }
 
     private async Task RemoveDigitalFile()
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Delete the digital copy from Azure storage?", yesText: "Delete", cancelText: "Cancel");
+        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Permanently delete the file from cloud storage?", yesText: "Delete", cancelText: "Cancel");
         if (confirmed == true)
         {
             try
@@ -175,7 +239,10 @@
                     await client.GetBlobClient(blobName).DeleteIfExistsAsync();
                 }
                 _editForm.PdfUrl = "";
-                Snackbar.Add("Digital copy cleared.", Severity.Info);
+                _previewUrl = null;
+                _showPreview = false;
+                _canPreview = false;
+                Snackbar.Add("File removed.", Severity.Success);
             }
             catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
         }
@@ -190,59 +257,42 @@
             if (dbEntry == null) return;
 
             List<string> changes = new();
+            if (dbEntry.FormName != _editForm.FormName) changes.Add("Name Updated");
+            if (dbEntry.Category != _editForm.Category) changes.Add("Category Updated");
 
-            if (dbEntry.FormName != _editForm.FormName)
-                changes.Add($"Name: '{dbEntry.FormName}' → '{_editForm.FormName}'");
-
-            if (dbEntry.FormNumber != _editForm.FormNumber)
-                changes.Add($"Number: '{dbEntry.FormNumber}' → '{_editForm.FormNumber}'");
-
-            if (dbEntry.Category != _editForm.Category)
-                changes.Add($"Category: '{dbEntry.Category}' → '{_editForm.Category}'");
-
-            
             if (_selectedFile != null)
             {
                 string conn = _config.GetConnectionString("AzureStorage");
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("templates");
                 await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-                
-                string fileName = $"TEMPLATE_UPD_{Guid.NewGuid()}_{_selectedFile.Name}";
+                // SANITIZATION: Replace spaces with underscores for Azure compatibility
+                string safeName = Regex.Replace(_selectedFile.Name, @"\s+", "_");
+                string fileName = $"TEMPLATE_UPD_{Guid.NewGuid()}_{safeName}";
                 var blob = container.GetBlobClient(fileName);
 
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                await blob.UploadAsync(stream, new BlobHttpHeaders
-                {
+                
+                // FORCE DOWNLOAD HEADERS
+                await blob.UploadAsync(stream, new BlobHttpHeaders { 
                     ContentType = _selectedFile.ContentType,
-                    ContentDisposition = "inline"
+                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
                 });
 
-                
                 _editForm.PdfUrl = blob.Uri.ToString();
                 changes.Add("Replaced Digital File");
             }
-            else if (dbEntry.PdfUrl != _editForm.PdfUrl)
-            {
-                changes.Add("Updated Manual Link");
-            }
 
-        
             dbEntry.FormName = _editForm.FormName;
             dbEntry.FormNumber = _editForm.FormNumber;
             dbEntry.Category = _editForm.Category;
             dbEntry.PdfUrl = _editForm.PdfUrl;
 
             var user = await _currentUserService.GetCurrentFullNameAsync();
-            string detailSummary = changes.Count > 0 ? string.Join(", ", changes) : "No changes made to details";
-
-            _context.TransactionLogs.Add(new TransactionLog
-            {
-                FullName = user,
-                EventName = "Form Updated",
-                Description = $"Edited '{dbEntry.FormName}': {detailSummary}",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
+            _context.TransactionLogs.Add(new TransactionLog {
+                FullName = user, EventName = "Form Updated",
+                Description = $"Edited '{dbEntry.FormName}': {string.Join(", ", changes)}",
+                Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
@@ -255,15 +305,13 @@
 
     private async Task DeleteForm()
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync("Confirm Delete", "Permanently remove this form from the repository?", yesText: "Delete", cancelText: "Cancel");
+        var confirmed = await DialogService.ShowMessageBoxAsync("Confirm Delete", "Permanently remove this form template?", yesText: "Delete", cancelText: "Cancel");
         if (confirmed == true)
         {
             var doc = await _context.FormTemplates.FindAsync(_editForm.Id);
-            if (doc != null)
-            {
+            if (doc != null) {
                 _context.FormTemplates.Remove(doc);
                 await _context.SaveChangesAsync();
-                Snackbar.Add("Form removed from repository.", Severity.Warning);
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }

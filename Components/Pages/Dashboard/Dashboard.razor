@@ -20,7 +20,7 @@
 <MudStack Spacing="4" Class="pa-6">
     @if (_loading)
     {
-        <MudPaper Class="pa-12 d-flex flex-column align-center justify-center" Elevation="0" Style="background:transparent; min-height: 400px;">
+        <MudPaper Class="pa-12 glass-midnight d-flex flex-column align-center justify-center" Elevation="0" Style="background:transparent; min-height: 400px;">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
             <MudText Typo="Typo.body1" Class="mt-4" Color="Color.Primary">Optimizing your view...</MudText>
         </MudPaper>
@@ -57,7 +57,7 @@
 
             @* TREND CHART - Main Visual *@
             <MudItem xs="12" lg="8">
-                <MudPaper Outlined="true" Class="pa-6 pb-10 rounded-xl h-100">
+                <MudPaper Outlined="true" Class="pa-6 glass-midnight pb-10 rounded-xl h-100">
                     <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mud-text-primary">Disposal Trend</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-4 d-block">Activity vs. Disposals (Last 6 Years)</MudText>
                     <MudChart ChartType="ChartType.Line"
@@ -74,12 +74,30 @@
             @* CIRCULATION - The "Donut" *@
             <MudItem xs="12" lg="4">
                 <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100 glass-midnight d-flex flex-column">
-                    <MudText Typo="Typo.h6" Style="font-weight: 700;">File Circulation</MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">Current storage vs. out-of-office</MudText>
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 700;">File Circulation</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Yearly storage overview
+                            </MudText>
+                        </div>
+                        <MudSpacer/>
+                        <MudSelect T="int"
+                                   Value="_selectedCirculationYear"
+                                   ValueChanged="OnCirculationYearChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="Max-width:200px">
+                            @foreach (var y in _yearChoices)
+                            {
+                                <MudSelectItem Value="@y">@y</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
 
                     @* DONUT CHART WITH TOOLTIP *@
                     <div class="d-flex justify-center align-center" style="height: 200px; width: 100%;">
-                        <MudTooltip Text="@($"{_totalBorrowed} Borrowed, {_activeDocuments - _totalBorrowed} In Storage")">
+                        <MudTooltip Text="@($"{_totalBorrowed} Borrowed, {_totalDocsForSelectedYear - _totalBorrowed} In Storage")">
                             <div class="circulation-donut" style="@GetBorrowDonutStyle()">
                                 <div class="circulation-donut-center">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Borrowed</MudText>
@@ -87,8 +105,19 @@
                                 </div>
                             </div>
                         </MudTooltip>
+                       
                     </div>
+                    <div class="d-flex justify-center mt-3 gap-4">
+                        <div class="d-flex align-center gap-1">
+                            <div style="width:10px;height:10px;background:#f59e0b;border-radius:50%;"></div>
+                            <MudText Typo="Typo.caption">Borrowed</MudText>
+                        </div>
 
+                        <div class="d-flex align-center gap-1">
+                            <div style="width:10px;height:10px;background:#1f2937;border-radius:50%;"></div>
+                            <MudText Typo="Typo.caption">In Storage</MudText>
+                        </div>
+                    </div>
                     @* COMPLIANCE BAR *@
                     <MudStack Spacing="1" Class="mt-4">
                         <div class="d-flex justify-space-between align-center">
@@ -133,7 +162,7 @@
 
             @* BOTTOM ROW: THREE EQUAL COLUMNS *@
             <MudItem xs="12" md="4">
-                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
+                <MudPaper Outlined="true" Class="pa-6 glass-midnight rounded-xl h-100">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
                         <MudText Typo="Typo.h6" Style="font-weight:700;">Disposal Progress</MudText>
                         <MudSelect T="int" Value="_selectedDisposalYear" ValueChanged="OnDisposalYearChanged" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px;">
@@ -155,7 +184,7 @@
             </MudItem>
 
             <MudItem xs="12" md="4">
-                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
+                <MudPaper Outlined="true" Class="pa-6 glass-midnight rounded-xl h-100">
                     <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700;">Top Contributors</MudText>
                     <MudStack Spacing="1">
                         @foreach (var c in _topContributors)
@@ -173,19 +202,19 @@
             </MudItem>
 
             <MudItem xs="12" md="4">
-                <MudPaper Outlined="true" Class="pa-6 rounded-xl h-100">
+                <MudPaper Outlined="true" Class="pa-6 glass-midnight rounded-xl h-100">
                     <div class="d-flex justify-space-between align-center mb-4">
                         <MudText Typo="Typo.h6" Style="font-weight: 700;">Recent Activity</MudText>
                         <MudButton Href="/transaction-logs" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">View All</MudButton>
                     </div>
                     <div style="max-height: 250px; overflow-y: auto;" class="no-scrollbar">
                         <MudTimeline TimelinePosition="TimelinePosition.Start" Dense="true">
-                            @foreach (var log in _activityFeed.Take(5))
+                            @foreach (var log in _activityFeed.Take(15))
                             {
                                 var line = GetActivityDisplay(log);
                                 <MudTimelineItem Color="Color.Info" Size="Size.Small">
                                     <MudText Typo="Typo.caption" Class="d-block" Style="font-weight:700;">@line.ActorName</MudText>
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@line.Action · @line.PerformedAt.ToString("h:mm tt")</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@line.Action · @line.PerformedAt.ToString("MMM dd, yyyy • h:mm tt")</MudText>
                                 </MudTimelineItem>
                             }
                         </MudTimeline>
@@ -236,150 +265,161 @@
         XAxisLabelRotation = 45,
         LineStrokeWidth = 5,
 		YAxisTicks = 20 ,
-    
+
     };
 
     protected override async Task OnInitializedAsync()
     {
+        _selectedCirculationYear = DateTime.Now.Year;
         _selectedDisposalYear = DateTime.Now.Year;
-		_yearChoices = Enumerable.Range(_selectedDisposalYear - 5, 6).Reverse().ToList();
+        _yearChoices = Enumerable.Range(_selectedDisposalYear - 5, 6).Reverse().ToList();
         await LoadAsync();
     }
 
     private async Task LoadAsync()
-{
-    _loading = true;
-    var now = DateTime.Now;
-
-
-    var fullName = await CurrentUser.GetCurrentFullNameAsync();
-    _greetingName = GetFirstName(fullName);
-
-    
-    var users = await UserManager.Users
-        .AsNoTracking()
-        .Select(u => new { u.FullName, u.UserName })
-        .ToListAsync();
-    
-    _totalUsers = users.Count;
-    _employeeDisplayByKey.Clear();
-    foreach (var u in users) _employeeDisplayByKey[u.FullName ?? u.UserName!] = u.FullName ?? u.UserName!;
-
-    
-    var stats = await Db.Documents
-        .AsNoTracking()
-        .Select(d => new { d.IsDeleted, d.IsDisposal })
-        .GroupBy(x => 1) 
-        .Select(g => new {
-            ActiveDocs = g.Count(d => !d.IsDeleted && !d.IsDisposal),
-            DisposedDocs = g.Count(d => d.IsDisposal && !d.IsDeleted)
-        })
-        .FirstOrDefaultAsync();
-
-    _activeDocuments = stats?.ActiveDocs ?? 0;
-    _cabinets = await Db.FillingCabinets.CountAsync();
-    _boxes = await Db.FileBoxes.CountAsync();
-    _folders = await Db.Folders.CountAsync();
-
-  
-    var sixYearsAgo = now.Year - 5;
-    var rawChartData = await Db.Documents
-        .AsNoTracking()
-            .Where(d => !d.IsDeleted && d.FiledAt.Year >= sixYearsAgo)
-            .GroupBy(d => d.FiledAt.Year)
-        .Select(g => new { 
-            Year = g.Key, 
-            Active = g.Count(d => !d.IsDisposal), 
-            Disposed = g.Count(d => d.IsDisposal) 
-        })
-        .ToListAsync();
-
-    
-    var labels = new List<string>();
-    var activeData = new List<double>();
-    var disposalData = new List<double>();
-
-    for (var i = 0; i < 6; i++)
     {
-        var year = sixYearsAgo + i;
-        labels.Add(year.ToString());
-        var yearMatch = rawChartData.FirstOrDefault(x => x.Year == year);
-        activeData.Add(yearMatch?.Active ?? 0);
-        disposalData.Add(yearMatch?.Disposed ?? 0);
-    }
+        _loading = true;
+        var now = DateTime.Now;
 
-    _xAxisLabels = labels.ToArray();
-    _series = new List<ChartSeries<double>>
+
+        var fullName = await CurrentUser.GetCurrentFullNameAsync();
+        _greetingName = GetFirstName(fullName);
+
+
+        var users = await UserManager.Users
+            .AsNoTracking()
+            .Select(u => new { u.FullName, u.UserName })
+            .ToListAsync();
+
+        _totalUsers = users.Count;
+        _employeeDisplayByKey.Clear();
+        foreach (var u in users) _employeeDisplayByKey[u.FullName ?? u.UserName!] = u.FullName ?? u.UserName!;
+
+
+        var stats = await Db.Documents
+            .AsNoTracking()
+            .Select(d => new { d.IsDeleted, d.IsDisposal })
+            .GroupBy(x => 1) 
+            .Select(g => new {
+                ActiveDocs = g.Count(d => !d.IsDeleted && !d.IsDisposal),
+                DisposedDocs = g.Count(d => d.IsDisposal && !d.IsDeleted)
+            })
+            .FirstOrDefaultAsync();
+
+        _activeDocuments = stats?.ActiveDocs ?? 0;
+        _cabinets = await Db.FillingCabinets.CountAsync();
+        _boxes = await Db.FileBoxes.CountAsync();
+        _folders = await Db.Folders.CountAsync();
+
+
+        var sixYearsAgo = now.Year - 5;
+        var rawChartData = await Db.Documents
+            .AsNoTracking()
+                .Where(d => !d.IsDeleted && d.FiledAt.Year >= sixYearsAgo)
+                .GroupBy(d => d.FiledAt.Year)
+            .Select(g => new { 
+                Year = g.Key, 
+                Active = g.Count(d => !d.IsDisposal), 
+                Disposed = g.Count(d => d.IsDisposal) 
+            })
+            .ToListAsync();
+
+
+        var labels = new List<string>();
+        var activeData = new List<double>();
+        var disposalData = new List<double>();
+
+        for (var i = 0; i < 6; i++)
+        {
+            var year = sixYearsAgo + i;
+            labels.Add(year.ToString());
+            var yearMatch = rawChartData.FirstOrDefault(x => x.Year == year);
+            activeData.Add(yearMatch?.Active ?? 0);
+            disposalData.Add(yearMatch?.Disposed ?? 0);
+        }
+
+        _xAxisLabels = labels.ToArray();
+        _series = new List<ChartSeries<double>>
     {
         new ChartSeries<double> { Name = "New Filing", Data = activeData.ToArray() },
         new ChartSeries<double> { Name = "Official Disposals", Data = disposalData.ToArray() }
     };
 
-    //  ACTIVITY & CONTRIBUTORS
-    _activityFeed = await Db.TransactionLogs
-        .AsNoTracking()
-        .OrderByDescending(t => t.PerformedAt)
-        .Take(15)
-        .ToListAsync();
+        //  ACTIVITY & CONTRIBUTORS
+        _activityFeed = await Db.TransactionLogs
+            .AsNoTracking()
+            .OrderByDescending(t => t.PerformedAt)
+            .Take(15)
+            .ToListAsync();
 
-    var topRaw = await Db.TransactionLogs
-        .AsNoTracking()
-        .Where(t => !string.IsNullOrEmpty(t.FullName))
-        .GroupBy(t => t.FullName!)
-        .Select(g => new { Name = g.Key, Count = g.Count() })
-        .OrderByDescending(x => x.Count)
-        .Take(15)
-        .ToListAsync();
+        var topRaw = await Db.TransactionLogs
+            .AsNoTracking()
+            .Where(t => !string.IsNullOrEmpty(t.FullName))
+            .GroupBy(t => t.FullName!)
+            .Select(g => new { Name = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(15)
+            .ToListAsync();
 
-    _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();
+        _topContributors = topRaw.Select(x => new ContributorRow(ResolveEmployeeName(x.Name), x.Count)).ToList();
 
-    await LoadBorrowStatsAsync();
-    await LoadDisposalYearDataAsync();
-    _loading = false;
-}
-// BORROWED SECTION 
-
-private int _totalBorrowed, _overdueDocuments;
-private double _returnRate;
-private double[] _borrowData = { 0, 0 };
-private string[] _borrowLabels = { "In Storage", "Borrowed" };
-private bool _hasBorrowableDocs;
-private double _borrowedPercent;
-private List<OverdueItem> _overdueItems = new();
-
-private async Task LoadBorrowStatsAsync()
-{
-  
-    var borrowStats = await Db.Documents
-        .AsNoTracking()
-        .Where(d => !d.IsDeleted && !d.IsDisposal)
-        .GroupBy(x => 1)
-        .Select(g => new {
-            Total = g.Count(),
-            Borrowed = g.Count(d => d.IsBorrowed), 
-            Overdue = g.Count(d => d.IsBorrowed && d.BorrowedAt < DateTime.Now),
-            InStorage = g.Count(d => !d.IsBorrowed)
-        })
-        .FirstOrDefaultAsync();
-
-    if (borrowStats != null)
-    {
-        _hasBorrowableDocs = borrowStats.Total > 0;
-        _totalBorrowed = borrowStats.Borrowed;
-        _overdueDocuments = borrowStats.Overdue;
-
-        _borrowData = borrowStats.Total > 0
-            ? new double[] { borrowStats.InStorage, borrowStats.Borrowed }
-            : new double[] { 0, 0 };
-
-        _borrowedPercent = borrowStats.Total <= 0
-            ? 0
-            : (double)borrowStats.Borrowed / borrowStats.Total * 100.0;
-
-        _returnRate = borrowStats.Total <= 0
-            ? 0
-            : Math.Round((double)borrowStats.InStorage / borrowStats.Total * 100, 0);
+        await LoadBorrowStatsAsync();
+        await LoadDisposalYearDataAsync();
+        _loading = false;
     }
+    // BORROWED SECTION 
+
+    private int _totalBorrowed, _overdueDocuments;
+    private double _returnRate;
+    private double[] _borrowData = { 0, 0 };
+    private string[] _borrowLabels = { "In Storage", "Borrowed" };
+    private bool _hasBorrowableDocs;
+    private double _borrowedPercent;
+    private List<OverdueItem> _overdueItems = new();
+    private int _selectedCirculationYear;
+    private int _totalDocsForSelectedYear;
+
+    //DITO DITO YUNG BORROW WAG KANA TUMINGIN SA IBA SAKIN NALANG
+    private async Task LoadBorrowStatsAsync()
+    {
+        var start = new DateTime(_selectedCirculationYear, 1, 1);
+        var end = start.AddYears(1);
+
+        var borrowStats = await Db.Documents
+            .AsNoTracking()
+            .Where(d => !d.IsDeleted && !d.IsDisposal
+         && d.FiledAt >= start
+         && d.FiledAt < end)
+            .GroupBy(x => 1)
+            .Select(g => new {
+                Total = g.Count(),
+                Borrowed = g.Count(d => d.IsBorrowed), 
+                Overdue = g.Count(d => d.IsBorrowed && d.BorrowedAt < DateTime.Now),
+                InStorage = g.Count(d => !d.IsBorrowed)
+            })
+            .FirstOrDefaultAsync();
+
+        if (borrowStats != null)
+        {
+            _totalDocsForSelectedYear = borrowStats.Total; // Store the year-specific total
+            _totalBorrowed = borrowStats.Borrowed;
+
+            _borrowedPercent = _totalDocsForSelectedYear <= 0
+                ? 0
+                : (double)_totalBorrowed / _totalDocsForSelectedYear * 100.0;
+
+            _returnRate = _totalDocsForSelectedYear <= 0
+                ? 0
+                : Math.Round((double)borrowStats.InStorage / _totalDocsForSelectedYear * 100, 0);
+        }
+        else
+        {
+            // Reset if no data for that year
+            _totalDocsForSelectedYear = 0;
+            _totalBorrowed = 0;
+            _borrowedPercent = 0;
+            _returnRate = 0;
+        }
 
         _overdueItems = await Db.Documents
             .AsNoTracking()
@@ -396,6 +436,12 @@ private async Task LoadBorrowStatsAsync()
             .ToListAsync();
     }
 
+    private async Task OnCirculationYearChanged(int year)
+    {
+        _selectedCirculationYear = year;
+        await LoadBorrowStatsAsync();
+        StateHasChanged();
+    }
     private record OverdueItem
     {
         public string Title { get; set; } = "";

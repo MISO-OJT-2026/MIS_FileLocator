@@ -1,5 +1,5 @@
 @page "/documentsPage"
-@attribute [Authorize]
+@attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Authorization
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
@@ -7,59 +7,67 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Text
 @using System.Security.Claims
-@using Microsoft.AspNetCore.Authorization
 
 @inject ApplicationDbContext _context
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
-@inject ICurrentUserService _currentUserService 
+@inject ICurrentUserService _currentUserService
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IRoleService RoleService 
-
+@inject IRoleService RoleService
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Document Inventory</MudText>
+
 <MudDataGrid T="Documents"
-             Items="@_allDocuments.Where(d => !d.IsDeleted && !d.IsDisposal)"
+             Items="@(_allDocuments?.Where(d => !d.IsDeleted && !d.IsDisposal) ?? Enumerable.Empty<Documents>())"
              Filterable="false"
              Hover="true"
-             Dense="true"
+             Dense="false"
              QuickFilter="@_quickFilter"
              Hideable="true"
-RowClick = "OnRowClicked">
+             Breakpoint="Breakpoint.Sm"
+             RowClick="OnRowClicked">
     <ToolBarContent>
-        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
-            @* Actions Group *@
-            <MudStack Row="true" Spacing="2">
-                @if (RoleService.CanAddEditDocuments(_currentUserRole))
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenAddDialog())">
-                        File New Document
-                    </MudButton>
-                }
-                <MudTooltip Text="Print Inventory">
-                    <MudIconButton Icon="@Icons.Material.Filled.Print" Color="Color.Success" Variant="Variant.Outlined" OnClick="ExportToCSV" />
-                </MudTooltip>
-            </MudStack>
+        <MudGrid Spacing="2" AlignItems="AlignItems.Center" Class="w-100 py-1">
+            @* 1. Action Buttons *@
+            <MudItem>
+                <MudStack Row="true" Spacing="2">
+                    @if (RoleService.CanAddEditDocuments(_currentUserRole))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="@(() => OpenAddDialog())"
+                                   Size="Size.Small"
+                                   Style="height:40px; white-space:nowrap;">
+                            File New Document
+                        </MudButton>
+                    }
+                    <MudTooltip Text="Print Inventory">
+                        <MudIconButton Icon="@Icons.Material.Filled.Print"
+                                       Color="Color.Success"
+                                       Variant="Variant.Outlined"
+                                       OnClick="ExportToCSV"
+                                       Style="height:40px; width:40px;" />
+                    </MudTooltip>
+                </MudStack>
+            </MudItem>
 
             <MudSpacer />
 
-            @* Filter and Search Group *@
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                @* Filter by Status *@
-                <MudMenu Label="Filter by Status"
+            @* 2. Filter & Search *@
+            <MudItem xs="12" sm="4" md="3">
+                @* Unified Filter Menu *@
+                <MudMenu Label="Filter Documents"
                          Variant="Variant.Outlined"
                          AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight"
                          Dense="true"
-                         StartIcon="@Icons.Material.Filled.FilterList"
-                         EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                         Margin="Margin.Dense"
-                         Style="width: 250px;">
+                         EndIcon="@Icons.Material.Filled.FilterList"
+                         Style="height: 40px; width: 100%; background: var(--mud-palette-background);">
                     <div class="pa-4" style="min-width: 300px;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Documents</MudText>
-                        
-                        @* Status Filter *@
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Search Filters</MudText>
+
                         <MudSelect T="string" Label="Status" @bind-Value="_selectedStatus"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
                             <MudSelectItem Value="@("")">All Status</MudSelectItem>
@@ -67,10 +75,7 @@ RowClick = "OnRowClicked">
                             <MudSelectItem Value="@("Borrowed")">Borrowed</MudSelectItem>
                         </MudSelect>
 
-                        @* Cabinet Filter *@
-                        <MudSelect T="string"
-                                   Label="Cabinet"
-                                   Value="_selectedCabinet"
+                        <MudSelect T="string" Label="Cabinet" Value="_selectedCabinet"
                                    ValueChanged="@(e => OnCabinetChanged(e))"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
                             <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
@@ -80,10 +85,7 @@ RowClick = "OnRowClicked">
                             }
                         </MudSelect>
 
-                        @* Box Filter *@
-                        <MudSelect T="string"
-                                   Label="Box"
-                                   Value="_selectedBox"
+                        <MudSelect T="string" Label="Box" Value="_selectedBox"
                                    ValueChanged="@(e => OnBoxChanged(e))"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2"
                                    Disabled="@string.IsNullOrWhiteSpace(_selectedCabinet)">
@@ -94,19 +96,7 @@ RowClick = "OnRowClicked">
                             }
                         </MudSelect>
 
-                        @* Folder Filter *@
-                        <MudSelect T="string" Label="Folder" @bind-Value="_selectedFolder"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2"
-                                   Disabled="@string.IsNullOrWhiteSpace(_selectedBox)">
-                            <MudSelectItem Value="@("")">All Folders</MudSelectItem>
-                            @foreach (var folder in GetAvailableFolders())
-                            {
-                                <MudSelectItem Value="@folder">@folder</MudSelectItem>
-                            }
-                        </MudSelect>
-
-                        @* Confidentiality Level Filter *@
-                        <MudSelect T="string" Label="Confidentiality Level" @bind-Value="_selectedConfidentiality"
+                        <MudSelect T="string" Label="Confidentiality" @bind-Value="_selectedConfidentiality"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
                             <MudSelectItem Value="@("")">All Levels</MudSelectItem>
                             @foreach (var level in GetAvailableConfidentialityLevels())
@@ -115,59 +105,50 @@ RowClick = "OnRowClicked">
                             }
                         </MudSelect>
 
-                        @* Year Filter *@
-                        <MudSelect T="string" Label="DocumentDate" @bind-Value="_selectedDocumentDate"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
-                            <MudSelectItem Value="@("")">All Years</MudSelectItem>
-                            @foreach (var date in GetAvailableDocumentDate())
-                            {
-                                <MudSelectItem Value="@date">@date</MudSelectItem>
-                            }
-                        </MudSelect>
-                        
-                        <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All Filters</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All</MudButton>
                     </div>
                 </MudMenu>
+            </MudItem>
 
-                @* Search Field *@
+            <MudItem xs="12" sm="4" md="3">
                 <MudTextField @bind-Value="_searchString"
-                              Placeholder="Search..."
+                              Placeholder="Search title or folder..."
                               Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
                               Immediate="true"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Style="width: 300px;" />
-            </MudStack>
-        </MudStack>
+                              Style="height: 40px; background: var(--mud-palette-background);" />
+            </MudItem>
+        </MudGrid>
     </ToolBarContent>
 
     <Columns>
         <PropertyColumn Property="x => x.Title" Title="Document Title" />
-        <PropertyColumn Property="x => x.DocumentDate" Title="Document Date" Sortable="true" />
+        <PropertyColumn Property="x => x.DocumentDate" Title="Date" Format="MMM dd, yyyy" Sortable="true" />
 
-      
-        <TemplateColumn Title="Physical Location">
+        <TemplateColumn Title="Location">
             <CellTemplate>
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.body2"><b>Folder:</b> @context.Item.Folder?.Name</MudText>
-                    <MudText Typo="Typo.caption">@($"{context.Item.Folder?.FileBox?.FillingCabinet?.Name} > {context.Item.Folder?.FileBox?.Name}")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @($"{context.Item.Folder?.FileBox?.FillingCabinet?.Name} > {context.Item.Folder?.FileBox?.Name}")
+                    </MudText>
                 </MudStack>
             </CellTemplate>
         </TemplateColumn>
 
-        
         <TemplateColumn Title="Status">
-            <CellTemplate >
+            <CellTemplate>
                 @if (context.Item.IsBorrowed)
                 {
                     <MudTooltip Text="@($"Borrowed by: {context.Item.CurrentBorrower}")">
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Outbound">Borrowed</MudChip>
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Outbound" Variant="Variant.Text">Borrowed</MudChip>
                     </MudTooltip>
                 }
                 else
                 {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">In Storage</MudChip>
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" Variant="Variant.Text">In Storage</MudChip>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -183,15 +164,16 @@ RowClick = "OnRowClicked">
 
         @if (RoleService.CanAddEditDocuments(_currentUserRole))
         {
-            <TemplateColumn Title="Actions">
+            <TemplateColumn Title="Actions" HeaderStyle="text-align: right;" CellStyle="text-align:;">
                 <CellTemplate Context="doc">
+                     <MudStack Spacing="2" Row="true" AlignItems="AlignItems.Center">
                     <div @onclick:stopPropagation="true">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                        Color="Color.Warning"
                                        Size="Size.Small"
                                        OnClick="@(() => OpenEditDialog(doc.Item))" />
-                     
                     </div>
+                    </MudStack>
                 </CellTemplate>
             </TemplateColumn>
         }
@@ -210,17 +192,30 @@ RowClick = "OnRowClicked">
     private string _selectedConfidentiality = "";
     private string _selectedDocumentDate = "";
 
-    protected override async Task OnInitializedAsync() 
+    protected override async Task OnInitializedAsync()
     {
         await LoadDocuments();
         await LoadCurrentUserRole();
+    }
+
+    private async Task LoadDocuments()
+    {
+        // Added .AsNoTracking() to prevent rendering collisions
+        _allDocuments = await _context.Documents
+            .AsNoTracking()
+            .Include(d => d.ConfidentialityLevel)
+            .Include(d => d.Folder)
+                .ThenInclude(f => f.FileBox)
+                    .ThenInclude(b => b.FillingCabinet)
+            .ToListAsync();
+
+        StateHasChanged();
     }
 
     private async Task LoadCurrentUserRole()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
         if (user.Identity is { IsAuthenticated: true })
         {
             var roleClaim = user.FindFirst(c => c.Type == ClaimTypes.Role);
@@ -228,78 +223,49 @@ RowClick = "OnRowClicked">
         }
     }
 
-    private async Task LoadDocuments() =>
-        
-        _allDocuments = await _context.Documents
-            .Include(d => d.ConfidentialityLevel)
-            .Include(d => d.Folder)
-                .ThenInclude(f => f.FileBox)
-                    .ThenInclude(b => b.FillingCabinet)
-            .ToListAsync();
-
     private Func<Documents, bool> _quickFilter => x =>
     {
-        // Filter by Status
         if (!string.IsNullOrWhiteSpace(_selectedStatus))
         {
             if (_selectedStatus == "In Storage" && x.IsBorrowed) return false;
             if (_selectedStatus == "Borrowed" && !x.IsBorrowed) return false;
         }
 
-        // Filter by Cabinet
         if (!string.IsNullOrWhiteSpace(_selectedCabinet))
         {
             if (x.Folder?.FileBox?.FillingCabinet?.Name != _selectedCabinet) return false;
         }
 
-        // Filter by Box
         if (!string.IsNullOrWhiteSpace(_selectedBox))
         {
             if (x.Folder?.FileBox?.Name != _selectedBox) return false;
         }
 
-        // Filter by Folder
-        if (!string.IsNullOrWhiteSpace(_selectedFolder))
-        {
-            if (x.Folder?.Name != _selectedFolder) return false;
-        }
-
-        // Filter by Confidentiality Level
         if (!string.IsNullOrWhiteSpace(_selectedConfidentiality))
         {
             if (x.ConfidentialityLevel?.Name != _selectedConfidentiality) return false;
         }
 
-        // Filter by Year
-        if (!string.IsNullOrWhiteSpace(_selectedDocumentDate))
-        {
-            if (x.DocumentDate?.ToString() != _selectedDocumentDate) return false;
-        }
-
-        // Search text
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-            if (x.DocumentDate?.ToString().Contains(_searchString) == true) return true;
             if (x.Folder?.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
             return false;
         }
-
         return true;
     };
+
     private void OnCabinetChanged(string value)
     {
         _selectedCabinet = value;
         _selectedBox = "";
         _selectedFolder = "";
-        StateHasChanged();
     }
 
     private void OnBoxChanged(string value)
     {
         _selectedBox = value;
         _selectedFolder = "";
-        StateHasChanged();
     }
 
     private void ResetFilters()
@@ -313,67 +279,20 @@ RowClick = "OnRowClicked">
         _searchString = "";
     }
 
-    private IEnumerable<string> GetAvailableCabinets()
-    {
-        return _allDocuments
-            .Where(d => d.Folder?.FileBox?.FillingCabinet != null)
-            .Select(d => d.Folder.FileBox.FillingCabinet.Name)
-            .Distinct()
-            .OrderBy(c => c);
-    }
+    private IEnumerable<string> GetAvailableCabinets() => _allDocuments
+        .Where(d => d.Folder?.FileBox?.FillingCabinet != null)
+        .Select(d => d.Folder.FileBox.FillingCabinet.Name)
+        .Distinct().OrderBy(c => c);
 
-    private IEnumerable<string> GetAvailableBoxes()
-    {
-        var query = _allDocuments.Where(d => d.Folder?.FileBox != null);
-        
-        if (!string.IsNullOrWhiteSpace(_selectedCabinet))
-        {
-            query = query.Where(d => d.Folder.FileBox.FillingCabinet?.Name == _selectedCabinet);
-        }
-        
-        return query
-            .Select(d => d.Folder.FileBox.Name)
-            .Distinct()
-            .OrderBy(b => b);
-    }
+    private IEnumerable<string> GetAvailableBoxes() => _allDocuments
+        .Where(d => d.Folder?.FileBox != null && (_selectedCabinet == "" || d.Folder.FileBox.FillingCabinet?.Name == _selectedCabinet))
+        .Select(d => d.Folder.FileBox.Name)
+        .Distinct().OrderBy(b => b);
 
-    private IEnumerable<string> GetAvailableFolders()
-    {
-        var query = _allDocuments.Where(d => d.Folder != null);
-        
-        if (!string.IsNullOrWhiteSpace(_selectedCabinet))
-        {
-            query = query.Where(d => d.Folder.FileBox?.FillingCabinet?.Name == _selectedCabinet);
-        }
-        
-        if (!string.IsNullOrWhiteSpace(_selectedBox))
-        {
-            query = query.Where(d => d.Folder.FileBox?.Name == _selectedBox);
-        }
-        
-        return query
-            .Select(d => d.Folder.Name)
-            .Distinct()
-            .OrderBy(f => f);
-    }
-
-    private IEnumerable<string> GetAvailableConfidentialityLevels()
-    {
-        return _allDocuments
-            .Where(d => d.ConfidentialityLevel != null)
-            .Select(d => d.ConfidentialityLevel.Name)
-            .Distinct()
-            .OrderBy(level => level);
-    }
-
-    private IEnumerable<string> GetAvailableDocumentDate()
-    {
-        return _allDocuments
-            .Where(d => d.DocumentDate.HasValue)
-            .Select(d => d.DocumentDate.Value.ToString("yyyy"))
-            .Distinct()
-            .OrderByDescending(date => date);
-    }
+    private IEnumerable<string> GetAvailableConfidentialityLevels() => _allDocuments
+        .Where(d => d.ConfidentialityLevel != null)
+        .Select(d => d.ConfidentialityLevel.Name)
+        .Distinct().OrderBy(l => l);
 
     private Color GetConfidentialityColor(string? name) => name?.ToLower() switch
     {
@@ -382,50 +301,65 @@ RowClick = "OnRowClicked">
         _ => Color.Default
     };
 
-    private async Task OpenAddDialog(Documents doc = null )
+    private async Task OpenAddDialog()
     {
-        var docToProcess = doc ?? new Documents();
-
-
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<AddDocumentDialog>("File New Document", options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadDocuments(); 
-        }
-
+        if (!(await dialog.Result).Canceled) await LoadDocuments();
     }
+
     private async Task OpenEditDialog(Documents doc)
     {
-
-
         var parameters = new DialogParameters<EditDocumentDialog> { { x => x.DocumentToEdit, doc } };
-        var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Small,
-                FullWidth = true,
-                CloseButton = true,
-                BackdropClick = false
-            };
-
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
         var dialog = await DialogService.ShowAsync<EditDocumentDialog>("Edit Document", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled) await LoadDocuments();
+        if (!(await dialog.Result).Canceled) await LoadDocuments();
     }
-    
+
     private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
     {
         var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth  = true, CloseButton = true};
-
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         await DialogService.ShowAsync<DocumentDetailsDialog>("Document Overview", parameters, options);
     }
 
     private async Task ExportToCSV()
     {
-        
-    }
+        try
+        {
+            var builder = new StringBuilder();
+           
+            builder.AppendLine("Document Title,Date,Cabinet,Box,Folder,Status,Borrower,Confidentiality");
+
+            
+            var documentsToExport = _allDocuments
+                .Where(d => !d.IsDeleted && !d.IsDisposal)
+                .Where(_quickFilter) 
+                .ToList();
+
+            foreach (var doc in documentsToExport)
+            {
+                var title = doc.Title?.Replace("\"", "\"\""); 
+                var date = doc.DocumentDate?.ToString("MMM dd, yyyy") ?? "N/A";
+                var cabinet = doc.Folder?.FileBox?.FillingCabinet?.Name ?? "N/A";
+                var box = doc.Folder?.FileBox?.Name ?? "N/A";
+                var folder = doc.Folder?.Name ?? "N/A";
+                var status = doc.IsBorrowed ? "Borrowed" : "In Storage";
+                var borrower = doc.IsBorrowed ? doc.CurrentBorrower : "";
+                var security = doc.ConfidentialityLevel?.Name ?? "Standard";
+
+                builder.AppendLine($"\"{title}\",\"{date}\",\"{cabinet}\",\"{box}\",\"{folder}\",\"{status}\",\"{borrower}\",\"{security}\"");
+            }
+
+            var fileName = $"Document_Inventory_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, builder.ToString());
+
+            Snackbar.Add("Inventory exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+}
 }

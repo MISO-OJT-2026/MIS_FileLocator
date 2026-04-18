@@ -158,13 +158,11 @@
     cursor: default !important;
 }
 /* --- BLUE LINE UNDER MUD GRIDS --- */
-.mud-table-root .mud-table-cell {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-    padding: 8px 16px !important;
-}
+
 
 .mud-table-head .mud-table-cell {
     border-bottom: 2px solid var(--mud-palette-primary) !important;
     font-weight: 700 !important;
     color: var(--mud-palette-text-primary) !important;
     font-size: 0.95rem !important;
+}

@@ -15,65 +15,63 @@
 @inject ICurrentUserService _currentUserService
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+
     @* --- Header Section --- *@
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
         <MudText Typo="Typo.h4">University Forms Repository</MudText>
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   StartIcon="@Icons.Material.Filled.Add" 
-                   OnClick="OpenAddDialog"
-                   Size="Size.Large">
-            Add New For
-        </MudButton>
+        
     </MudStack>
 
     @* --- Filter & Search Section --- *@
-    <MudPaper Elevation="3" Class="pa-6 mb-6">
-        <MudGrid Spacing="3" AlignItems="AlignItems.Center">
-            @* Search by Name or Number *@
-            <MudItem xs="12" md="5">
-                <MudTextField @bind-Value="_searchString" 
-                              Label="Search Forms"
-                              Placeholder="Type form name or TSU number..." 
-                              Adornment="Adornment.Start" 
-                              AdornmentIcon="@Icons.Material.Filled.Search" 
-                              IconSize="Size.Medium" 
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true" />
-            </MudItem>
+<MudPaper Elevation="3" Class="pa-2 mb-3">
+   
+    <MudGrid Spacing="2" AlignItems="AlignItems.Center">
 
-            @* Filter by Office/Category *@
-            <MudItem xs="12" md="4">
-                <MudSelect T="string" Label="Issuing Office" 
-                           @bind-Value="_selectedCategory" 
-                           AnchorOrigin="Origin.BottomCenter"
-                           Variant="Variant.Outlined"
-                           Clearable="true">
-                    <MudSelectItem Value="@((string)null)">All Offices</MudSelectItem>
-                    @foreach (var cat in _categories)
-                    {
-                        <MudSelectItem Value="@cat">@cat</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+        @* 1. Add Button *@
+        <MudItem>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Size="Size.Medium"
+                       OnClick="OpenAddDialog"
+                       Style="height: 40px; text-transform: none;">
+                @* Fixed Height *@
+                Add New Form
+            </MudButton>
+        </MudItem>
 
-            @* Filter Actions *@
-            <MudItem xs="12" md="3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
-                  
-                    @if (!string.IsNullOrWhiteSpace(_searchString) || !string.IsNullOrEmpty(_selectedCategory))
-                    {
-                        <MudButton Variant="Variant.Text" 
-                                   Color="Color.Error" 
-                                   OnClick="ResetFilters" 
-                                   StartIcon="@Icons.Material.Filled.FilterAltOff">
-                            Reset
-                        </MudButton>
-                    }
-                </MudStack>
-            </MudItem>
+        <MudSpacer />
+
+        @* 2. Search Field *@
+        <MudItem xs="12" md="4">
+            <MudTextField @bind-Value="_searchString"
+                          PlaceHolder="Search Forms"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Style="height: 40px;" /> @* Matching Height *@
+        </MudItem>
+
+      
+        <MudItem xs="12" md="3">
+            <MudSelect T="string" 
+                       @bind-Value="_selectedCategory"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true"
+                       Style="height: 40px;">
+                @* Matching Height *@
+                <MudSelectItem Value="@((string)null)">All Offices</MudSelectItem>
+                @foreach (var cat in _categories)
+                {
+                    <MudSelectItem Value="@cat">@cat</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+            
         </MudGrid>
     </MudPaper>
 
@@ -87,11 +85,11 @@
               Class="rounded-lg"
               Dense="true">
         <HeaderContent>
-            <MudTh Style="font-weight: bold;">Form Details</MudTh>
-            <MudTh Style="font-weight: bold;">Form Number</MudTh>
-            <MudTh Style="font-weight: bold;">Office / Category</MudTh>
-            <MudTh Style="font-weight: bold;">Added By</MudTh>
-            <MudTh Style="font-weight: bold; text-align: center;">Actions</MudTh>
+            <MudTh>Form Details</MudTh>
+            <MudTh>Form Number</MudTh>
+            <MudTh>Office / Category</MudTh>
+            <MudTh>Added By</MudTh>
+            <MudTh Style="text-align: center;">Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Form Name">
@@ -101,10 +99,10 @@
                 </MudStack>
             </MudTd>
             <MudTd DataLabel="Form Number">
-                <MudText Typo="Typo.body2" Class="font-monospace">@(string.IsNullOrEmpty(context.FormNumber) ? "---" : context.FormNumber)</MudText>
+                <MudText Typo="Typo.body2">@(string.IsNullOrEmpty(context.FormNumber) ? "---" : context.FormNumber)</MudText>
             </MudTd>
             <MudTd DataLabel="Category">
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Label="true">@context.Category</MudChip>
+                <MudChip T="string" Color="Color.Info"  Size="Size.Small" Variant="Variant.Text" Label="true">@context.Category</MudChip>
             </MudTd> 
             <MudTd DataLabel="Added By">@context.AddedBy</MudTd>
             <MudTd DataLabel="Action" Style="text-align: center;">
@@ -131,7 +129,7 @@
             </MudAlert>
         </NoRecordsContent>
     </MudTable>
-</MudContainer>
+
 
 @code {
     private List<FormTemplate> _allForms = new();

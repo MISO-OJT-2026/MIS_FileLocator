@@ -7,7 +7,7 @@
 
 <MudText Typo="Typo.h4" Class="mb-4 " Color="Color.Primary">System Activity Logs</MudText>
 
-@* transactionLog in t came from mmodel clas. only accept data from thereeee *@
+
 
 <MudDataGrid T="TransactionLog" Items="@_logs" SortMode="SortMode.Multiple" Filterable="false" QuickFilter="@_quickFilter">
 
@@ -23,10 +23,10 @@
                          AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight"
                          Dense="true"
-                         StartIcon="@Icons.Material.Filled.FilterList"
-                         EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                         EndIcon="@Icons.Material.Filled.FilterList"
+                         
                          Margin="Margin.Dense"
-                         Style="width: 200px;">
+                         Style="width: 300px;">
                     <div class="pa-4" style="min-width: 300px;">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Logs</MudText>
                         
