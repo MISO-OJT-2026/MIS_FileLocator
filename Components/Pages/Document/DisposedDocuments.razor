@@ -15,7 +15,56 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Disposal Management</MudText>
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+@* ── Toolbar above tabs ── *@
+<MudPaper Outlined="true" Class="pa-3 mb-3">
+    <div class="page-toolbar">
+        <div class="toolbar-actions">
+            @if (_activeTab == 0)
+            {
+                <MudIconButton Variant="Variant.Outlined" Color="Color.Success"
+                               Icon="@Icons.Material.Filled.Print" OnClick="ExportPendingToCSV"
+                               Disabled="@(!_pendingDisposal.Any())" />
+                @if (_selectedItems.Any())
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.DeleteForever" OnClick="ProcessOfficialDisposal">
+                        Dispose (@_selectedItems.Count)
+                    </MudButton>
+                }
+            }
+            else
+            {
+                <MudIconButton Variant="Variant.Outlined" Color="Color.Success"
+                               Icon="@Icons.Material.Filled.Print" OnClick="ExportToCSV"
+                               Disabled="@(!_disposedHistory.Any())" />
+            }
+        </div>
+        <div class="toolbar-filters">
+            @if (_activeTab == 0)
+            {
+                <MudDateRangePicker @bind-DateRange="_pendingDateRange" PlaceholderStart="From"
+                                    PlaceholderEnd="To" Margin="Margin.Dense"
+                                    Variant="Variant.Outlined" Clearable="true" />
+                <MudTextField @bind-Value="_searchPending" Placeholder="Search Title/Location..."
+                              Adornment="Adornment.Start" Immediate="true"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            }
+            else
+            {
+                <MudDateRangePicker @bind-DateRange="_historyDateRange" Margin="Margin.Dense"
+                                    PlaceholderStart="From" PlaceholderEnd="To"
+                                    Variant="Variant.Outlined" Clearable="true" />
+                <MudTextField @bind-Value="_searchHistory" Placeholder="Search Title/Handler..."
+                              Adornment="Adornment.Start" Immediate="true"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            }
+        </div>
+    </div>
+</MudPaper>
+
+<MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3">
 
     @* --- PANEL 1: PENDING DISPOSAL --- *@
     <MudTabPanel Text="Pending Disposal" Icon="@Icons.Material.Filled.HourglassEmpty">
@@ -31,30 +80,6 @@
                      Dense="true"
                      Filterable="false"
                      QuickFilter="@_pendingFilter">
-            <ToolBarContent>
-                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="w-100 align-center">
-                    <MudText Typo="Typo.h6">Eligible List</MudText>
-
-                    <MudTooltip Text="Export Pending Disposal">
-                        <MudIconButton Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.Print" OnClick="ExportPendingToCSV" Disabled="@(!_pendingDisposal.Any())" />
-                    </MudTooltip>
-
-                    @if (_selectedItems.Any())
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever" OnClick="ProcessOfficialDisposal">
-                            Dispose (@_selectedItems.Count)
-                        </MudButton>
-                    }
-
-                    <MudSpacer />
-
-                    @* Search and Date Filter *@
-                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
-                        <MudDateRangePicker @bind-DateRange="_pendingDateRange"  PlaceholderStart="From" PlaceholderEnd="To" Margin="Margin.Dense" Variant="Variant.Outlined" Style="width: 250px;" Clearable="true" />
-                        <MudTextField @bind-Value="_searchPending" Placeholder="Search Title/Location..." Adornment="Adornment.Start" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" AdornmentIcon="@Icons.Material.Filled.Search" Style="width: 250px;" />
-                    </MudStack>
-                </MudStack>
-            </ToolBarContent>
             <Columns>
                 <SelectColumn T="Documents" />
                 <PropertyColumn Property="x => x.Title" Title="Document" />
@@ -78,30 +103,12 @@
 
     @* --- PANEL 2: DISPOSAL HISTORY --- *@
     <MudTabPanel Text="Disposal History" Icon="@Icons.Material.Filled.History">
-        <MudStack Spacing="4" Class="mt-4">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
-                Permanent record of documents physically destroyed or removed.
-            </MudAlert>
+        <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mb-3">
+            Permanent record of documents physically destroyed or removed.
+        </MudAlert>
 
-            <MudDataGrid T="Documents" Items="@_disposedHistory" Hover="true" QuickFilter="@_historyFilter">
-                <ToolBarContent>
-                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="w-100 align-center">
-                        <MudText Typo="Typo.h6">History Record</MudText>
-
-                        <MudTooltip Text="Export Disposal History">
-                            <MudIconButton Variant="Variant.Outlined" Color="Color.Success" Icon="@Icons.Material.Filled.Print" OnClick="ExportToCSV" Disabled="@(!_disposedHistory.Any())" />
-                        </MudTooltip>
-
-                        <MudSpacer />
-
-                        @* Search and Date Filter *@
-                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
-                            <MudDateRangePicker @bind-DateRange="_historyDateRange"  Margin="Margin.Dense" PlaceholderStart = "From" PlaceholderEnd="To" Variant="Variant.Outlined" Style="width: 250px;" Clearable="true" />
-                            <MudTextField @bind-Value="_searchHistory" Placeholder="Search Title/Handler..." Adornment="Adornment.Start" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" AdornmentIcon="@Icons.Material.Filled.Search" Style="width: 250px;" />
-                        </MudStack>
-                    </MudStack>
-                </ToolBarContent>
-                <Columns>
+        <MudDataGrid T="Documents" Items="@_disposedHistory" Hover="true" QuickFilter="@_historyFilter">
+            <Columns>
                     <PropertyColumn Property="x => x.Title" Title="Document Title" />
                     <TemplateColumn Title="Date Disposed">
                         <CellTemplate>
@@ -122,7 +129,6 @@
                 </Columns>
                 <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
             </MudDataGrid>
-        </MudStack>
     </MudTabPanel>
 </MudTabs>
 
@@ -130,6 +136,7 @@
     private List<Documents> _disposedHistory = new();
     private List<Documents> _pendingDisposal = new();
     private HashSet<Documents> _selectedItems = new();
+    private int _activeTab = 0;
 
     // Search Strings
     private string _searchPending = "";

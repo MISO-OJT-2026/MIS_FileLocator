@@ -13,69 +13,122 @@
 @inject IRoleService RoleService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary">Filing folder</MudText>
-
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+    <MudPaper Class="pa-8" Elevation="0">
+        <MudStack AlignItems="AlignItems.Center" Spacing="3">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1">Loading folder information...</MudText>
+        </MudStack>
+    </MudPaper>
 }
 else if (_folder == null)
 {
-    <MudAlert Severity="Severity.Warning">This folder was not found or is archived.</MudAlert>
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+            <MudText Typo="Typo.h6">Folder Not Found</MudText>
+            <MudText Typo="Typo.body2">This folder was not found or has been archived.</MudText>
+        </MudAlert>
+    </MudPaper>
 }
 else
 {
-    <MudText Typo="Typo.subtitle1" Class="mb-1"><b>@_folder.Name</b></MudText>
-    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@_locationPath</MudText>
+    @* Header Card *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Primary" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 600;">@_folder.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                        @_locationPath
+                    </MudText>
+                </div>
+            </MudStack>
+            
+            @if (!string.IsNullOrEmpty(_folder.Description))
+            {
+                <MudText Typo="Typo.body2" Class="mt-2">@_folder.Description</MudText>
+            }
+        </MudStack>
+    </MudPaper>
 
-    <MudText Typo="Typo.subtitle2" Class="mb-2">Documents</MudText>
-    @if (_documents.Count == 0)
-    {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">No active documents in this folder.</MudText>
-    }
-    else
-    {
-        <MudTable Items="@_documents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
-            <HeaderContent>
-                <MudTh>Title</MudTh>
-                <MudTh>Status</MudTh>
-                <MudTh Style="width: 140px;">Action</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Title">@context.Title</MudTd>
-                <MudTd DataLabel="Status">
-                    @if (context.IsBorrowed)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Borrowed</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Available</MudChip>
-                    }
-                </MudTd>
-                <MudTd DataLabel="Action">
-                    <AuthorizeView Context="authContext">
-                        <Authorized>
-                            @if (_canBorrow && !context.IsBorrowed && !context.IsDeleted && !context.IsDisposal)
+    @* Documents Section *@
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+                    Documents in this Folder
+                </MudText>
+                <MudChip T="string" Color="Color.Info" Size="Size.Small">@_documents.Count document(s)</MudChip>
+            </MudStack>
+
+            @if (_documents.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">No active documents in this folder.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_documents" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Class="mt-2">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: 600;">Title</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: center;">Status</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: center; width: 180px;">Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Title">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Title</MudText>
+                            @if (!string.IsNullOrEmpty(context.Description))
                             {
-                                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                                           OnClick="@(() => QuickBorrow(context))">
-                                    Quick borrow
-                                </MudButton>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
                             }
-                            else if (context.IsBorrowed)
+                        </MudTd>
+                        <MudTd DataLabel="Status" Style="text-align: center;">
+                            @if (context.IsBorrowed)
                             {
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Outbound">Borrowed</MudChip>
                             }
-                        </Authorized>
-                        <NotAuthorized>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Href="@GetLoginHref()">Sign in to borrow</MudButton>
-                        </NotAuthorized>
-                    </AuthorizeView>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Available</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Action" Style="text-align: center;">
+                            <AuthorizeView Context="authContext">
+                                <Authorized>
+                                    @if (_canBorrow && !context.IsBorrowed && !context.IsDeleted && !context.IsDisposal)
+                                    {
+                                        <MudButton Size="Size.Small" 
+                                                   Variant="Variant.Filled" 
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.LibraryAdd"
+                                                   OnClick="@(() => QuickBorrow(context))">
+                                            Quick Borrow
+                                        </MudButton>
+                                    }
+                                    else if (context.IsBorrowed)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Not Available</MudText>
+                                    }
+                                </Authorized>
+                                <NotAuthorized>
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Outlined" 
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Login"
+                                               Href="@GetLoginHref()">
+                                        Sign In to Borrow
+                                    </MudButton>
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </MudPaper>
 }
 
 @code {
@@ -136,7 +189,7 @@ else
             { x => x.DocumentTitle, doc.Title }
         };
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<QuickBorrowDialog>("Quick borrow", parameters, options);
+        var dialog = await DialogService.ShowAsync<QuickBorrowDialog>("Quick Borrow Document", parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
             await ReloadDocs();

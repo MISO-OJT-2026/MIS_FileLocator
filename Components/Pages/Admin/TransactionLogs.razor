@@ -7,64 +7,39 @@
 
 <MudText Typo="Typo.h4" Class="mb-4 " Color="Color.Primary">System Activity Logs</MudText>
 
-
+@* ── Toolbar above grid ── *@
+<MudPaper Outlined="true" Class="pa-3 mb-3">
+    <div class="page-toolbar">
+        <div class="toolbar-filters">
+            <MudMenu Label="Filter Logs" Variant="Variant.Outlined" Dense="true"
+                     EndIcon="@Icons.Material.Filled.FilterList">
+                <div class="pa-4" style="min-width: 280px;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Logs</MudText>
+                    <MudSelect T="string" Label="Action" @bind-Value="_selectedAction"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
+                        <MudSelectItem Value="@("")">All Actions</MudSelectItem>
+                        @foreach (var action in GetAvailableActions())
+                        {
+                            <MudSelectItem Value="@action">@action</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudDatePicker Label="From Date" @bind-Date="_fromDate"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
+                    <MudDatePicker Label="To Date" @bind-Date="_toDate"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
+                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All Filters</MudButton>
+                </div>
+            </MudMenu>
+            <MudTextField @bind-Value="_searchString" Placeholder="Search..."
+                          Adornment="Adornment.Start" Immediate="true"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </div>
+    </div>
+</MudPaper>
 
 <MudDataGrid T="TransactionLog" Items="@_logs" SortMode="SortMode.Multiple" Filterable="false" QuickFilter="@_quickFilter">
-
-    <ToolBarContent>
-        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
-            <MudSpacer />
-
-            @* Filter and Search Group *@
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                @* Filter Menu *@
-                <MudMenu Label="Filter Logs"
-                         Variant="Variant.Outlined"
-                         AnchorOrigin="Origin.BottomRight"
-                         TransformOrigin="Origin.TopRight"
-                         Dense="true"
-                         EndIcon="@Icons.Material.Filled.FilterList"
-                         
-                         Margin="Margin.Dense"
-                         Style="width: 300px;">
-                    <div class="pa-4" style="min-width: 300px;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Logs</MudText>
-                        
-                        @* Action Filter *@
-                        <MudSelect T="string" Label="Action" @bind-Value="_selectedAction"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
-                            <MudSelectItem Value="@("")">All Actions</MudSelectItem>
-                            @foreach (var action in GetAvailableActions())
-                            {
-                                <MudSelectItem Value="@action">@action</MudSelectItem>
-                            }
-                        </MudSelect>
-
-                        @* Date Range Filter *@
-                        <MudDatePicker Label="From Date" @bind-Date="_fromDate"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
-                        <MudDatePicker Label="To Date" @bind-Date="_toDate"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
-                        
-                        <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All Filters</MudButton>
-                    </div>
-                </MudMenu>
-
-                @* Search Field *@
-                <MudTextField @bind-Value="_searchString"
-                              Placeholder="Search..."
-                              Adornment="Adornment.Start"
-                              Immediate="true"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Style="width: 300px;" />
-            </MudStack>
-        </MudStack>
-    </ToolBarContent>
-
     <Columns>
-
         <PropertyColumn Property="x => x.PerformedAt" Title="Date & Time" Format="MMM dd, yyyy hh:mm tt" />
 
         <PropertyColumn Property="x => x.FullName" Title="Full Name" />

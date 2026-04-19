@@ -16,18 +16,19 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Borrowed Inventory Tracking</MudText>
 
-<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="false" Hover="true" RowClick ="OnRowClicked" Dense="true" >
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">Currently Out</MudText>
-        <MudSpacer />
-        <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
-                      Adornment="Adornment.Start"
-					  Variant="Variant.Outlined"
-                       Immediate ="true"
-                       
-                      Margin="Margin.Dense"
-                      AdornmentIcon="@Icons.Material.Filled.Search" />
-    </ToolBarContent>
+@* ── Toolbar above grid ── *@
+<MudPaper Outlined="true" Class="pa-3 mb-3">
+    <div class="page-toolbar">
+        <div class="toolbar-filters">
+            <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
+                          Adornment="Adornment.Start" Variant="Variant.Outlined"
+                          Immediate="true" Margin="Margin.Dense"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </div>
+    </div>
+</MudPaper>
+
+<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="false" Hover="true" RowClick="OnRowClicked" Dense="true">
     <Columns>
         @* Overdue Indication Column *@
         <TemplateColumn Title="Alert" Size="Size.Small">

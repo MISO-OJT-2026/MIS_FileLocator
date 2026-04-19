@@ -16,16 +16,16 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">User Management</MudText>
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" SliderColor="Color.Primary">
+@* ── Toolbar above tabs ── *@
+<MudPaper Outlined="true" Class="pa-3 mb-3">
+    @RenderToolbar()
+</MudPaper>
+
+<MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" SliderColor="Color.Primary">
 
     @* --- ACTIVE USERS TAB --- *@
     <MudTabPanel Text="Active Users" Icon="@Icons.Material.Filled.Person">
-     
-
         <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users.Where(u => !u.IsDisabled)" Hover="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
-            <ToolBarContent>
-                @RenderToolbar()
-            </ToolBarContent>
             <Columns>
                 <PropertyColumn Property="x => x.EmployeeId" Title="ID" />
                 <PropertyColumn Property="x => x.FullName" Title="Name" />
@@ -52,9 +52,6 @@
     @* --- DISABLED USERS TAB --- *@
     <MudTabPanel Text="Disabled Users" Icon="@Icons.Material.Filled.PersonOff">
         <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users.Where(u => u.IsDisabled)" Hover="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
-            <ToolBarContent>
-                @RenderToolbar()
-            </ToolBarContent>
             <Columns>
                 <PropertyColumn Property="x => x.EmployeeId" Title="ID" />
                 <PropertyColumn Property="x => x.FullName" Title="Name" />
@@ -87,6 +84,7 @@
 
 @code {
     private bool _loading = true;
+    private int _activeTab = 0;
     private string _searchString = "";
     private string _selectedRole = "";
     private List<UserDisplayModel> _users = new();
@@ -94,16 +92,20 @@
     
     RenderFragment RenderToolbar() => __builder =>
     {
-        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3" AlignItems="AlignItems.Center" Class="w-100 py-2">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog">
-                Add New User
-            </MudButton>
-            <MudSpacer />
-            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Center" Class="flex-grow-0">
-                <MudMenu Label="Filter Role" Variant="Variant.Outlined" Dense="true" EndIcon="@Icons.Material.Filled.FilterList"  Margin="Margin.Dense" Style="min-width: 300px;">
+        <div class="page-toolbar">
+            <div class="toolbar-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddUserDialog">
+                    Add New User
+                </MudButton>
+            </div>
+            <div class="toolbar-filters">
+                <MudMenu Label="Filter Role" Variant="Variant.Outlined" Dense="true"
+                         EndIcon="@Icons.Material.Filled.FilterList">
                     <div class="pa-4" style="min-width: 200px;">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Filter by Role</MudText>
-                        <MudSelect T="string" Label="Role" @bind-Value="_selectedRole" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
+                        <MudSelect T="string" Label="Role" @bind-Value="_selectedRole"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
                             <MudSelectItem Value="@("")">All Roles</MudSelectItem>
                             <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
                             <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
@@ -112,9 +114,12 @@
                         <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset</MudButton>
                     </div>
                 </MudMenu>
-                <MudTextField @bind-Value="_searchString" Placeholder="Search..." Adornment="Adornment.Start" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" AdornmentIcon="@Icons.Material.Filled.Search" Style="max-width: 300px;" />
-            </MudStack>
-        </MudStack>
+                <MudTextField @bind-Value="_searchString" Placeholder="Search..."
+                              Adornment="Adornment.Start" Immediate="true"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            </div>
+        </div>
     };
 
     private Func<UserDisplayModel, bool> _quickFilter => x =>

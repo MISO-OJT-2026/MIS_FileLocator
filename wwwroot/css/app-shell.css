@@ -1,9 +1,23 @@
-/* --- Sidebar Container --- */
-.app-shell-drawer.mud-drawer {
-    /* Uses the color defined in your PaletteLight/Dark DrawerBackground */
-    background-color: var(--mud-palette-drawer-background) !important;
-    border-right: 1px solid var(--mud-palette-divider);
+/* ============================================
+   MIS FILE LOCATOR - MOBILE-FIRST RESPONSIVE STYLES
+   ============================================ */
+
+/* --- GLOBAL RESETS --- */
+body, html {
+    overflow-x: hidden;
+    max-width: 100vw;
 }
+
+.mud-main-content {
+    overflow-x: hidden;
+}
+
+/* --- SIDEBAR & DRAWER --- */
+.app-shell-drawer.mud-drawer {
+    background: linear-gradient(180deg, #152a3d 0%, #0e1824 42%, #0a121c 100%) !important;
+    border-right: 1px solid rgba(255,255,255,0.06);
+}
+
 .app-shell-drawer .mud-nav-link,
 .app-shell-drawer .mud-nav-group-toggle {
     color: var(--mud-palette-drawer-text) !important;
@@ -13,19 +27,58 @@
     color: var(--mud-palette-drawer-icon) !important;
 }
 
-/* Fix the Active state specifically */
+/* --- APPBAR FROSTED GLASS --- */
+.appbar-glass {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Dark mode appbar */
+.dark .appbar-glass,
+[data-mud-theme="dark"] .appbar-glass {
+    background: rgba(11, 15, 26, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* On mobile: drawer slides over everything including the AppBar */
+@media (max-width: 959px) {
+    .mud-drawer-responsive.mud-drawer-open ~ .mud-main-content,
+    .mud-main-content {
+        margin-left: 0 !important;
+    }
+
+    /* Drawer sits above the AppBar (AppBar is z-index ~1100 in MudBlazor) */
+    .mud-drawer-responsive {
+        position: fixed !important;
+        z-index: 1400 !important;
+        top: 0 !important;
+        height: 100dvh !important;
+        height: 100vh !important;
+    }
+
+    /* Overlay also covers the AppBar */
+    .mud-overlay-drawer {
+        z-index: 1399 !important;
+        top: 0 !important;
+        height: 100dvh !important;
+        height: 100vh !important;
+    }
+}
+
 ::deep .mud-nav-link.active {
     background-color: rgba(255, 255, 255, 0.1) !important;
     border-left: 4px solid var(--mud-palette-primary) !important;
     color: var(--mud-palette-primary) !important;
 }
 
-    ::deep .mud-nav-link.active .mud-icon-root {
-        color: var(--mud-palette-primary) !important;
-    }
+::deep .mud-nav-link.active .mud-icon-root {
+    color: var(--mud-palette-primary) !important;
+}
 
-/* --- Nav Links --- */
-.nav-shell-menu .mud-nav-link{
+/* --- NAV LINKS --- */
+.nav-shell-menu .mud-nav-link {
     border-radius: 0 24px 24px 0 !important;
     margin-right: 12px;
     margin-bottom: 4px;
@@ -33,63 +86,17 @@
     border-left: 4px solid transparent;
 }
 
-    /* Active State */
-    .nav-shell-menu .mud-nav-link.active {
-        background-color: var(--mud-palette-primary-hover) !important;
-        color: var(--mud-palette-primary-text) !important;
-        border-left: 4px solid var(--mud-palette-primary) !important;
-    }
+.nav-shell-menu .mud-nav-link.active {
+    background-color: var(--mud-palette-primary-hover) !important;
+    color: var(--mud-palette-primary-text) !important;
+    border-left: 4px solid var(--mud-palette-primary) !important;
+}
 
-/* --- Nested Items In Group --- */
 .nav-shell-menu .mud-nav-group .mud-nav-link {
     padding-left: 48px !important;
     font-size: 0.875rem;
 }
 
-/* --- Scrollbar --- */
-.nav-menu-scroll {
-    flex-grow: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--mud-palette-divider) transparent;
-}
-
-    .nav-menu-scroll::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .nav-menu-scroll::-webkit-scrollbar-thumb {
-        background-color: var(--mud-palette-divider);
-        border-radius: 10px;
-    }
-
-/* --- Main Content --- */
-.app-shell-main {
-    background-color: var(--mud-palette-background) !important;
-    min-height: 100vh;
-}
-
-/* --- Modern Glassmorphism Card --- */
-.glass-midnight {
-    /* Uses theme surface color with transparency */
-    background: var(--mud-palette-surface-70) !important;
-    backdrop-filter: blur(16px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
-    /* Dynamic border color based on theme */
-    border: 1px solid var(--mud-palette-divider) !important;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1) !important;
-    border-radius: 20px !important;
-    transition: all 0.3s ease;
-}
-
-    .glass-midnight:hover {
-        background: var(--mud-palette-surface) !important;
-        transform: translateY(-4px);
-        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2) !important;
-    }
-
-/* --- Navigation Alignment (Flattened) --- */
-/* This aligns Storage/Documents with Dashboard/Profile */
 .nav-shell-menu .mud-nav-group-toggle,
 .nav-shell-menu .mud-nav-link {
     padding-left: 16px !important;
@@ -99,12 +106,6 @@
     color: var(--mud-palette-drawer-text) !important;
 }
 
-/* Fixes nested sub-items alignment */
-.nav-shell-menu .mud-nav-group .mud-nav-link {
-    padding-left: 16px !important;
-}
-
-/* --- Active/Hover Glass State for Sidebar --- */
 .nav-shell-menu .mud-nav-link.mud-nav-link-active,
 .nav-shell-menu .mud-nav-link:hover,
 .nav-shell-menu .mud-nav-group-toggle:hover {
@@ -114,12 +115,442 @@
     border-left: 4px solid #5eb5f7 !important;
 }
 
-/* Dark mode specific sidebar background tweak */
-.app-shell-drawer.mud-drawer {
-    background: linear-gradient(180deg, #152a3d 0%, #0e1824 42%, #0a121c 100%) !important;
+/* --- SCROLLBAR --- */
+.nav-menu-scroll {
+    flex-grow: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--mud-palette-divider) transparent;
 }
 
-/* --- Progress Bar Glass Style --- */
+.nav-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nav-menu-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--mud-palette-divider);
+    border-radius: 10px;
+}
+
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- MAIN CONTENT --- */
+.app-shell-main {
+    background-color: var(--mud-palette-background) !important;
+    min-height: 100vh;
+}
+
+@media (max-width: 959px) {
+    /* Reduce top padding on mobile so content starts closer to the AppBar */
+    .app-shell-main .mud-container {
+        padding-top: 16px !important;
+    }
+}
+
+/* --- TABS: inactive tab text visible in both light and dark mode --- */
+/* Target every possible element inside an inactive tab */
+.mud-tab:not(.mud-tab-active),
+.mud-tab:not(.mud-tab-active) *,
+.mud-tab:not(.mud-tab-active) span,
+.mud-tab:not(.mud-tab-active) .mud-tab-label,
+.mud-tab:not(.mud-tab-active) p {
+    color: var(--mud-palette-text-primary) !important;
+    opacity: 0.6;
+}
+
+.mud-tab:not(.mud-tab-active):hover,
+.mud-tab:not(.mud-tab-active):hover * {
+    opacity: 0.9;
+}
+.mud-table-head .mud-table-cell {
+    border-bottom: 2px solid var(--mud-palette-primary) !important;
+    font-weight: 700 !important;
+    color: var(--mud-palette-text-primary) !important;
+    font-size: 0.95rem !important;
+}
+
+/* --- HOVER CARD EFFECT --- */
+.hover-card {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.hover-card:hover {
+    box-shadow: 0 4px 12px rgba(26, 58, 82, 0.15) !important;
+    transform: translateY(-2px);
+}
+
+/* --- STATIC LIST (NO HOVER) --- */
+.static-list .mud-list-item:hover {
+    background-color: transparent !important;
+}
+
+.static-list .mud-list-item.mud-list-item-active {
+    background-color: transparent !important;
+}
+
+.static-list .mud-list-item .mud-list-item-hover:before {
+    display: none !important;
+}
+
+.static-list .mud-list-item {
+    cursor: default !important;
+}
+
+/* ============================================
+   MOBILE-FIRST RESPONSIVE DESIGN
+   ============================================ */
+
+/* --- MOBILE DRAWER BEHAVIOR --- */
+/* Handled above in the SIDEBAR & DRAWER section */
+
+/* --- APPBAR MOBILE FIXES --- */
+@media (max-width: 959px) {
+    .mud-appbar {
+        padding: 8px 12px !important;
+    }
+    
+    .mud-appbar .mud-typography-h6 {
+        font-size: 1rem !important;
+    }
+    
+    /* Ensure hamburger and dark mode button are properly spaced */
+    .mud-appbar .mud-icon-button {
+        min-width: 48px !important;
+        min-height: 48px !important;
+    }
+    
+    /* Logo sizing on mobile */
+    .mud-appbar img {
+        height: 28px !important;
+    }
+}
+
+/* ============================================
+   PAGE TOOLBAR — responsive across all pages
+   ============================================ */
+
+/* Wrapper applied to every ToolBarContent MudStack */
+.page-toolbar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+/* Action buttons group (left side on desktop) */
+.page-toolbar .toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Filters/search group (right side on desktop) */
+.page-toolbar .toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* All inputs/selects/menus inside toolbar: natural width on desktop */
+.page-toolbar .toolbar-filters .mud-input-control,
+.page-toolbar .toolbar-filters .mud-select,
+.page-toolbar .toolbar-filters .mud-text-field {
+    min-width: 160px;
+    max-width: 280px;
+}
+
+/* ── Mobile overrides ── */
+@media (max-width: 959px) {
+    .page-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px 0;
+    }
+
+    .page-toolbar .toolbar-actions {
+        width: 100%;
+    }
+
+    /* Each action button fills half the row (2 per row) */
+    .page-toolbar .toolbar-actions .mud-button {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+        justify-content: center;
+    }
+
+    /* Icon-only buttons stay compact */
+    .page-toolbar .toolbar-actions .mud-icon-button {
+        flex: 0 0 44px;
+    }
+
+    .page-toolbar .toolbar-filters {
+        width: 100%;
+        margin-left: 0;
+        flex-direction: column;
+    }
+
+    /* Every filter/search input goes full width on mobile */
+    .page-toolbar .toolbar-filters > *,
+    .page-toolbar .toolbar-filters .mud-input-control,
+    .page-toolbar .toolbar-filters .mud-select,
+    .page-toolbar .toolbar-filters .mud-text-field,
+    .page-toolbar .toolbar-filters .mud-menu {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* MudMenu button full width */
+    .page-toolbar .toolbar-filters .mud-button-root {
+        width: 100% !important;
+    }
+
+    /* Hide MudSpacer on mobile — we use flex-direction:column */
+    .page-toolbar .mud-spacer {
+        display: none !important;
+    }
+}
+
+/* --- PAGER: show on desktop, hide on mobile (scroll instead) --- */
+@media (max-width: 959px) {
+    .mud-table-pagination,
+    .mud-datagrid-pagination {
+        display: none !important;
+    }
+}
+.mud-button-filled {
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+}
+
+.mud-button-outlined {
+    font-weight: 600 !important;
+}
+
+.mud-icon-button {
+    border-radius: 8px !important;
+}
+
+/* --- SEARCH & FILTER INPUTS --- */
+.mud-input-root,
+.mud-select {
+    border-radius: 8px !important;
+}
+
+/* Prevent iOS zoom on input focus */
+@media (max-width: 959px) {
+    .mud-input-root .mud-input {
+        font-size: 16px !important;
+    }
+}
+
+/* --- TABLE MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    /* Make tables more mobile-friendly */
+    .mud-table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Increase row height for touch */
+    .mud-table-row {
+        min-height: 56px !important;
+    }
+    
+    .mud-table-cell {
+        padding: 12px 8px !important;
+        font-size: 0.875rem !important;
+    }
+    
+    /* Hide less important columns on mobile */
+    .mud-table-cell[data-label="Description"],
+    .mud-table-cell:has(> .mud-text-secondary) {
+        display: none !important;
+    }
+    
+    /* Make action buttons stack */
+    .mud-table-cell .mud-stack[row="true"] {
+        flex-direction: column !important;
+        gap: 4px !important;
+    }
+    
+    .mud-table-cell .mud-icon-button {
+        width: 100% !important;
+    }
+}
+
+/* --- DIALOG MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    .mud-dialog {
+        margin: 8px !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: calc(100vh - 16px) !important;
+    }
+    
+    .mud-dialog-content {
+        padding: 16px !important;
+    }
+    
+    .mud-dialog-actions {
+        padding: 12px 16px !important;
+        flex-direction: column-reverse !important;
+        gap: 8px !important;
+    }
+    
+    .mud-dialog-actions .mud-button {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+}
+
+/* --- TABS MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    .mud-tabs .mud-tab {
+        min-width: auto !important;
+        padding: 12px 16px !important;
+        font-size: 0.875rem !important;
+    }
+    
+    .mud-tabs-toolbar {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+
+/* --- CHIP MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    .mud-chip {
+        font-size: 0.8125rem !important;
+        height: 28px !important;
+        padding: 0 10px !important;
+    }
+}
+
+/* --- CONTAINER PADDING --- */
+@media (max-width: 599px) {
+    .mud-container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    
+    .pa-6 {
+        padding: 16px !important;
+    }
+    
+    .pa-4 {
+        padding: 12px !important;
+    }
+    
+    .pa-3 {
+        padding: 8px !important;
+    }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+    .mud-container {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}
+
+/* --- TYPOGRAPHY MOBILE --- */
+@media (max-width: 959px) {
+    .mud-typography-h4 {
+        font-size: 1.75rem !important;
+        margin-bottom: 16px !important;
+    }
+    
+    .mud-typography-h5 {
+        font-size: 1.5rem !important;
+    }
+    
+    .mud-typography-h6 {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* --- GRID MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    .mud-grid {
+        margin: 0 !important;
+    }
+    
+    .mud-grid-item {
+        padding: 8px !important;
+    }
+}
+
+/* --- MENU MOBILE OPTIMIZATION --- */
+@media (max-width: 959px) {
+    .mud-menu-popover {
+        max-width: calc(100vw - 32px) !important;
+    }
+    
+    .mud-list-item {
+        min-height: 48px !important;
+    }
+}
+
+/* --- APPBAR MOBILE --- */
+@media (max-width: 959px) {
+    .mud-appbar {
+        padding: 8px 12px !important;
+    }
+    
+    .mud-appbar .mud-typography-h6 {
+        font-size: 1.125rem !important;
+    }
+}
+
+/* --- PREVENT HORIZONTAL SCROLL --- */
+.mud-grid,
+.mud-stack,
+.mud-toolbar {
+    max-width: 100% !important;
+}
+
+/* --- TOUCH TARGETS --- */
+@media (max-width: 959px) {
+    /* Only icon buttons and list items need larger touch targets */
+    .mud-icon-button,
+    .mud-list-item {
+        min-height: 44px !important;
+    }
+}
+
+/* --- GLASSMORPHISM EFFECTS --- */
+.glass-midnight {
+    background: var(--mud-palette-surface-70) !important;
+    backdrop-filter: blur(16px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+    border: 1px solid var(--mud-palette-divider) !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 20px !important;
+    transition: all 0.3s ease;
+}
+
+.glass-midnight:hover {
+    background: var(--mud-palette-surface) !important;
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* --- PROGRESS BAR --- */
 .custom-progress-bar.mud-progress-linear {
     height: 16px !important;
     border-radius: 20px !important;
@@ -133,36 +564,65 @@
     border-radius: 20px !important;
 }
 
-/* --- Main Content Area --- */
-.app-shell-main {
-    background-color: var(--mud-palette-background) !important;
-    min-height: 100vh;
+/* --- PRINT STYLES --- */
+@media print {
+    .mud-appbar,
+    .mud-drawer,
+    .mud-button,
+    .mud-icon-button,
+    .mud-tabs-toolbar {
+        display: none !important;
+    }
+    
+    .mud-main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .mud-table {
+        page-break-inside: avoid;
+    }
 }
 
-/* --- HOVER EFFECT IN STORAGE EXPLORER --- */
-
-.static-list .mud-list-item:hover {
-    background-color: transparent !important;
+/* --- APP-LIKE MOBILE EXPERIENCE --- */
+@media (max-width: 959px) {
+    /* Remove desktop-style borders and shadows for cleaner mobile look */
+    .mud-paper {
+        border-radius: 12px !important;
+    }
+    
+    /* Consistent spacing */
+    .mb-4 {
+        margin-bottom: 16px !important;
+    }
+    
+    .mt-4 {
+        margin-top: 16px !important;
+    }
+    
+    /* Full-width cards on mobile */
+    .mud-card {
+        width: 100% !important;
+    }
+    
+    /* Better visual hierarchy */
+    .mud-typography-h4 {
+        font-weight: 700 !important;
+    }
 }
 
-.static-list .mud-list-item.mud-list-item-active {
-    background-color: transparent !important;
-}
-
-
-.static-list .mud-list-item .mud-list-item-hover:before {
-    display: none !important;
-}
-
-.static-list .mud-list-item {
-    cursor: default !important;
-}
-/* --- BLUE LINE UNDER MUD GRIDS --- */
-
-
-.mud-table-head .mud-table-cell {
-    border-bottom: 2px solid var(--mud-palette-primary) !important;
-    font-weight: 700 !important;
-    color: var(--mud-palette-text-primary) !important;
-    font-size: 0.95rem !important;
+/* --- DATAGRID SPECIFIC MOBILE FIXES --- */
+@media (max-width: 959px) {
+    .mud-datagrid {
+        font-size: 0.875rem !important;
+    }
+    
+    .mud-datagrid-header-cell {
+        padding: 12px 8px !important;
+        font-size: 0.8125rem !important;
+    }
+    
+    .mud-datagrid-cell {
+        padding: 12px 8px !important;
+    }
 }

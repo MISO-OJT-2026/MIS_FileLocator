@@ -17,110 +17,86 @@
             </MudStack>
         </MudAlert>
 
-        <MudGrid>
-            @* Left Side: Main Info *@
-            <MudItem xs="12" md="7">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT TITLE</MudText>
-                <MudText Typo="Typo.h4" Class="mb-4">@SelectedDoc.Title</MudText>
+        @* --- DOCUMENT INFO SECTION --- *@
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT TITLE</MudText>
+        <MudText Typo="Typo.h4" Class="mb-4">@SelectedDoc.Title</MudText>
 
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">DESCRIPTION</MudText>
-                <MudText Typo="Typo.body1" Class="mb-4">@(string.IsNullOrEmpty(SelectedDoc.Description) ? "No description provided." : SelectedDoc.Description)</MudText>
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">DESCRIPTION</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">@(string.IsNullOrEmpty(SelectedDoc.Description) ? "No description provided." : SelectedDoc.Description)</MudText>
 
-                <MudDivider Class="my-4" />
+        <MudGrid Spacing="2" Class="mb-4">
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT DATE</MudText>
+                <MudText Typo="Typo.body2">@SelectedDoc.DocumentDate?.ToString("MMM dd, yyyy")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">CONFIDENTIALITY</MudText>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning">@SelectedDoc.ConfidentialityLevel?.Name</MudChip>
+            </MudItem>
+        </MudGrid>
 
-                <MudStack Row="true" Spacing="4">
-                    <div>
-                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT DATE</MudText>
-                        <MudText Typo="Typo.h6">@SelectedDoc.DocumentDate?.ToString("MMM dd, yyyy")</MudText>
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">CONFIDENTIALITY</MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning">@SelectedDoc.ConfidentialityLevel?.Name</MudChip>
-                    </div>
-                </MudStack>
+        <MudDivider Class="my-4" />
 
-                @* --- ADDED: BORROWING DETAILS SECTION --- *@
-                @if (SelectedDoc.IsBorrowed)
+        @* --- BORROWING DETAILS SECTION --- *@
+        @if (SelectedDoc.IsBorrowed)
+        {
+            <MudPaper Outlined="true" Class="pa-4 mb-4 border-dashed" Style="border-color: var(--mud-palette-error); background-color: #fff8f8;">
+                <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-3">BORROWING DETAILS</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Class="d-block">Borrower Name</MudText>
+                        <MudText Typo="Typo.body2"><b>@SelectedDoc.CurrentBorrower</b></MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Class="d-block">Date Borrowed</MudText>
+                        <MudText Typo="Typo.body2">@SelectedDoc.BorrowedAt?.ToString("MMM dd, yyyy")</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Class="d-block">Remarks</MudText>
+                        <MudText Typo="Typo.body2" Style="font-style: italic;">
+                            @(string.IsNullOrEmpty(SelectedDoc.BorrowRemarks) ? "No remarks provided." : SelectedDoc.BorrowRemarks)
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+
+        <MudDivider Class="my-4" />
+
+        @* --- DIGITAL ASSETS & METADATA SECTION --- *@
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">DIGITAL ASSETS</MudText>
+                @if (!string.IsNullOrEmpty(SelectedDoc.FilePath))
                 {
-                    <MudPaper Outlined="true" Class="pa-4 mt-6 border-dashed" Style="border-color: var(--mud-palette-error); background-color: #fff8f8;">
-                        <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">BORROWING DETAILS</MudText>
-                        <MudGrid Spacing="1">
-                            <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Class="d-block">Borrower Name</MudText>
-                                <MudText Typo="Typo.body2"><b>@SelectedDoc.CurrentBorrower</b></MudText>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Class="d-block">Date Borrowed</MudText>
-                                <MudText Typo="Typo.body2">@SelectedDoc.BorrowedAt?.ToString("MMM dd, yyyy")</MudText>
-                            </MudItem>
-                            <MudItem xs="12" Class="mt-2">
-                                <MudText Typo="Typo.caption" Class="d-block">Remarks</MudText>
-                                <MudText Typo="Typo.body2" Style="font-style: italic;">
-                                    @(string.IsNullOrEmpty(SelectedDoc.BorrowRemarks) ? "No remarks provided." : SelectedDoc.BorrowRemarks)
-                                </MudText>
-                            </MudItem>
-                        </MudGrid>
-                    </MudPaper>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Visibility"
+                               Href="@SelectedDoc.FilePath"
+                               Target="_blank">
+                        View Digital Copy
+                    </MudButton>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.CloudOff">
+                        No Digital Copy Uploaded
+                    </MudAlert>
                 }
             </MudItem>
 
-            @* Right Side: Status, Digital Copy & Metadata *@
-            <MudItem xs="12" md="5">
-                <MudPaper Outlined="true" Class="pa-4 bg-light">
-                    <MudText Typo="Typo.button" Class="mb-2 d-block">Inventory Status</MudText>
-
-                    @if (SelectedDoc.IsBorrowed)
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">FILE METADATA</MudText>
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.caption"><b>Filed At:</b> @SelectedDoc.FiledAt.ToString("MMM dd, yyyy")</MudText>
+                    <MudText Typo="Typo.caption"><b>Filed By:</b> @SelectedDoc.FiledBy</MudText>
+                    <MudText Typo="Typo.caption"><b>Retention:</b> Disposal on @SelectedDoc.DateOfDisposal?.ToString("MMM dd, yyyy")</MudText>
+                    @if (!string.IsNullOrEmpty(SelectedDoc.UpdatedBy))
                     {
-                        <MudAlert Severity="Severity.Error" Dense="true" Icon="@Icons.Material.Filled.Outbound" Class="mb-2">
-                            Borrowed / Out of Office
-                        </MudAlert>
-                        <MudText Typo="Typo.caption" Color="Color.Error" Class="ml-2">
-                            <b>Expected Return:</b> @SelectedDoc.ExpectedReturnDate?.ToString("MMM dd, yyyy")
-                        </MudText>
+                        <MudText Typo="Typo.caption"><b>Last Modified By:</b> @SelectedDoc.UpdatedBy</MudText>
                     }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Success" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
-                            Available in Folder
-                        </MudAlert>
-                    }
-
-                    <MudDivider Class="my-4" />
-
-                    @* --- DIGITAL COPY VIEW BUTTON --- *@
-                    <MudText Typo="Typo.button" Class="mb-2 d-block">Digital Assets</MudText>
-                    @if (!string.IsNullOrEmpty(SelectedDoc.FilePath))
-                    {
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Visibility"
-                                   Href="@SelectedDoc.FilePath"
-                                   Target="_blank"
-                                   Class="mb-2">
-                            View Digital Copy
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.CloudOff">
-                            No Digital Copy Uploaded
-                        </MudAlert>
-                    }
-
-                    <MudDivider Class="my-4" />
-
-                    @* Metadata Footer *@
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.caption"><b>Filed At:</b> @SelectedDoc.FiledAt.ToString("MMM dd, yyyy")</MudText>
-                        <MudText Typo="Typo.caption"><b>Filed By:</b> @SelectedDoc.FiledBy</MudText>
-                        <MudText Typo="Typo.caption"><b>Retention:</b> Disposal on @SelectedDoc.DateOfDisposal?.ToString("MMM dd, yyyy")</MudText>
-                        @if (!string.IsNullOrEmpty(SelectedDoc.UpdatedBy))
-                        {
-                            <MudText Typo="Typo.caption"><b>Last Modified By:</b> @SelectedDoc.UpdatedBy</MudText>
-                        }
-                    </MudStack>
-                </MudPaper>
+                </MudStack>
             </MudItem>
         </MudGrid>
     </DialogContent>

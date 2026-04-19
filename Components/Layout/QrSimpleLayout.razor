@@ -1,47 +1,63 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 
-<MudThemeProvider />
+<MudThemeProvider @ref="_mudThemeProvider" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-
 <MudLayout>
-    <MudAppBar Elevation="0" Outlined="true" >
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" >
-            <img src="images/MIS-LOGO.png" alt="MIS" style="height:28px; width:auto;" />
-            <MudText Typo="Typo.h6" Style="font-weight: 700;">MIS File Locator</MudText>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <img src="images/MIS-LOGO.png" alt="MIS" style="height:32px; width:auto;" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700; color: white;">MIS File Locator</MudText>
         </MudStack>
         <MudSpacer />
         <AuthorizeView>
             <Authorized>
-                <MudButton Href="/dashboard" Variant="Variant.Text" Color="Color.Primary">Dashboard</MudButton>
+                <MudButton Href="/dashboard" Variant="Variant.Text" Style="color: white;">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-1" />
+                    Dashboard
+                </MudButton>
             </Authorized>
             <NotAuthorized>
-                <MudButton Href="/Account/Login" Variant="Variant.Text" Color="Color.Primary">Staff login</MudButton>
+                <MudButton Href="/Account/Login" Variant="Variant.Text" Style="color: white;">
+                    <MudIcon Icon="@Icons.Material.Filled.Login" Class="mr-1" />
+                    Staff Login
+                </MudButton>
             </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>
-    <MudMainContent Class="pt-4 pb-8">
-        <MudContainer MaxWidth="MaxWidth.Large">
+    <MudMainContent Style="background: #f8fafc; min-height: 100vh;">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="pt-6 pb-8">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
-@code{
+
+@code {
     private MudThemeProvider _mudThemeProvider;
-    private MudTheme _theme = new ()
+    private MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight()
         {
             Primary = "#1a3a52",
             Secondary = "#4f6d7a",
-            Background = "#f0f0f0",
+            Background = "#f8fafc",
             Surface = "#ffffff",
             AppbarBackground = "#1a3a52",
+            AppbarText = "#ffffff",
             DrawerBackground = "#ffffff",
             DrawerText = "#1a3a52",
-            DrawerIcon = "#1a3a52"
+            DrawerIcon = "#1a3a52",
+            TextPrimary = "#0e1824",
+            TextSecondary = "rgba(14, 24, 36, 0.7)"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Inter", "Roboto", "Helvetica", "Arial", "sans-serif" }
+            }
         }
-    };  
+    };
 }

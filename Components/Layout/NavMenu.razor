@@ -6,31 +6,34 @@
 
 @using System.Security.Claims
 @using MudBlazor
-@inject NavigationManager NavigationManager
-@inject ICurrentUserService _currentUserService
-@inject AuthenticationStateProvider AuthStateProvider
-@inject IRoleService RoleService
 
 <MudNavMenu Class="nav-shell-menu">
     @if (SideBarOpen)
     {
-        <div class="d-flex flex-column" style="height: calc(100vh - 32px);">
-            @* User Profile Section *@
-            <div class="d-flex flex-column align-center py-6 px-4">
-                <MudAvatar Style="height:70px; width:70px; color:white;!important" Class="mb-3 elevation-4">
-                    @_currentUserInitials
-                </MudAvatar>
-                
-                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: inherit;">@_currentUserName</MudText>
-                <MudText Typo="Typo.body2" Style="color: inherit; opacity: 0.7;">@_currentUserRole</MudText>
+        <div class="nav-full-layout">
+
+            @* ── Profile card ── *@
+            <div class="nav-profile-card">
+                <MudAvatar Class="nav-avatar">@_currentUserInitials</MudAvatar>
+                <div class="nav-profile-text">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color:inherit;">@_currentUserName</MudText>
+                    <MudText Typo="Typo.caption" Style="color:inherit; opacity:0.65;">@_currentUserRole</MudText>
+                </div>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Inherit"
+                               Size="Size.Small" Class="nav-close-btn"
+                               OnClick="@(() => OnNavLinkClicked.InvokeAsync())" />
             </div>
 
-            <div class="nav-menu-scroll no-scrollbar px-2">
-                <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:ghostwhite;">GENERAL</MudText>
+            @* ── Scrollable links ── *@
+            <div class="nav-menu-scroll no-scrollbar">
+
+                <div class="nav-section-label">GENERAL</div>
 
                 @if (RoleService.CanAccessDashboard(_currentUserRole))
                 {
-                    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard"
+                                Match="NavLinkMatch.All">Dashboard</MudNavLink>
                 }
 
                 <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
@@ -42,37 +45,37 @@
 
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
-                    <MudNavGroup Title="Storage" Icon="@Icons.Material.Filled.Inventory2">
-                        <MudNavLink Href="/storages/cabinets">Filing Cabinets</MudNavLink>
-                        <MudNavLink Href="/storages/boxes">Filing Boxes</MudNavLink>
-                        <MudNavLink Href="/storages/folders">Filing Folders</MudNavLink>
-                    </MudNavGroup>
+                    @* Flat nav links — no indented MudNavGroup *@
+                    <div class="nav-section-label mt-2">STORAGE</div>
+                    <MudNavLink Href="/storages/cabinets" Icon="@Icons.Material.Filled.Inventory2">Filing Cabinets</MudNavLink>
+                    <MudNavLink Href="/storages/boxes" Icon="@Icons.Material.Filled.Archive">Filing Boxes</MudNavLink>
+                    <MudNavLink Href="/storages/folders" Icon="@Icons.Material.Filled.Folder">Filing Folders</MudNavLink>
 
-                    <MudNavGroup Title="Documents" Icon="@Icons.Material.Filled.Description">
-                        <MudNavLink Href="/documentsPage">All Documents</MudNavLink>
-                        <MudNavLink Href="/disposed">Disposed</MudNavLink>
-                        <MudNavLink Href="/barrowed">Borrowed</MudNavLink>
-                    </MudNavGroup>
+                    <div class="nav-section-label mt-2">DOCUMENTS</div>
+                    <MudNavLink Href="/documentsPage" Icon="@Icons.Material.Filled.Description">All Documents</MudNavLink>
+                    <MudNavLink Href="/disposed" Icon="@Icons.Material.Filled.DeleteSweep">Disposed</MudNavLink>
+                    <MudNavLink Href="/barrowed" Icon="@Icons.Material.Filled.SwapHoriz">Borrowed</MudNavLink>
                 }
                 else if (RoleService.CanAccessDocuments(_currentUserRole))
                 {
-                    <MudNavLink Href="/documentsPage" Icon="@Icons.Material.Filled.Description" Match="NavLinkMatch.Prefix">Documents</MudNavLink>
+                    <MudNavLink Href="/documentsPage" Icon="@Icons.Material.Filled.Description"
+                                Match="NavLinkMatch.Prefix">Documents</MudNavLink>
                 }
 
-                @if (RoleService.CanAccessUserManagement(_currentUserRole) || RoleService.CanAccessAdminTools(_currentUserRole) || RoleService.CanAccessTransactionLogs(_currentUserRole))
+                @if (RoleService.CanAccessUserManagement(_currentUserRole)
+                  || RoleService.CanAccessAdminTools(_currentUserRole)
+                  || RoleService.CanAccessTransactionLogs(_currentUserRole))
                 {
-                    <MudText Typo="Typo.overline" Class="px-4 mt-6 mb-2 mud-text-secondary" Style="font-weight: bold; color:ghostwhite;">ADMIN & TOOLS</MudText>
+                    <div class="nav-section-label mt-2">ADMIN & TOOLS</div>
 
                     @if (RoleService.CanAccessUserManagement(_currentUserRole))
                     {
                         <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">User Management</MudNavLink>
                     }
-
                     @if (RoleService.CanAccessAdminTools(_currentUserRole))
                     {
                         <MudNavLink Href="/admin/qr-codes" Icon="@Icons.Material.Filled.QrCode">QR Codes</MudNavLink>
                     }
-
                     @if (RoleService.CanAccessTransactionLogs(_currentUserRole))
                     {
                         <MudNavLink Href="/transaction-logs" Icon="@Icons.Material.Filled.History">Transaction Logs</MudNavLink>
@@ -80,8 +83,8 @@
                 }
             </div>
 
-            @* Logout Section *@
-            <div class="mt-auto pa-4">
+            @* ── Logout ── *@
+            <div class="nav-footer">
                 <AuthorizeView>
                     <Authorized>
                         <form action="Account/Logout" method="post" class="nav-logout-form">
@@ -92,8 +95,7 @@
                                        StartIcon="@Icons.Material.Filled.Logout"
                                        FullWidth="true"
                                        Color="Color.Inherit"
-                                       Class="justify-start text-none nav-logout-btn"
-                                       Style="opacity: 0.9;">
+                                       Class="justify-start nav-logout-btn">
                                 Logout
                             </MudButton>
                         </form>
@@ -104,149 +106,226 @@
     }
     else
     {
-        @* MINI STATE *@
-        <div class="d-flex flex-column align-center py-6 gap-4">
-            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Size="Size.Large" Class="mb-6" />
+        @* ── Mini / icon-only state ── *@
+        <div class="nav-mini-layout">
+            <MudTooltip Text="@_currentUserName" Placement="Placement.Right">
+                <MudAvatar Class="nav-mini-avatar">@_currentUserInitials</MudAvatar>
+            </MudTooltip>
+
             @if (RoleService.CanAccessDashboard(_currentUserRole))
-
-            {   <MudTooltip Text="Dashboard">
-                <MudIconButton Icon="@Icons.Material.Filled.Dashboard" href="/dashboard" />
-                </MudTooltip>
-
-                <MudTooltip text="Profile">
-                <MudIconButton Icon="@Icons.Material.Filled.Person" Href="/profile"/>
-                </MudTooltip>
-
-                <MudTooltip Text="Forms">
-                <MudIconButton Icon="@Icons.Material.Filled.Assignment" Href="/forms" />
+            {
+                <MudTooltip Text="Dashboard" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Dashboard" Href="/dashboard" Color="Color.Inherit" />
                 </MudTooltip>
             }
+
+            <MudTooltip Text="Profile" Placement="Placement.Right">
+                <MudIconButton Icon="@Icons.Material.Filled.Person" Href="/profile" Color="Color.Inherit" />
+            </MudTooltip>
+
+            @if (RoleService.CanAccessForms(_currentUserRole))
+            {
+                <MudTooltip Text="Forms" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Assignment" Href="/forms" Color="Color.Inherit" />
+                </MudTooltip>
+            }
+
             @if (RoleService.CanAccessStorage(_currentUserRole))
             {
-                <MudTooltip Text="Storges">
-                <MudIconButton Icon="@Icons.Material.Filled.Inventory2" href="/storages/cabinets" />
+                <MudTooltip Text="Storage" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Color="Color.Inherit" />
                 </MudTooltip>
-
-                <MudTooltip Text="Documents">
-                <MudIconButton Icon="@Icons.Material.Filled.Description" href="/documentsPage" />
+                <MudTooltip Text="Documents" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Color="Color.Inherit" />
                 </MudTooltip>
             }
 
-            
-            
             @if (RoleService.CanAccessUserManagement(_currentUserRole))
             {
-                <MudTooltip Text="Users Management">
-                <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" href="/admin/users" />
+                <MudTooltip Text="User Management" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings" Href="/admin/users" Color="Color.Inherit" />
                 </MudTooltip>
             }
             @if (RoleService.CanAccessAdminTools(_currentUserRole))
-
             {
-                <MudTooltip Text="QR Code">
-                <MudIconButton Icon="@Icons.Material.Filled.QrCode" href="/admin/qr-codes" />
+                <MudTooltip Text="QR Codes" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.QrCode" Href="/admin/qr-codes" Color="Color.Inherit" />
                 </MudTooltip>
-
-                <MudTooltip Text="Transaction Logs">
-                <MudIconButton Icon="@Icons.Material.Filled.History" href="/transaction-logs" />
+                <MudTooltip Text="Transaction Logs" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.History" Href="/transaction-logs" Color="Color.Inherit" />
                 </MudTooltip>
             }
-
-           
         </div>
     }
 </MudNavMenu>
 
 <style>
-
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
+    /* ── Layout shells ── */
+    .nav-full-layout {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
     }
 
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+    .nav-mini-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px 0;
+        gap: 4px;
     }
 
+    /* ── Profile card ── */
+    .nav-profile-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 16px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        flex-shrink: 0;
+    }
+
+    .nav-avatar {
+        height: 44px !important;
+        width: 44px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        background: var(--mud-palette-primary) !important;
+        color: #fff !important;
+        flex-shrink: 0;
+    }
+
+    .nav-mini-avatar {
+        height: 36px !important;
+        width: 36px !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        background: var(--mud-palette-primary) !important;
+        color: #fff !important;
+        margin-bottom: 8px;
+        cursor: default;
+    }
+
+    .nav-profile-text {
+        overflow: hidden;
+    }
+
+    .nav-profile-text .mud-typography {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+
+    /* Close button — only visible on mobile */
+    .nav-close-btn {
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+
+    @@media (min-width: 960px) {
+        .nav-close-btn {
+            display: none !important;
+        }
+    }
+
+    /* ── Section labels ── */
+    .nav-section-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        color: rgba(255,255,255,0.4);
+        padding: 12px 16px 4px;
+        text-transform: uppercase;
+    }
+
+    .nav-section-label.mt-2 {
+        margin-top: 4px;
+    }
+
+    /* ── Scrollable area ── */
     .nav-menu-scroll {
-        flex-grow: 1;
+        flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
+        padding: 4px 0;
     }
 
-    /* Force the group headers to play nice with the glass links */
-    .nav-shell-menu .mud-nav-group-toggle {
-        margin-top: 4px;
-        margin-bottom: 4px;
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    /* ── Nav links — flush, no indent ── */
+    .nav-shell-menu .mud-nav-link {
+        padding-left: 16px !important;
+        margin: 1px 8px 1px 0 !important;
+        border-radius: 0 20px 20px 0 !important;
+        border-left: 3px solid transparent !important;
+        color: rgba(255,255,255,0.85) !important;
+        font-size: 0.875rem !important;
+        transition: all 0.15s ease;
     }
 
-    /* Ensure NavGroup arrows stay white */
-    ::deep .mud-nav-group-caret-icon {
-        color: white !important;
+    .nav-shell-menu .mud-nav-link:hover {
+        background: rgba(255,255,255,0.08) !important;
+        color: #fff !important;
+        border-left-color: rgba(255,255,255,0.3) !important;
     }
 
-    /* Padding adjustment to give the glass room to breathe */
-    .mud-nav-link {
-        margin-right: 8px !important;
-        margin-left: 0 !important;
-        border-radius: 0 20px 20px 0 !important; /* Rounded glass edge */
+    .nav-shell-menu .mud-nav-link.active,
+    .nav-shell-menu .mud-nav-link.mud-nav-link-active {
+        background: rgba(94,181,247,0.15) !important;
+        color: #5eb5f7 !important;
+        border-left-color: #5eb5f7 !important;
+        font-weight: 600 !important;
     }
 
-        .mud-nav-link.active {
-            background-color: rgba(255, 255, 255, 0.1) !important;
-            border-left: 4px solid var(--mud-palette-primary) !important;
-            color: var(--mud-palette-primary) !important;
-        }
-
-    a {
-        text-decoration: none;
+    .nav-shell-menu .mud-nav-link .mud-icon-root {
+        color: inherit !important;
+        font-size: 1.1rem !important;
     }
 
-    .nav-logout-form {
-        width: 100%;
+    /* ── Caret icon stays white ── */
+    ::deep .mud-nav-group-caret-icon { color: rgba(255,255,255,0.6) !important; }
+
+    /* ── Footer / logout ── */
+    .nav-footer {
+        flex-shrink: 0;
+        padding: 8px 0 12px;
+        border-top: 1px solid rgba(255,255,255,0.08);
     }
+
+    .nav-logout-form { width: 100%; }
 
     .nav-logout-form ::deep .nav-logout-btn.mud-button-root {
-        transition: background-color .2s ease, color .2s ease, opacity .2s ease, border-color .2s ease;
+        padding-left: 16px !important;
+        margin: 0 8px 0 0 !important;
         border-radius: 0 20px 20px 0 !important;
-        margin-right: 0 !important;
-        margin-left: -4px !important;
-        width: calc(100% + 4px) !important;
-        min-height: 44px;
-        justify-content: flex-start !important;
-        border-left: 4px solid transparent !important;
-        padding-left: 20px !important;
+        border-left: 3px solid transparent !important;
+        color: rgba(255,255,255,0.75) !important;
+        font-weight: 500 !important;
         text-transform: none !important;
-        font-weight: 600 !important;
-        color: rgba(255, 255, 255, 0.9) !important;
+        justify-content: flex-start !important;
+        transition: all 0.15s ease;
     }
 
     .nav-logout-form ::deep .nav-logout-btn.mud-button-root:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-left: 4px solid var(--mud-palette-primary) !important;
-        color: var(--mud-palette-primary) !important;
-        opacity: 1 !important;
+        background: rgba(255,255,255,0.08) !important;
+        color: #f87171 !important;
+        border-left-color: #f87171 !important;
     }
 
-    .nav-logout-form ::deep .nav-logout-btn .mud-button-start-icon {
-        margin-right: 10px;
-    }
+    a { text-decoration: none; }
 </style>
 
 @code {
     [Parameter] public bool SideBarOpen { get; set; }
-
-    [Parameter] public EventCallback OnToggleSideBar { get; set; }
-    private async Task ToggleSideBar()
-    {
-        await OnToggleSideBar.InvokeAsync();
-    }
+    [Parameter] public EventCallback OnNavLinkClicked { get; set; }
 
     private string? currentUrl;
     private string _currentUserInitials = "";
     private string _currentUserRole = "";
-    private string _currentUserName ="";
-
+    private string _currentUserName = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -257,20 +336,15 @@
             var names = _currentUserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             _currentUserInitials = names.Length >= 2
                 ? $"{names[0][0]}{names[1][0]}".ToUpper()
-                : _currentUserName.Substring(0, Math.Min(2, _currentUserName.Length)).ToUpper();
+                : _currentUserName[..Math.Min(2, _currentUserName.Length)].ToUpper();
         }
-
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
         if (user.Identity is { IsAuthenticated: true })
         {
-            // Look for the "Role" c
             var roleClaim = user.FindFirst(c => c.Type == ClaimTypes.Role);
-
-            //by default staff sya
-            _currentUserRole = roleClaim != null ? roleClaim.Value : "Staff";
+            _currentUserRole = roleClaim?.Value ?? "Staff";
         }
     }
 
@@ -286,10 +360,5 @@
         StateHasChanged();
     }
 
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-    }
-
-
+    public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
 }

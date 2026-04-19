@@ -17,7 +17,7 @@
 @inject IRoleService RoleService
 
 
-<MudStack Spacing="4" Class="pa-6">
+<MudStack Spacing="4" Class="pa-4 pa-md-6">
     @if (_loading)
     {
         <MudPaper Class="pa-12 glass-midnight d-flex flex-column align-center justify-center" Elevation="0" Style="background:transparent; min-height: 400px;">
@@ -28,46 +28,51 @@
     else
     {
         @* HERO SECTION *@
-        <MudPaper Elevation="0" Outlined="true" Class="pa-8 glass-midnight rounded-xl border-solid border-2 mud-border-primary">
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6 glass-midnight rounded-xl border-solid border-2 mud-border-primary">
             <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 700;">@DateTime.Now.ToString("dddd, MMMM d, yyyy")</MudText>
-            <MudText Typo="Typo.h3" Style="font-weight: 800;" Class="mud-text-primary">Hello, @_greetingName</MudText>
+            <MudText Typo="Typo.h4" Style="font-weight: 800;" Class="mud-text-primary">Hello, @_greetingName</MudText>
             <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">Welcome back to the MIS File Locator System.</MudText>
         </MudPaper>
 
         <MudGrid Spacing="3">
-            @* STAT TILES - Optimized Row *@
-            <MudItem xs="12" sm="6" md="2">
+            @* STAT TILES - 2 per row on mobile, 6 across on desktop *@
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Cabinets" Value="@_cabinets.ToString()" Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Background="var(--mud-palette-primary)" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="2">
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Boxes" Value="@_boxes.ToString()" Icon="@Icons.Material.Filled.Archive" Href="/storages/boxes" Background="#b42318" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="2">
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Folders" Value="@_folders.ToString()" Icon="@Icons.Material.Filled.Folder" Href="/storages/folders" Background="#7b6ab3" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="2">
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Documents" Value="@_activeDocuments.ToString()" Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Background="#3a6351" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="2">
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Pending" Value="@_pendingForSelectedYear.ToString()" Icon="@Icons.Material.Filled.HourglassTop" Href="/disposed" Background="#7d1c1c" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="2">
+            <MudItem xs="6" sm="6" md="2">
                 <SolidStatTile Title="Users" Value="@_totalUsers.ToString()" Icon="@Icons.Material.Filled.People" Href="/admin/users" Background="#0e1824" />
             </MudItem>
 
-            @* TREND CHART - Main Visual *@
+            @* TREND CHART - scrollable on mobile *@
             <MudItem xs="12" lg="8">
-                <MudPaper Outlined="true" Class="pa-6 glass-midnight pb-10 rounded-xl h-100">
+                <MudPaper Outlined="true" Class="pa-6 glass-midnight rounded-xl h-100">
                     <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mud-text-primary">Disposal Trend</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-4 d-block">Activity vs. Disposals (Last 6 Years)</MudText>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_series"
-                              ChartLabels="@_xAxisLabels"
-                              Width="100%"
-                              Height="500px"
-                              CanHideSeries="true"
-                              ChartOptions="@_chartOptions"
-                              ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
+                    @* Horizontal scroll wrapper on mobile so chart keeps its size *@
+                    <div class="chart-scroll-wrapper">
+                        <div class="chart-inner">
+                            <MudChart ChartType="ChartType.Line"
+                                      ChartSeries="@_series"
+                                      ChartLabels="@_xAxisLabels"
+                                      Width="100%"
+                                      Height="320px"
+                                      CanHideSeries="true"
+                                      ChartOptions="@_chartOptions"
+                                      ChartPalette="@(new[] { "#5eb5f7", "#f87171" })" />
+                        </div>
+                    </div>
                 </MudPaper>
             </MudItem>
 
@@ -86,8 +91,9 @@
                                    Value="_selectedCirculationYear"
                                    ValueChanged="OnCirculationYearChanged"
                                    Dense="true"
+                                   Margin="Margin.Dense"
                                    Variant="Variant.Outlined"
-                                   Style="Max-width:200px">
+                                   Style="max-width:120px">
                             @foreach (var y in _yearChoices)
                             {
                                 <MudSelectItem Value="@y">@y</MudSelectItem>
@@ -244,6 +250,29 @@
         align-items: center;
         justify-content: center;
         box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+    }
+
+    /* Chart scroll wrapper - desktop: normal, mobile: horizontal scroll */
+    .chart-scroll-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Extra bottom padding so the legend isn't clipped */
+        padding-bottom: 8px;
+    }
+
+    .chart-inner {
+        min-width: 100%;
+    }
+
+    @@media (max-width: 959px) {
+        .chart-inner {
+            min-width: 560px; /* Keep chart at a readable size, user scrolls */
+        }
+        /* Show a subtle scroll hint */
+        .chart-scroll-wrapper {
+            border-radius: 8px;
+        }
     }
 </style>
 

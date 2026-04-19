@@ -9,72 +9,141 @@
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext _context
 
-<MudText Typo="Typo.h4" Class="mt-10 mb-2" Color="Color.Primary">Filing box</MudText>
-
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+    <MudPaper Class="pa-8" Elevation="0">
+        <MudStack AlignItems="AlignItems.Center" Spacing="3">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1">Loading box information...</MudText>
+        </MudStack>
+    </MudPaper>
 }
 else if (_box == null)
 {
-    <MudAlert Severity="Severity.Warning">This box was not found or is archived.</MudAlert>
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+            <MudText Typo="Typo.h6">Box Not Found</MudText>
+            <MudText Typo="Typo.body2">This box was not found or has been archived.</MudText>
+        </MudAlert>
+    </MudPaper>
 }
 else
 {
-    <MudText Typo="Typo.subtitle2" Class="mb-1"><b>@_box.Name</b></MudText>
-    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@_locationPath</MudText>
-
-    <MudText Typo="Typo.subtitle2" Class="mb-2">Folders in this box</MudText>
-    @if (_folders.Count == 0)
-    {
-        <MudText Typo="Typo.body2"  Class="mud-text-secondary">No folders in this box.</MudText>
-    }
-    else
-    {
-        <MudStack Spacing="2" Class="mb-6">
-            @foreach (var f in _folders)
+    @* Header Card *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 600;">@_box.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                        @_locationPath
+                    </MudText>
+                </div>
+            </MudStack>
+            
+            @if (!string.IsNullOrEmpty(_box.Description))
             {
-                <MudPaper Outlined="true" Class="pa-3" Style="color:#1a3a52;">
-                    <MudLink Href="@($"/qr/folder/{f.Id}")" Typo="Typo.body1" Style="font-weight: 600;">
-                        <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Class="mr-1" />@f.Name
-                    </MudLink>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@_docsInFolder.GetValueOrDefault(f.Id, 0) document(s)</MudText>
-                </MudPaper>
+                <MudText Typo="Typo.body2" Class="mt-2">@_box.Description</MudText>
             }
         </MudStack>
-    }
+    </MudPaper>
 
-    <MudDivider Class="my-4" />
-    <MudText Typo="Typo.subtitle2" Class="mb-2">All documents in this box</MudText>
-    @if (_documents.Count == 0)
-    {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">No active documents.</MudText>
-    }
-    else
-    {
-        <MudTable Items="@_documents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
-            <HeaderContent>
-                <MudTh>Title</MudTh>
-                <MudTh>Folder</MudTh>
-                <MudTh>Status</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Title">@context.Title</MudTd>
-                <MudTd DataLabel="Folder">@context.Folder?.Name</MudTd>
-                <MudTd DataLabel="Status">
-                    @if (context.IsBorrowed)
+    @* Folders Section *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" />
+                    Folders in this Box
+                </MudText>
+                <MudChip T="string" Color="Color.Info" Size="Size.Small">@_folders.Count folder(s)</MudChip>
+            </MudStack>
+
+            @if (_folders.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">No folders found in this box.</MudAlert>
+            }
+            else
+            {
+                <MudStack Spacing="2">
+                    @foreach (var f in _folders)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Borrowed</MudChip>
+                        <MudPaper Outlined="true" Class="pa-4 hover-card" Style="transition: all 0.2s; cursor: pointer;" 
+                                  @onclick="@(() => NavigateToFolder(f.Id))">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" Size="Size.Medium" />
+                                    <div>
+                                        <MudText Typo="Typo.body1" Style="font-weight: 600; color: #1a3a52;">@f.Name</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @_docsInFolder.GetValueOrDefault(f.Id, 0) document(s)
+                                        </MudText>
+                                    </div>
+                                </MudStack>
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Primary" Size="Size.Small" />
+                            </MudStack>
+                        </MudPaper>
                     }
-                    else
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success">In</MudChip>
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+                </MudStack>
+            }
+        </MudStack>
+    </MudPaper>
+
+    @* Documents Section *@
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+                    All Documents in this Box
+                </MudText>
+                <MudChip T="string" Color="Color.Success" Size="Size.Small">@_documents.Count document(s)</MudChip>
+            </MudStack>
+
+            @if (_documents.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">No active documents in this box.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_documents" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Class="mt-2">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: 600;">Title</MudTh>
+                        <MudTh Style="font-weight: 600;">Folder</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: center;">Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Title">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Title</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Folder">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Folder?.Name</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Status" Style="text-align: center;">
+                            @if (context.IsBorrowed)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Outbound">Borrowed</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Available</MudChip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </MudPaper>
 }
+
+<style>
+    .hover-card:hover {
+        box-shadow: 0 4px 12px rgba(26, 58, 82, 0.15);
+        transform: translateY(-2px);
+    }
+</style>
 
 @code {
     [Parameter] public int BoxId { get; set; }
@@ -85,6 +154,8 @@ else
     private Dictionary<int, int> _docsInFolder = new();
     private string _locationPath = "";
     private bool _loading = true;
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,5 +195,10 @@ else
         _docsInFolder = docs.GroupBy(d => d.FolderId).ToDictionary(g => g.Key, g => g.Count());
 
         _loading = false;
+    }
+
+    private void NavigateToFolder(int folderId)
+    {
+        NavigationManager.NavigateTo($"/qr/folder/{folderId}");
     }
 }

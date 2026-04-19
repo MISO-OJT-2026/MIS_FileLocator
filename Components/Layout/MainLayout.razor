@@ -1,5 +1,7 @@
 @using MudBlazor
 @using Microsoft.AspNetCore.Authorization
+@inject NavigationManager NavigationManager
+@implements IDisposable
 @inherits LayoutComponentBase
 
 <MudThemeProvider @ref="@_mudThemeProvider" Theme="@_theme" @bind-IsDarkMode="@_isDarkMode" />
@@ -8,47 +10,39 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    @* Added AppBar for the Toggle and Menu controls *@
-    <MudAppBar Elevation="0" Outlined="true" Class="mud-border-bottom">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => _drawerOpen = !_drawerOpen)" />
-        <MudImage> </MudImage>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-3">
-            
-            <img src="images/MIS-LOGO.png" alt="MIS Logo" style="height:32px; width:auto;" />
-
-            
-            <MudText Typo="Typo.h6" Style="font-weight: 800; white-space: nowrap;">
+    <MudAppBar Elevation="0" Class="appbar-glass mud-border-bottom">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@(() => { _drawerOpen = !_drawerOpen; })" />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-2">
+            <img src="images/MIS-LOGO.png" alt="MIS Logo" style="height:28px; width:auto;" />
+            <MudText Typo="Typo.h6" Style="font-weight: 800; white-space: nowrap; font-size: 1rem;">
                 MIS File Locator
             </MudText>
         </MudStack>
         <MudSpacer />
-
-        @* Dark Mode Toggle Button *@
         <MudToggleIconButton @bind-Toggled="@_isDarkMode"
                              Icon="@Icons.Material.Outlined.DarkMode" Color="Color.Inherit"
                              ToggledIcon="@Icons.Material.Outlined.WbSunny" ToggledColor="Color.Inherit"
                              title="@(_isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode")" />
-
-       
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen"
-               Variant="DrawerVariant.Mini"
-              
-               OpenMiniOnHover="false"
-               Elevation="0"
+               Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md"
+               OpenMiniOnHover="true"
+               Elevation="1"
                Class="app-shell-drawer no-scrollbar"
                Style="overflow-x: hidden;">
-        @* Passing the state to your NavMenu *@
         <NavMenu SideBarOpen="_drawerOpen" />
     </MudDrawer>
 
     <MudMainContent Class="app-shell-main">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-4">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
 <style>
     .mud-timeline-item:hover {
         background-color: var(--mud-palette-action-default-hover);
@@ -66,11 +60,26 @@
     {
         if (firstRender)
         {
-
             StateHasChanged();
         }
     }
 
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Close drawer on mobile after any navigation
+        _drawerOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
 
     private MudTheme _theme = new()
     {
@@ -80,9 +89,9 @@
             Background = "#f8fafc",
             AppbarBackground = "#ffffff",
             AppbarText = "#0e1824",
-            DrawerBackground = "#0e1824", // Your dark sidebar in light mode
-            DrawerText = "#FFFFFF",       // Force white text for dark sidebar
-            DrawerIcon = "#FFFFFF",       // Force white icons for dark sidebar
+            DrawerBackground = "#0e1824",
+            DrawerText = "#FFFFFF",
+            DrawerIcon = "#FFFFFF",
             Surface = "#FFFFFF",
             TextPrimary = "#0e1824",
             TextSecondary = "rgba(14, 24, 36, 0.7)"
@@ -93,14 +102,13 @@
             Background = "#0b0f1a",
             Surface = "#111827",
             DrawerBackground = "#111827",
-            DrawerText = "#f9fafb",       
+            DrawerText = "#f9fafb",
             DrawerIcon = "#f9fafb",
             AppbarBackground = "#0b0f1a",
             AppbarText = "#f9fafb",
             TextPrimary = "#f9fafb",
             TextSecondary = "rgba(249, 250, 251, 0.7)"
         },
-        
         LayoutProperties = new LayoutProperties()
         {
             DefaultBorderRadius = "4px",
