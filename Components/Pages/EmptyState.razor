@@ -1,0 +1,29 @@
+@using MudBlazor
+
+<div class="empty-state">
+    <MudIcon Icon="@Icon" Size="Size.Large" Class="empty-icon" />
+    <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">@Message</MudText>
+</div>
+
+<style>
+    .empty-state {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 16px;
+        opacity: 0.5;
+    }
+
+    .empty-icon {
+        font-size: 3rem !important;
+        width: 3rem !important;
+        height: 3rem !important;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public string Message { get; set; } = "";
+    [Parameter, EditorRequired] public string Icon { get; set; } = "";
+}

@@ -30,6 +30,8 @@
 
                 <div class="nav-section-label">GENERAL</div>
 
+                <MudNavLink Href="/home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
+
                 @if (RoleService.CanAccessDashboard(_currentUserRole))
                 {
                     <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard"

@@ -1,0 +1,979 @@
+
+@page "/home"
+@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Authorization
+@using MIS_FileLocator.Data
+@using FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext _context
+@inject IJSRuntime JS
+
+<PageTitle>Home – MIS File Locator</PageTitle>
+
+@* ── Hero ── *@
+<div class="showroom-hero">
+    <canvas id="particle-canvas" class="hero-canvas"></canvas>
+    <div class="hero-content">
+        <div class="hero-badge">📁 MIS File Locator</div>
+        <h1 class="hero-title">Your Files,<br /><span class="hero-accent">Perfectly Organized</span></h1>
+        <p class="hero-sub">Explore the physical storage hierarchy — from cabinets to documents.</p>
+        <div class="hero-stats">
+            <div class="stat-pill"><span class="stat-icon">🗄️</span><span id="stat-cabinets" class="stat-num">0</span><span class="stat-label">Cabinets</span></div>
+            <div class="stat-pill"><span class="stat-icon">📦</span><span id="stat-boxes" class="stat-num">0</span><span class="stat-label">Boxes</span></div>
+            <div class="stat-pill"><span class="stat-icon">📂</span><span id="stat-folders" class="stat-num">0</span><span class="stat-label">Folders</span></div>
+            <div class="stat-pill"><span class="stat-icon">📄</span><span id="stat-docs" class="stat-num">0</span><span class="stat-label">Documents</span></div>
+        </div>
+    </div>
+</div>
+
+@* ── Breadcrumb ── *@
+@if (_breadcrumbs.Count > 1)
+{
+    <div class="showroom-breadcrumb">
+        @for (int i = 0; i < _breadcrumbs.Count; i++)
+        {
+            var crumb = _breadcrumbs[i];
+            var isLast = i == _breadcrumbs.Count - 1;
+            var idx = i;
+            @if (!isLast)
+            {
+                <span class="crumb-link" @onclick="@(() => GoToCrumb(idx))">@crumb.Label</span>
+                <span class="crumb-sep">›</span>
+            }
+            else
+            {
+                <span class="crumb-current">@crumb.Label</span>
+            }
+        }
+    </div>
+}
+
+@* ── Section heading ── *@
+<div class="section-heading">
+    <div class="section-icon-wrap @_levelColor">
+        <MudIcon Icon="@_levelIcon" Size="Size.Medium" />
+    </div>
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:800;">@_levelTitle</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@_levelSubtitle</MudText>
+    </div>
+</div>
+
+@* ── Loading ── *@
+@if (_loading)
+{
+    <div class="showroom-loading">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">Loading storage...</MudText>
+    </div>
+}
+else
+{
+    <div id="card-container" class="showroom-grid @(_animClass)">
+
+        @* ── CABINETS ── *@
+        @if (_level == Level.Cabinets)
+        {
+            @foreach (var cab in _cabinets)
+            {
+                var boxCount = cab.FileBox?.Count(b => !b.IsArchived) ?? 0;
+                var c = cab;
+                <div class="showroom-item" @onclick="@(async (e) => { await JS.InvokeVoidAsync("showroom.burst", e.ClientX, e.ClientY, "#1a3a52"); await DrillIntoCabinet(c); })">
+                    <div class="object-wrap">
+                        <div class="filing-cabinet">
+                            <div class="cabinet-body">
+                                <div class="cabinet-top"></div>
+                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                <div class="cabinet-base"></div>
+                            </div>
+                            <div class="cabinet-side"></div>
+                        </div>
+                    </div>
+                    <div class="item-label">@cab.Name</div>
+                    <div class="item-meta">@boxCount box@(boxCount != 1 ? "es" : "")</div>
+                </div>
+            }
+            @if (!_cabinets.Any())
+            {
+                <div class="showroom-empty"><div style="font-size:3rem">🗄️</div><MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">No cabinets yet.</MudText></div>
+            }
+        }
+
+        @* ── BOXES ── *@
+        else if (_level == Level.Boxes)
+        {
+            @foreach (var box in _boxes)
+            {
+                var folderCount = box.Folders?.Count(f => !f.IsArchived) ?? 0;
+                var b = box;
+                <div class="showroom-item" @onclick="@(async (e) => { await JS.InvokeVoidAsync("showroom.burst", e.ClientX, e.ClientY, "#b42318"); await DrillIntoBox(b); })">
+                    <div class="object-wrap">
+                        <div class="cardboard-box">
+                            <div class="box-body">
+                                <div class="box-flap box-flap-left"></div>
+                                <div class="box-flap box-flap-right"></div>
+                                <div class="box-label-strip">@box.Name</div>
+                            </div>
+                            <div class="box-side"></div>
+                            <div class="box-bottom"></div>
+                        </div>
+                    </div>
+                    <div class="item-label">@box.Name</div>
+                    <div class="item-meta">@folderCount folder@(folderCount != 1 ? "s" : "")</div>
+                </div>
+            }
+            @if (!_boxes.Any())
+            {
+                <div class="showroom-empty"><div style="font-size:3rem">📦</div><MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">This cabinet is empty.</MudText></div>
+            }
+        }
+
+        @* ── FOLDERS ── *@
+        else if (_level == Level.Folders)
+        {
+            @foreach (var folder in _folders)
+            {
+                var docCount = folder.Documents?.Count(d => !d.IsDeleted && !d.IsDisposal) ?? 0;
+                var f = folder;
+                <div class="showroom-item" @onclick="@(async (e) => { await JS.InvokeVoidAsync("showroom.burst", e.ClientX, e.ClientY, "#7b6ab3"); await DrillIntoFolder(f); })">
+                    <div class="object-wrap">
+                        <div class="manila-folder">
+                            <div class="folder-back"></div>
+                            <div class="folder-tab">@folder.Name</div>
+                            <div class="folder-front"></div>
+                            <div class="folder-papers">
+                                <div class="paper p1"></div>
+                                <div class="paper p2"></div>
+                                <div class="paper p3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-label">@folder.Name</div>
+                    <div class="item-meta">@docCount doc@(docCount != 1 ? "s" : "")</div>
+                </div>
+            }
+            @if (!_folders.Any())
+            {
+                <div class="showroom-empty"><div style="font-size:3rem">📂</div><MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">No folders in this box.</MudText></div>
+            }
+        }
+
+        @* ── DOCUMENTS ── *@
+        else if (_level == Level.Documents)
+        {
+            @foreach (var doc in _documents)
+            {
+                <div class="showroom-item no-drill">
+                    <div class="object-wrap">
+                        <div class="document-sheet @(doc.IsBorrowed ? "doc-borrowed" : "")">
+                            <div class="doc-lines">
+                                <div class="doc-line dl-title"></div>
+                                <div class="doc-line"></div>
+                                <div class="doc-line"></div>
+                                <div class="doc-line short"></div>
+                            </div>
+                            @if (doc.IsBorrowed)
+                            {
+                                <div class="doc-stamp">OUT</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="item-label">@doc.Title</div>
+                    <div class="item-meta">@(doc.DocumentDate?.ToString("MMM dd, yyyy") ?? "No date")</div>
+                    @if (doc.IsBorrowed)
+                    {
+                        <span class="item-badge borrowed-badge">Borrowed</span>
+                    }
+                    else
+                    {
+                        <span class="item-badge stored-badge">In Storage</span>
+                    }
+                </div>
+            }
+            @if (!_documents.Any())
+            {
+                <div class="showroom-empty"><div style="font-size:3rem">📄</div><MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">No documents in this folder.</MudText></div>
+            }
+        }
+
+    </div>
+}
+
+@* ════════════════════════════════════════════════════════════
+   STORYTELLING SECTION — Our Journey · Process · Thank You
+   ════════════════════════════════════════════════════════════ *@
+<div class="story-section">
+
+    @* ── Divider ── *@
+    <div class="story-divider">
+        <span class="story-divider-line"></span>
+        <span class="story-divider-label">Our Story</span>
+        <span class="story-divider-line"></span>
+    </div>
+
+    @* ══════════════════════════════════════
+       1. OUR JOURNEY — glass blue
+    ══════════════════════════════════════ *@
+    <div class="story-card story-journey glass-blue">
+        <div class="glass-blob blob-1"></div>
+
+        @* ── Carousel: Our Journey
+           ADD YOUR PHOTOS: replace placeholder src values below.
+           To add more slides, copy a <div class="carousel-slide"> block.
+           Recommended: team photos, office environment, working together.
+           Path example: src="images/story/journey-1.jpg"
+        ── *@
+        <div class="story-carousel" id="carousel-journey">
+            <div class="carousel-track" id="track-journey">
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/1a3a52/5eb5f7?text=Our+Journey+1"
+                         alt="Our Journey — slide 1 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/1e4d73/7ec8f0?text=Our+Journey+2"
+                         alt="Our Journey — slide 2 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/0e2233/4a9fd4?text=Our+Journey+3"
+                         alt="Our Journey — slide 3 (replace with your photo)" class="carousel-img" />
+                </div>
+            </div>
+            <div class="carousel-dots" id="dots-journey">
+                <span class="dot active" onclick="carouselGo('track-journey','dots-journey',0)"></span>
+                <span class="dot" onclick="carouselGo('track-journey','dots-journey',1)"></span>
+                <span class="dot" onclick="carouselGo('track-journey','dots-journey',2)"></span>
+            </div>
+        </div>
+
+        <div class="story-text">
+            <div class="story-tag">🗺️ Our Journey</div>
+            <h2 class="story-title">From Paper Piles to Digital Order</h2>
+            <p class="story-body">
+                The MIS File Locator started as a simple need — the MIS office was drowning in physical documents
+                scattered across cabinets, boxes, and folders with no clear system. We set out to build a tool
+                that bridges the physical and digital worlds, giving every file a home that anyone can find in seconds.
+            </p>
+            <p class="story-body">
+                What began as a capstone project grew into a fully functional records management system,
+                built with care by a small team who believed that good organization is the foundation of good work.
+            </p>
+        </div>
+    </div>
+
+    @* ══════════════════════════════════════
+       2. DEVELOPMENT PROCESS — glass purple
+    ══════════════════════════════════════ *@
+    <div class="story-card story-process story-reverse glass-purple">
+        <div class="glass-blob blob-2"></div>
+
+        @* ── Carousel: Development Process
+           ADD YOUR PHOTOS: replace placeholder src values below.
+           Recommended: coding setup, system screenshots, workflow diagrams, dev environment.
+           Path example: src="images/story/process-1.jpg"
+        ── *@
+        <div class="story-carousel" id="carousel-process">
+            <div class="carousel-track" id="track-process">
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/0e1824/a78bfa?text=Dev+Process+1"
+                         alt="Development Process — slide 1 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/1a0e33/c4a8ff?text=Dev+Process+2"
+                         alt="Development Process — slide 2 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/0d0d1f/8b6fd4?text=Dev+Process+3"
+                         alt="Development Process — slide 3 (replace with your photo)" class="carousel-img" />
+                </div>
+            </div>
+            <div class="carousel-dots" id="dots-process">
+                <span class="dot active" onclick="carouselGo('track-process','dots-process',0)"></span>
+                <span class="dot" onclick="carouselGo('track-process','dots-process',1)"></span>
+                <span class="dot" onclick="carouselGo('track-process','dots-process',2)"></span>
+            </div>
+        </div>
+
+        <div class="story-text">
+            <div class="story-tag">⚙️ Development Process</div>
+            <h2 class="story-title">Built with Blazor, Driven by Purpose</h2>
+            <p class="story-body">
+                We chose ASP.NET Core Blazor and MudBlazor to deliver a fast, modern, and responsive experience
+                that works seamlessly on both desktop and mobile. The system was designed iteratively —
+                starting with core storage management, then layering in document tracking, QR code scanning,
+                borrowing workflows, and disposal management.
+            </p>
+            <div class="story-tech-pills">
+                <span class="tech-pill">Blazor Server</span>
+                <span class="tech-pill">MudBlazor</span>
+                <span class="tech-pill">Entity Framework</span>
+                <span class="tech-pill">SQL Server</span>
+                <span class="tech-pill">Docker</span>
+            </div>
+        </div>
+    </div>
+
+    @* ══════════════════════════════════════
+       3. THANK YOU — glass green
+    ══════════════════════════════════════ *@
+    <div class="story-card story-thankyou glass-green">
+        <div class="glass-blob blob-3"></div>
+
+        @* ── Carousel: Thank You
+           ADD YOUR PHOTOS: replace placeholder src values below.
+           Recommended: team celebration, graduation, OJT group photos, warm moments.
+           Path example: src="images/story/thankyou-1.jpg"
+           To add more slides, copy a <div class="carousel-slide"> block and add a dot.
+        ── *@
+        <div class="story-carousel" id="carousel-thanks">
+            <div class="carousel-track" id="track-thanks">
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/1a3a2a/6fcf97?text=Thank+You+1"
+                         alt="Thank You — slide 1 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/0f2a1e/4caf7d?text=Thank+You+2"
+                         alt="Thank You — slide 2 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/3a6351/a8e6c8?text=Thank+You+3"
+                         alt="Thank You — slide 3 (replace with your photo)" class="carousel-img" />
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://placehold.co/600x400/2d5040/8fd4b0?text=OJT+Team+%F0%9F%8E%93"
+                         alt="OJT Team — slide 4 (replace with your group photo)" class="carousel-img" />
+                </div>
+            </div>
+            <div class="carousel-dots" id="dots-thanks">
+                <span class="dot active" onclick="carouselGo('track-thanks','dots-thanks',0)"></span>
+                <span class="dot" onclick="carouselGo('track-thanks','dots-thanks',1)"></span>
+                <span class="dot" onclick="carouselGo('track-thanks','dots-thanks',2)"></span>
+                <span class="dot" onclick="carouselGo('track-thanks','dots-thanks',3)"></span>
+            </div>
+        </div>
+
+        <div class="story-text">
+            <div class="story-tag">💚 Thank You</div>
+            <h2 class="story-title">To Everyone Who Made This Possible</h2>
+            <p class="story-body">
+                To our adviser, our institution, and the MIS office staff who trusted us with this project —
+                thank you. Your patience, feedback, and encouragement shaped every feature in this system.
+            </p>
+            <p class="story-body">
+                To future users: we hope this tool saves you time, reduces frustration, and makes every
+                document feel exactly where it belongs. This system was built for you.
+            </p>
+            <div class="story-signature">— The Development Team 🎓</div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+/* ── Hero ── */
+.showroom-hero {
+    position: relative; overflow: hidden; border-radius: 20px;
+    background: linear-gradient(135deg, #0e1824 0%, #1a3a52 50%, #0e1824 100%);
+    padding: 48px 32px 40px; margin-bottom: 28px; min-height: 260px;
+    display: flex; align-items: center;
+}
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero-content { position: relative; z-index: 1; max-width: 600px; }
+.hero-badge {
+    display: inline-block; background: rgba(94,181,247,0.15);
+    border: 1px solid rgba(94,181,247,0.3); color: #5eb5f7;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 14px; text-transform: uppercase;
+}
+.hero-title { font-size: clamp(1.7rem,4vw,2.6rem); font-weight: 900; color: #fff; line-height: 1.15; margin: 0 0 10px; }
+.hero-accent { background: linear-gradient(90deg,#5eb5f7,#a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero-sub { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin: 0 0 24px; line-height: 1.6; }
+.hero-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat-pill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 7px 12px; }
+.stat-icon { font-size: 0.95rem; }
+.stat-num { font-size: 1rem; font-weight: 800; color: #5eb5f7; min-width: 18px; text-align: center; }
+.stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); font-weight: 500; }
+
+/* ── Breadcrumb ── */
+.showroom-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; font-size: 0.85rem; }
+.crumb-link { color: var(--mud-palette-primary); cursor: pointer; font-weight: 600; padding: 2px 6px; border-radius: 6px; transition: background 0.15s; }
+.crumb-link:hover { background: rgba(94,181,247,0.1); }
+.crumb-sep { color: var(--mud-palette-text-secondary); opacity: 0.4; padding: 0 2px; }
+.crumb-current { color: var(--mud-palette-text-primary); font-weight: 700; padding: 2px 6px; }
+
+/* ── Section heading ── */
+.section-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.section-icon-wrap { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.level-cabinet { background: rgba(26,58,82,0.15); color: #1a3a52; }
+.level-box     { background: rgba(180,35,24,0.15); color: #b42318; }
+.level-folder  { background: rgba(123,106,179,0.15); color: #7b6ab3; }
+.level-doc     { background: rgba(58,99,81,0.15); color: #3a6351; }
+
+/* ── Loading ── */
+.showroom-loading { display: flex; flex-direction: column; align-items: center; padding: 60px 0; }
+.loading-dots { display: flex; gap: 8px; }
+.loading-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--mud-palette-primary); animation: dot-bounce 1.2s infinite ease-in-out; }
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@@keyframes dot-bounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+/* ── Grid ── */
+.showroom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+@@media (max-width: 599px) { .showroom-grid { grid-template-columns: 1fr 1fr; gap: 14px; } }
+
+/* ── Item wrapper ── */
+.showroom-item {
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; padding: 16px 8px 14px;
+    border-radius: 16px; border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s;
+}
+.showroom-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.14) !important; border-color: var(--mud-palette-primary); }
+.showroom-item.no-drill { cursor: default; }
+.showroom-item.no-drill:hover { transform: none; box-shadow: none !important; border-color: var(--mud-palette-divider); }
+
+.object-wrap { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+
+.item-label { font-size: 0.85rem; font-weight: 700; color: var(--mud-palette-text-primary); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.item-meta { font-size: 0.72rem; color: var(--mud-palette-text-secondary); margin-top: 2px; }
+.item-badge { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; margin-top: 6px; }
+.stored-badge   { background: rgba(58,99,81,0.12); color: #3a6351; }
+.borrowed-badge { background: rgba(245,158,11,0.12); color: #d97706; }
+
+/* ── Animations ── */
+.anim-enter { animation: gridEnter 0.28s ease forwards; }
+.anim-back  { animation: gridBack  0.28s ease forwards; }
+@@keyframes gridEnter { from { opacity:0; transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
+@@keyframes gridBack  { from { opacity:0; transform:translateX(-28px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── Empty ── */
+.showroom-empty { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; padding: 60px 16px; opacity: 0.5; }
+
+/* ════════════════════════════════════════
+   3-D FILING CABINET
+════════════════════════════════════════ */
+.filing-cabinet {
+    position: relative;
+    width: 72px; height: 90px;
+    transform-style: preserve-3d;
+    transform: rotateX(8deg) rotateY(-18deg);
+    transition: transform 0.3s ease;
+}
+.showroom-item:hover .filing-cabinet { transform: rotateX(12deg) rotateY(-24deg) scale(1.08); }
+
+.cabinet-body {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, #2d6a9f 0%, #1a3a52 60%, #0e2233 100%);
+    border-radius: 4px 4px 2px 2px;
+    display: flex; flex-direction: column;
+    box-shadow: inset -4px 0 8px rgba(0,0,0,0.3);
+}
+.cabinet-top {
+    height: 8px;
+    background: linear-gradient(90deg, #4a8fc0, #2d6a9f);
+    border-radius: 4px 4px 0 0;
+    border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+.cabinet-drawer {
+    flex: 1; margin: 2px 4px;
+    background: linear-gradient(160deg, #3a7ab5 0%, #1e4d73 100%);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+    transition: transform 0.25s ease;
+}
+.showroom-item:hover .cabinet-drawer:nth-child(2) { transform: translateX(6px); }
+.drawer-handle {
+    width: 24px; height: 5px;
+    background: linear-gradient(90deg, #c8a96e, #e8c98e, #c8a96e);
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.cabinet-base {
+    height: 6px;
+    background: linear-gradient(90deg, #0e2233, #1a3a52);
+    border-radius: 0 0 2px 2px;
+}
+.cabinet-side {
+    position: absolute;
+    top: 0; right: -10px;
+    width: 10px; height: 100%;
+    background: linear-gradient(180deg, #0e2233 0%, #0a1a28 100%);
+    transform-origin: left center;
+    transform: skewY(-2deg);
+    border-radius: 0 2px 2px 0;
+}
+
+/* ════════════════════════════════════════
+   3-D CARDBOARD BOX
+════════════════════════════════════════ */
+.cardboard-box {
+    position: relative;
+    width: 80px; height: 72px;
+    transform-style: preserve-3d;
+    transform: rotateX(10deg) rotateY(-20deg);
+    transition: transform 0.3s ease;
+}
+.showroom-item:hover .cardboard-box { transform: rotateX(14deg) rotateY(-26deg) scale(1.08); }
+
+.box-body {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, #d4956a 0%, #b8733a 60%, #9a5c28 100%);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset -3px 0 6px rgba(0,0,0,0.25);
+}
+.box-flap {
+    position: absolute; top: 0;
+    width: 50%; height: 18px;
+    background: linear-gradient(180deg, #c8854e, #b8733a);
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+.box-flap-left  { left: 0;   border-right: 1px solid rgba(0,0,0,0.1); transform-origin: top left;  transform: rotateX(-15deg); }
+.box-flap-right { right: 0;  border-left:  1px solid rgba(0,0,0,0.1); transform-origin: top right; transform: rotateX(-15deg); }
+.box-label-strip {
+    position: absolute; bottom: 8px; left: 6px; right: 6px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 2px; padding: 2px 4px;
+    font-size: 0.55rem; font-weight: 700; color: #5a3010;
+    text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.box-side {
+    position: absolute;
+    top: 0; right: -12px;
+    width: 12px; height: 100%;
+    background: linear-gradient(180deg, #9a5c28, #7a4418);
+    border-radius: 0 2px 2px 0;
+    transform: skewY(-1deg);
+}
+.box-bottom {
+    position: absolute;
+    bottom: -8px; left: 0; right: 0;
+    height: 8px;
+    background: linear-gradient(90deg, #7a4418, #9a5c28);
+    border-radius: 0 0 3px 3px;
+    transform: skewX(-1deg);
+}
+
+/* ════════════════════════════════════════
+   MANILA FOLDER
+════════════════════════════════════════ */
+.manila-folder {
+    position: relative;
+    width: 84px; height: 72px;
+    transform-style: preserve-3d;
+    transform: rotateX(6deg) rotateY(-12deg);
+    transition: transform 0.3s ease;
+}
+.showroom-item:hover .manila-folder { transform: rotateX(10deg) rotateY(-18deg) scale(1.08); }
+
+.folder-back {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: linear-gradient(160deg, #e8c96e 0%, #d4a832 60%, #b88c1a 100%);
+    border-radius: 2px 8px 2px 2px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+}
+.folder-tab {
+    position: absolute; top: 0; left: 8px;
+    width: 52px; height: 16px;
+    background: linear-gradient(160deg, #f0d878, #d4a832);
+    border-radius: 4px 4px 0 0;
+    font-size: 0.5rem; font-weight: 700; color: #7a5a00;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+}
+.folder-front {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: linear-gradient(160deg, #f0d878 0%, #e0b840 60%, #c89c20 100%);
+    border-radius: 2px 6px 2px 2px;
+    border-top: 1px solid rgba(255,255,255,0.3);
+}
+.folder-papers {
+    position: absolute; bottom: 8px; left: 8px; right: 8px;
+    display: flex; flex-direction: column; gap: 3px;
+}
+.paper {
+    height: 4px; border-radius: 1px;
+    background: rgba(255,255,255,0.85);
+}
+.p1 { width: 90%; }
+.p2 { width: 75%; }
+.p3 { width: 60%; }
+
+/* ════════════════════════════════════════
+   DOCUMENT SHEET
+════════════════════════════════════════ */
+.document-sheet {
+    position: relative;
+    width: 68px; height: 88px;
+    background: #fff;
+    border-radius: 2px 8px 2px 2px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.06);
+    transform: rotateX(4deg) rotateY(-8deg);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+.document-sheet::before {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 16px; height: 16px;
+    background: linear-gradient(225deg, #e0e0e0 50%, transparent 50%);
+}
+.doc-borrowed { background: #fff8f0; }
+.doc-lines { padding: 14px 8px 8px; display: flex; flex-direction: column; gap: 5px; }
+.doc-line { height: 4px; background: #e0e0e0; border-radius: 2px; }
+.doc-line.dl-title { height: 6px; background: #bdbdbd; width: 80%; }
+.doc-line.short { width: 55%; }
+.doc-stamp {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-15deg);
+    font-size: 0.7rem; font-weight: 900; color: #b42318;
+    border: 2px solid #b42318; border-radius: 3px;
+    padding: 1px 5px; opacity: 0.7; letter-spacing: 0.1em;
+}
+
+@@media (max-width: 599px) {
+    .showroom-hero { padding: 28px 16px 24px; }
+    .hero-title { font-size: 1.5rem; }
+    .object-wrap { width: 80px; height: 80px; }
+    .filing-cabinet { width: 58px; height: 74px; }
+    .cardboard-box { width: 64px; height: 58px; }
+    .manila-folder { width: 68px; height: 58px; }
+    .document-sheet { width: 54px; height: 70px; }
+}
+
+/* ════════════════════════════════════════
+   STORYTELLING SECTION
+════════════════════════════════════════ */
+
+/* ── Divider ── */
+.story-section { margin-top: 64px; padding-bottom: 40px; }
+
+.story-divider {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 48px;
+}
+.story-divider-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--mud-palette-divider), transparent);
+}
+.story-divider-label {
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--mud-palette-text-secondary);
+    white-space: nowrap; padding: 0 4px;
+}
+
+/* ── Story card base ── */
+.story-card {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    margin-bottom: 40px;
+    padding: 36px;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.story-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
+}
+
+/* Reverse layout */
+.story-reverse { direction: rtl; }
+.story-reverse > * { direction: ltr; }
+
+/* ── Glass colour variants ── */
+.glass-blue {
+    background: linear-gradient(135deg,
+        rgba(26,58,82,0.18) 0%,
+        rgba(14,34,51,0.22) 100%);
+    border-color: rgba(94,181,247,0.18);
+    box-shadow: 0 8px 32px rgba(26,58,82,0.12);
+}
+.glass-purple {
+    background: linear-gradient(135deg,
+        rgba(123,106,179,0.18) 0%,
+        rgba(14,13,31,0.22) 100%);
+    border-color: rgba(167,139,250,0.18);
+    box-shadow: 0 8px 32px rgba(123,106,179,0.12);
+}
+.glass-green {
+    background: linear-gradient(135deg,
+        rgba(58,99,81,0.18) 0%,
+        rgba(15,42,30,0.22) 100%);
+    border-color: rgba(111,207,151,0.18);
+    box-shadow: 0 8px 32px rgba(58,99,81,0.12);
+}
+
+/* ── Decorative blobs ── */
+.glass-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 0;
+}
+.blob-1 { width: 280px; height: 280px; background: radial-gradient(circle, #5eb5f7 0%, transparent 70%); top: -60px; left: -60px; }
+.blob-2 { width: 260px; height: 260px; background: radial-gradient(circle, #a78bfa 0%, transparent 70%); bottom: -50px; right: -50px; }
+.blob-3 { width: 300px; height: 300px; background: radial-gradient(circle, #6fcf97 0%, transparent 70%); top: -80px; right: -40px; }
+
+/* ── Carousel ── */
+.story-carousel {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    aspect-ratio: 3 / 2;
+    z-index: 1;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carousel-slide {
+    min-width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.carousel-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.45s ease;
+}
+
+.story-carousel:hover .carousel-img {
+    transform: scale(1.03);
+}
+
+/* Dots */
+.carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+.dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+.dot.active {
+    background: #fff;
+    transform: scale(1.3);
+}
+
+/* ── Text side ── */
+.story-text { display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 1; }
+
+.story-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--mud-palette-primary);
+    background: rgba(94,181,247,0.1);
+    border: 1px solid rgba(94,181,247,0.25);
+    padding: 4px 12px; border-radius: 20px;
+    width: fit-content;
+    backdrop-filter: blur(8px);
+}
+
+.story-title {
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 800;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.25;
+    margin: 0;
+}
+
+.story-body {
+    font-size: 0.9rem;
+    color: var(--mud-palette-text-secondary);
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* ── Tech pills ── */
+.story-tech-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.tech-pill {
+    font-size: 0.72rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--mud-palette-text-secondary);
+    backdrop-filter: blur(6px);
+    transition: border-color 0.2s, color 0.2s;
+}
+.tech-pill:hover { border-color: var(--mud-palette-primary); color: var(--mud-palette-primary); }
+
+/* ── Signature ── */
+.story-signature {
+    font-size: 0.9rem; font-style: italic;
+    color: var(--mud-palette-text-secondary);
+    margin-top: 8px; font-weight: 600;
+}
+
+/* ── Responsive ── */
+@@media (max-width: 767px) {
+    .story-card {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .story-reverse { direction: ltr; }
+    .story-title { font-size: 1.2rem; }
+    .glass-blob { opacity: 0.2; }
+}
+</style>
+
+@code {
+    enum Level { Cabinets, Boxes, Folders, Documents }
+
+    bool _loading = true;
+    Level _level = Level.Cabinets;
+    string _animClass = "anim-enter";
+
+    List<FillingCabinet> _cabinets = new();
+    List<FileBoxes> _boxes = new();
+    List<Folder> _folders = new();
+    List<Documents> _documents = new();
+
+    FillingCabinet? _selectedCabinet;
+    FileBoxes? _selectedBox;
+    Folder? _selectedFolder;
+
+    string _levelTitle = "All Cabinets";
+    string _levelSubtitle = "Click a cabinet to explore what's inside";
+    string _levelIcon = Icons.Material.Filled.Inventory2;
+    string _levelColor = "level-cabinet";
+
+    record Crumb(string Label, Level Level, FillingCabinet? Cabinet = null, FileBoxes? Box = null, Folder? Folder = null);
+    List<Crumb> _breadcrumbs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cabinets = await _context.FillingCabinets
+            .Where(c => !c.IsArchived)
+            .Include(c => c.FileBox.Where(b => !b.IsArchived))
+                .ThenInclude(b => b.Folders.Where(f => !f.IsArchived))
+                    .ThenInclude(f => f.Documents.Where(d => !d.IsDeleted && !d.IsDisposal))
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        _loading = false;
+        RebuildBreadcrumbs();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("showroom.initParticles", "particle-canvas");
+
+            var totalBoxes   = _cabinets.Sum(c => c.FileBox?.Count(b => !b.IsArchived) ?? 0);
+            var totalFolders = _cabinets.Sum(c => c.FileBox?.Sum(b => b.Folders?.Count(f => !f.IsArchived) ?? 0) ?? 0);
+            var totalDocs    = _cabinets.Sum(c => c.FileBox?.Sum(b => b.Folders?.Sum(f => f.Documents?.Count(d => !d.IsDeleted && !d.IsDisposal) ?? 0) ?? 0) ?? 0);
+
+            await JS.InvokeVoidAsync("showroom.animateCounter", "stat-cabinets", _cabinets.Count);
+            await JS.InvokeVoidAsync("showroom.animateCounter", "stat-boxes",    totalBoxes);
+            await JS.InvokeVoidAsync("showroom.animateCounter", "stat-folders",  totalFolders);
+            await JS.InvokeVoidAsync("showroom.animateCounter", "stat-docs",     totalDocs);
+        }
+        await JS.InvokeVoidAsync("showroom.staggerCards", "#card-container");
+    }
+
+    async Task DrillIntoCabinet(FillingCabinet cab)
+    {
+        _selectedCabinet = cab;
+        _boxes = cab.FileBox?.Where(b => !b.IsArchived).OrderBy(b => b.Name).ToList() ?? new();
+        await Transition(Level.Boxes, true);
+        _levelTitle = cab.Name; _levelSubtitle = $"{_boxes.Count} box{(_boxes.Count != 1 ? "es" : "")} inside";
+        _levelIcon = Icons.Material.Filled.Archive; _levelColor = "level-box";
+        RebuildBreadcrumbs();
+    }
+
+    async Task DrillIntoBox(FileBoxes box)
+    {
+        _selectedBox = box;
+        _folders = box.Folders?.Where(f => !f.IsArchived).OrderBy(f => f.Name).ToList() ?? new();
+        await Transition(Level.Folders, true);
+        _levelTitle = box.Name; _levelSubtitle = $"{_folders.Count} folder{(_folders.Count != 1 ? "s" : "")} inside";
+        _levelIcon = Icons.Material.Filled.Folder; _levelColor = "level-folder";
+        RebuildBreadcrumbs();
+    }
+
+    async Task DrillIntoFolder(Folder folder)
+    {
+        _selectedFolder = folder;
+        _documents = folder.Documents?.Where(d => !d.IsDeleted && !d.IsDisposal).OrderBy(d => d.Title).ToList() ?? new();
+        await Transition(Level.Documents, true);
+        _levelTitle = folder.Name; _levelSubtitle = $"{_documents.Count} document{(_documents.Count != 1 ? "s" : "")}";
+        _levelIcon = Icons.Material.Filled.Description; _levelColor = "level-doc";
+        RebuildBreadcrumbs();
+    }
+
+    async Task GoToCrumb(int idx)
+    {
+        var crumb = _breadcrumbs[idx];
+        _selectedCabinet = crumb.Cabinet; _selectedBox = crumb.Box; _selectedFolder = crumb.Folder;
+        switch (crumb.Level)
+        {
+            case Level.Cabinets:
+                await Transition(Level.Cabinets, false);
+                _levelTitle = "All Cabinets"; _levelSubtitle = "Click a cabinet to explore what's inside";
+                _levelIcon = Icons.Material.Filled.Inventory2; _levelColor = "level-cabinet"; break;
+            case Level.Boxes when crumb.Cabinet != null:
+                _boxes = crumb.Cabinet.FileBox?.Where(b => !b.IsArchived).OrderBy(b => b.Name).ToList() ?? new();
+                await Transition(Level.Boxes, false);
+                _levelTitle = crumb.Cabinet.Name; _levelSubtitle = $"{_boxes.Count} box{(_boxes.Count != 1 ? "es" : "")} inside";
+                _levelIcon = Icons.Material.Filled.Archive; _levelColor = "level-box"; break;
+            case Level.Folders when crumb.Box != null:
+                _folders = crumb.Box.Folders?.Where(f => !f.IsArchived).OrderBy(f => f.Name).ToList() ?? new();
+                await Transition(Level.Folders, false);
+                _levelTitle = crumb.Box.Name; _levelSubtitle = $"{_folders.Count} folder{(_folders.Count != 1 ? "s" : "")} inside";
+                _levelIcon = Icons.Material.Filled.Folder; _levelColor = "level-folder"; break;
+        }
+        RebuildBreadcrumbs();
+    }
+
+    async Task Transition(Level newLevel, bool forward)
+    {
+        _animClass = ""; StateHasChanged();
+        await Task.Delay(20);
+        _level = newLevel; _animClass = forward ? "anim-enter" : "anim-back";
+        StateHasChanged();
+    }
+
+    void RebuildBreadcrumbs()
+    {
+        _breadcrumbs = new List<Crumb> { new Crumb("Home", Level.Cabinets) };
+        if (_selectedCabinet != null) _breadcrumbs.Add(new Crumb(_selectedCabinet.Name, Level.Boxes, Cabinet: _selectedCabinet));
+        if (_selectedBox != null)     _breadcrumbs.Add(new Crumb(_selectedBox.Name, Level.Folders, Cabinet: _selectedCabinet, Box: _selectedBox));
+        if (_selectedFolder != null)  _breadcrumbs.Add(new Crumb(_selectedFolder.Name, Level.Documents, Cabinet: _selectedCabinet, Box: _selectedBox, Folder: _selectedFolder));
+    }
+}

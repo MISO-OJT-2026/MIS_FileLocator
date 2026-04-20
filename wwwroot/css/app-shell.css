@@ -8,6 +8,19 @@ body, html {
     max-width: 100vw;
 }
 
+/* Remove focus outline on non-interactive elements (headings, divs, etc.)
+   Keep it on buttons, inputs, links for accessibility */
+h1, h2, h3, h4, h5, h6, p, div, span {
+    outline: none !important;
+}
+
+/* Blazor sometimes focuses the page container on navigation — suppress that ring */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .mud-main-content {
     overflow-x: hidden;
 }
