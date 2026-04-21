@@ -33,8 +33,9 @@
                            Variant="Variant.Outlined" OnClick="ExportToCSV" />
         </div>
         <div class="toolbar-filters">
-            <MudMenu Label="Filter Documents" Variant="Variant.Outlined" Dense="true"
-                     EndIcon="@Icons.Material.Filled.FilterList" Style="font-weight:100">
+            <MudMenu Label="FILTER DOCUMENTS" Variant="Variant.Outlined" Dense="true"
+                     EndIcon="@Icons.Material.Filled.FilterList"
+                     Style="font-weight:700; letter-spacing:0.05em;">
                 <div class="pa-4" style="min-width: 280px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Search Filters</MudText>
                     <MudSelect T="string" Label="Status" @bind-Value="_selectedStatus"
@@ -69,6 +70,17 @@
                         {
                             <MudSelectItem Value="@level">@level</MudSelectItem>
                         }
+                    </MudSelect>
+                    <MudDatePicker Label="Document Date (From)" @bind-Date="_docDateFrom"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2" />
+                    <MudDatePicker Label="Document Date (To)" @bind-Date="_docDateTo"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2" />
+                    <MudSelect T="string" Label="Disposal Retention" @bind-Value="_selectedDisposalStatus"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                        <MudSelectItem Value="@("")">All</MudSelectItem>
+                        <MudSelectItem Value="@("pending")">Pending Disposal</MudSelectItem>
+                        <MudSelectItem Value="@("disposed")">Already Disposed</MudSelectItem>
+                        <MudSelectItem Value="@("none")">No Disposal Date</MudSelectItem>
                     </MudSelect>
                     <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All</MudButton>
                 </div>
@@ -157,6 +169,9 @@
     private string _selectedFolder = "";
     private string _selectedConfidentiality = "";
     private string _selectedDocumentDate = "";
+    private string _selectedDisposalStatus = "";
+    private DateTime? _docDateFrom = null;
+    private DateTime? _docDateTo = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -212,6 +227,18 @@
             if (x.ConfidentialityLevel?.Name != _selectedConfidentiality) return false;
         }
 
+        // Document date range filter
+        if (_docDateFrom.HasValue && x.DocumentDate.HasValue && x.DocumentDate.Value.Date < _docDateFrom.Value.Date) return false;
+        if (_docDateTo.HasValue && x.DocumentDate.HasValue && x.DocumentDate.Value.Date > _docDateTo.Value.Date) return false;
+
+        // Disposal retention filter
+        if (!string.IsNullOrWhiteSpace(_selectedDisposalStatus))
+        {
+            if (_selectedDisposalStatus == "pending" && !(x.DateOfDisposal.HasValue && !x.IsDisposal)) return false;
+            if (_selectedDisposalStatus == "disposed" && !x.IsDisposal) return false;
+            if (_selectedDisposalStatus == "none" && x.DateOfDisposal.HasValue) return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
@@ -242,6 +269,9 @@
         _selectedFolder = "";
         _selectedConfidentiality = "";
         _selectedDocumentDate = "";
+        _selectedDisposalStatus = "";
+        _docDateFrom = null;
+        _docDateTo = null;
         _searchString = "";
     }
 

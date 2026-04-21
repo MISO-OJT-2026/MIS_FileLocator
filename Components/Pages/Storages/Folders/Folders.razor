@@ -8,12 +8,12 @@
 @using System.Text
 @using MIS_FileLocator.Components.Pages.Storages
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@inject ICurrentUserService _currentUserService
 @inject IJSRuntime JSRuntime
+@inject IServiceProvider ServiceProvider
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Storage Folders</MudText>
 
@@ -33,20 +33,48 @@
                            OnClick="@(() => ExportToCSV(_activeTab == 1))" />
         </div>
         <div class="toolbar-filters">
-            <MudSelect T="string" @bind-Value="_selectedCabinet" Clearable="true"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" Label="Filter Cabinet"
-                       AdornmentIcon="@Icons.Material.Filled.FilterList">
-                <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
-                @if (_folders != null)
-                {
-                    @foreach (var cab in _folders.Where(f => f.FileBox?.FillingCabinet != null)
-                                                  .Select(f => f.FileBox.FillingCabinet.Name)
-                                                  .Distinct().OrderBy(n => n))
-                    {
-                        <MudSelectItem Value="@cab">@cab</MudSelectItem>
-                    }
-                }
-            </MudSelect>
+            <MudMenu Label="Filter Folders" Variant="Variant.Outlined" Dense="true"
+                     EndIcon="@Icons.Material.Filled.FilterList">
+                <div class="pa-4" style="min-width: 300px;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
+                    
+                    <MudSelect T="string" Value="_selectedCabinet" Clearable="true"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Label="Cabinet"
+                               ValueChanged="OnFolderCabinetChanged" Class="mb-3">
+                        <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                        @if (_folders != null)
+                        {
+                            @foreach (var cab in _folders.Where(f => f.FileBox?.FillingCabinet != null)
+                                                          .Select(f => f.FileBox.FillingCabinet.Name)
+                                                          .Distinct().OrderBy(n => n))
+                            {
+                                <MudSelectItem Value="@cab">@cab</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                    
+                    <MudSelect T="string" @bind-Value="_selectedBox" Clearable="true"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Label="Box"
+                               Disabled="@string.IsNullOrWhiteSpace(_selectedCabinet)" Class="mb-3">
+                        <MudSelectItem Value="@("")">All Boxes</MudSelectItem>
+                        @if (_folders != null && !string.IsNullOrWhiteSpace(_selectedCabinet))
+                        {
+                            @foreach (var box in _folders
+                                .Where(f => f.FileBox?.FillingCabinet?.Name == _selectedCabinet && f.FileBox != null)
+                                .Select(f => f.FileBox!.Name)
+                                .Distinct().OrderBy(n => n))
+                            {
+                                <MudSelectItem Value="@box">@box</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                    
+                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" 
+                               OnClick="ResetFilters" Class="mt-2">
+                        Reset Filters
+                    </MudButton>
+                </div>
+            </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search folders..."
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -54,6 +82,17 @@
     </div>
 </MudPaper>
 
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+    <MudText Align="Align.Center" Class="my-4">Loading folders...</MudText>
+}
+else if (_folders == null || !_folders.Any())
+{
+    <MudAlert Severity="Severity.Info" Class="my-4">No folders found. Click "Add Folder" to create your first folder.</MudAlert>
+}
+else
+{
 <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" SliderColor="Color.Primary">
 
     @* --- ACTIVE FOLDERS TAB --- *@
@@ -125,24 +164,57 @@
         </MudDataGrid>
     </MudTabPanel>
 </MudTabs>
+}
 
 @code {
-    private List<Folder> _folders = new();
+    private List<Folder>? _folders = null;
     private string _searchString = "";
     private string _selectedCabinet = "";
     private string _selectedBox = "";
     private int _activeTab = 0;
+    private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync() => await LoadFolders();
 
     private async Task LoadFolders()
     {
-        _folders = await _context.Folders
-            .AsNoTracking()
-            .Include(f => f.FileBox)
-                .ThenInclude(b => b.FillingCabinet)
-            .Include(f => f.Documents)
-            .ToListAsync();
+        try
+        {
+            _isLoading = true;
+            using var scope = ServiceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            _folders = await context.Folders
+                .AsNoTracking()
+                .Include(f => f.FileBox)
+                    .ThenInclude(b => b.FillingCabinet)
+                .Include(f => f.Documents)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading folders: {ex.Message}", Severity.Error);
+            _folders = new List<Folder>();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // When cabinet changes, reset box selection so stale box doesn't remain
+    private void OnFolderCabinetChanged(string value)
+    {
+        _selectedCabinet = value;
+        _selectedBox = "";
+        StateHasChanged();
+    }
+
+    private void ResetFilters()
+    {
+        _selectedCabinet = "";
+        _selectedBox = "";
+        _searchString = "";
         StateHasChanged();
     }
 
@@ -151,6 +223,11 @@
         if (!string.IsNullOrWhiteSpace(_selectedCabinet))
         {
             if (x.FileBox?.FillingCabinet?.Name != _selectedCabinet) return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_selectedBox))
+        {
+            if (x.FileBox?.Name != _selectedBox) return false;
         }
 
         if (!string.IsNullOrWhiteSpace(_searchString))
@@ -197,13 +274,25 @@
         bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are you sure?", yesText: "Archive", cancelText: "Cancel");
         if (result == true)
         {
-            folder.IsArchived = true;
-            folder.ArchivedAt = DateTime.UtcNow.AddHours(8);
-            folder.ArchivedBy = await _currentUserService.GetCurrentFullNameAsync();
-            _context.Folders.Update(folder);
-            await _context.SaveChangesAsync();
-            await LoadFolders();
-            Snackbar.Add("Folder archived successfully.", Severity.Success);
+            try
+            {
+                using var scope = ServiceProvider.CreateScope();
+                var currentUserService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
+                var currentUserName = await currentUserService.GetCurrentFullNameAsync();
+                var archCtx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                folder.IsArchived = true;
+                folder.ArchivedAt = DateTime.UtcNow.AddHours(8);
+                folder.ArchivedBy = currentUserName;
+                archCtx.Folders.Update(folder);
+                await archCtx.SaveChangesAsync();
+                await LoadFolders();
+                Snackbar.Add("Folder archived successfully.", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error archiving folder: {ex.Message}", Severity.Error);
+            }
         }
     }
 
@@ -212,14 +301,23 @@
         bool? result = await DialogService.ShowMessageBoxAsync("Restore Folder", $"Restore '{folder.Name}'?", yesText: "Restore", cancelText: "Cancel");
         if (result == true)
         {
-            var admin = await _currentUserService.GetCurrentFullNameAsync();
-            folder.IsArchived = false;
-            folder.ArchivedAt = null;
-            folder.ArchivedBy = null;
-            _context.Folders.Update(folder);
-            await _context.SaveChangesAsync();
-            await LoadFolders();
-            Snackbar.Add("Restored.", Severity.Success);
+            try
+            {
+                using var scope = ServiceProvider.CreateScope();
+                var restCtx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                folder.IsArchived = false;
+                folder.ArchivedAt = null;
+                folder.ArchivedBy = null;
+                restCtx.Folders.Update(folder);
+                await restCtx.SaveChangesAsync();
+                await LoadFolders();
+                Snackbar.Add("Restored.", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error restoring folder: {ex.Message}", Severity.Error);
+            }
         }
     }
 

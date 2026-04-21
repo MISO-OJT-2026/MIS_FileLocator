@@ -84,7 +84,7 @@
                         }
 
                         @* Path 1: File Upload *@
-                        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
+                        <MudFileUpload T="IBrowserFile" @ref="_fileUpload" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.xls,.xlsx">
                             <ActivatorContent>
                                 <MudButton Variant="Variant.Filled" 
                                            Color="Color.Info" 
@@ -129,6 +129,7 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private FormTemplate _newForm = new();
     private IBrowserFile? _selectedFile;
+    private MudFileUpload<IBrowserFile>? _fileUpload;
     
     private string? _previewUrl;
     private bool _showPreview = false;
@@ -206,14 +207,16 @@
         StateHasChanged();
     }
 
-    private void ClearFile()
+    private async Task ClearFile()
     {
         _selectedFile = null;
         _previewUrl = null;
         _showPreview = false;
-        _newForm.FormName = "";
+        _newForm.FormName = _newForm.FormName; // keep form data
         _fileIcon = Icons.Material.Filled.InsertDriveFile;
         _fileColor = Color.Default;
+        if (_fileUpload != null)
+            await _fileUpload.ResetAsync();
         StateHasChanged();
     }
 
