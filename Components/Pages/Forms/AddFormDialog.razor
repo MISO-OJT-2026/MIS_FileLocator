@@ -93,6 +93,8 @@
                                     @(_selectedFile == null ? "Upload File (PDF, Word, Excel)" : "Replace Selected File")
                                 </MudButton>
                             </ActivatorContent>
+                            
+
                         </MudFileUpload>
 
                         <MudDivider />
@@ -157,7 +159,11 @@
 
     private async Task OnFileSelected(IBrowserFile file)
     {
-        if (file == null) { ClearFile(); return; }
+        if (file == null) { 
+
+            ClearFile(); return; 
+        
+        }
 
         _selectedFile = file;
         _previewUrl = null;

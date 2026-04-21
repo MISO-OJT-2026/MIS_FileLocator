@@ -426,13 +426,14 @@ else
 
 /* ── Item wrapper ── */
 .showroom-item {
-    display: flex; flex-direction: column; align-items: center;
-    cursor: pointer; padding: 16px 8px 14px;
-    border-radius: 16px; border: 1px solid var(--mud-palette-divider);
-    background: var(--mud-palette-surface);
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    cursor: pointer; 
+    padding: 16px 8px 14px;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s;
 }
-.showroom-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.14) !important; border-color: var(--mud-palette-primary); }
+.showroom-item:hover { transform: translateY(-8px); }
 .showroom-item.no-drill { cursor: default; }
 .showroom-item.no-drill:hover { transform: none; box-shadow: none !important; border-color: var(--mud-palette-divider); }
 
@@ -654,20 +655,29 @@ else
 ════════════════════════════════════════ */
 
 /* ── Divider ── */
-.story-section { margin-top: 64px; padding-bottom: 40px; }
+.story-section {
+    margin-top: 64px; 
+    padding-bottom: 40px; }
 
 .story-divider {
-    display: flex; align-items: center; gap: 16px;
+    display: flex; 
+    align-items: center; 
+    gap: 16px;
     margin-bottom: 48px;
 }
 .story-divider-line {
-    flex: 1; height: 1px;
+    flex: 1; 
+    height: 1px;
     background: linear-gradient(90deg, transparent, var(--mud-palette-divider), transparent);
 }
 .story-divider-label {
-    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--mud-palette-text-secondary);
-    white-space: nowrap; padding: 0 4px;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase; 
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    padding: 0 4px;
 }
 
 /* ── Story card base ── */

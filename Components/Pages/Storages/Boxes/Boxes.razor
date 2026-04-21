@@ -67,9 +67,21 @@
                 <PropertyColumn Property="x => x.Description" Title="Description" />
                 <TemplateColumn Title="Cabinet">
                     <CellTemplate>
-                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Text">
+                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text">
                             @(context.Item.FillingCabinet?.Name ?? "Unassigned")
                         </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Contents">
+                    <CellTemplate>
+                        <MudButton Variant="Variant.Text"
+                        StartIcon="@Icons.Material.Filled.Folder"
+                        Color="Color.Info"
+                        Size="Size.Small"
+                        OnClick="@(() => OpenBoxExplorer(context.Item))">
+                        @(context.Item.Folders?.Count(f => !f.IsArchived) ?? 0) Folder
+                            
+                        </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Actions" CellStyle="text-align:;">

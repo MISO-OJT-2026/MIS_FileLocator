@@ -1,6 +1,4 @@
-/* ============================================
-   MIS FILE LOCATOR - MOBILE-FIRST RESPONSIVE STYLES
-   ============================================ */
+
 
 /* --- GLOBAL RESETS --- */
 body, html {
@@ -8,8 +6,7 @@ body, html {
     max-width: 100vw;
 }
 
-/* Remove focus outline on non-interactive elements (headings, divs, etc.)
-   Keep it on buttons, inputs, links for accessibility */
+
 h1, h2, h3, h4, h5, h6, p, div, span {
     outline: none !important;
 }
