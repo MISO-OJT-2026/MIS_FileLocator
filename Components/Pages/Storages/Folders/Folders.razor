@@ -33,7 +33,7 @@
                            OnClick="@(() => ExportToCSV(_activeTab == 1))" />
         </div>
         <div class="toolbar-filters">
-            <MudMenu Label="Filter Folders" Variant="Variant.Outlined" Dense="true"
+            <MudMenu Label="Filter Folders" Variant="Variant.Outlined" Dense="true" Typo="Typo.subtitle2"
                      EndIcon="@Icons.Material.Filled.FilterList">
                 <div class="pa-4" style="min-width: 300px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
@@ -165,6 +165,11 @@ else
     </MudTabPanel>
 </MudTabs>
 }
+<style>
+    .mud-button-label{
+        font-weight:100 !important;
+    }
+</style>
 
 @code {
     private List<Folder>? _folders = null;

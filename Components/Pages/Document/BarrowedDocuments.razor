@@ -103,7 +103,11 @@ else
     <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
 </MudDataGrid>
 }
-
+<style>
+    .mud-button-label{
+        font-weight:100 !important;
+    }
+</style>
 @code {
     private List<Documents>? _borrowedDocs = null;
     private string _searchString = "";

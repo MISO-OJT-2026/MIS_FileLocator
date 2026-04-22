@@ -336,6 +336,8 @@ h1, h2, h3, h4, h5, h6, p, div, span {
     }
 }
 
+
+
 /* --- PAGER: show on desktop, hide on mobile (scroll instead) --- */
 @media (max-width: 959px) {
     .mud-table-pagination,

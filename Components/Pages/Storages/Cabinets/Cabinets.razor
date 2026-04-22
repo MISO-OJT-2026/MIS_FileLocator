@@ -44,9 +44,9 @@
         <div class="toolbar-filters">
             <MudSelect T="string" @bind-Value="_selectedCabinetName" Clearable="true"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                       Label="Filter Cabinet"
+                       
                        AdornmentIcon="@Icons.Material.Filled.FilterList">
-                <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                <MudSelectItem Value="@("")">ALL CABINETS</MudSelectItem>
                 @foreach (var name in _cabinets.Select(c => c.Name).Distinct().OrderBy(n => n))
                 {
                     <MudSelectItem Value="@name">@name</MudSelectItem>

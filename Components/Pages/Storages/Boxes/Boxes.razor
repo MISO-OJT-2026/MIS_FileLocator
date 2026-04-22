@@ -35,9 +35,9 @@
         </div>
         <div class="toolbar-filters">
             <MudSelect T="string" @bind-Value="_selectedCabinet" Clearable="true"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" Label="Filter Cabinet"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" 
                        AdornmentIcon="@Icons.Material.Filled.FilterList">
-                <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                <MudSelectItem Value="@("")">ALL CABINETS </MudSelectItem>
                 @if (_cabinetNames != null)
                 {
                     @foreach (var name in _cabinetNames)
