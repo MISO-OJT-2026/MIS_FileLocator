@@ -25,8 +25,9 @@
                      EndIcon="@Icons.Material.Filled.FilterList">
                 <div class="pa-4" style="min-width: 200px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Filter by Type</MudText>
-                    <MudSelect T="string" Label="Type" @bind-Value="_kindFilter"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
+                    <MudSelect T="string" @bind-Value="_kindFilter" Label="Type"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true">
                         <MudSelectItem Value="@("")">All Types</MudSelectItem>
                         <MudSelectItem Value="@("box")">Boxes only</MudSelectItem>
                         <MudSelectItem Value="@("folder")">Folders only</MudSelectItem>

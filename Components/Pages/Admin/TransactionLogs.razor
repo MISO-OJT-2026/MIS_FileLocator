@@ -15,8 +15,9 @@
                      EndIcon="@Icons.Material.Filled.FilterList">
                 <div class="pa-4" style="min-width: 280px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Logs</MudText>
-                    <MudSelect T="string" Label="Action" @bind-Value="_selectedAction"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true">
+                    <MudSelect T="string" @bind-Value="_selectedAction" Label="Action"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true">
                         <MudSelectItem Value="@("")">All Actions</MudSelectItem>
                         @foreach (var action in GetAvailableActions())
                         {

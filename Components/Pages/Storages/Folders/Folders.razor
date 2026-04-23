@@ -7,6 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Text
 @using MIS_FileLocator.Components.Pages.Storages
+@using MIS_FileLocator.Services
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
@@ -14,6 +15,7 @@
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject IServiceProvider ServiceProvider
+@inject ICurrentUserService CurrentUserService
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Storage Folders</MudText>
 
@@ -38,9 +40,9 @@
                 <div class="pa-4" style="min-width: 300px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
                     
-                    <MudSelect T="string" Value="_selectedCabinet" Clearable="true"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Label="Cabinet"
-                               ValueChanged="OnFolderCabinetChanged" Class="mb-3">
+                    <MudSelect T="string" Value="_selectedCabinet" Label="Cabinet"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" ValueChanged="OnFolderCabinetChanged" Class="mb-3">
                         <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
                         @if (_folders != null)
                         {
@@ -52,17 +54,16 @@
                             }
                         }
                     </MudSelect>
-                    
-                    <MudSelect T="string" @bind-Value="_selectedBox" Clearable="true"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Label="Box"
-                               Disabled="@string.IsNullOrWhiteSpace(_selectedCabinet)" Class="mb-3">
+
+                    <MudSelect T="string" @bind-Value="_selectedBox" Label="Box"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Disabled="@string.IsNullOrWhiteSpace(_selectedCabinet)" Class="mb-3">
                         <MudSelectItem Value="@("")">All Boxes</MudSelectItem>
                         @if (_folders != null && !string.IsNullOrWhiteSpace(_selectedCabinet))
                         {
                             @foreach (var box in _folders
                                 .Where(f => f.FileBox?.FillingCabinet?.Name == _selectedCabinet && f.FileBox != null)
-                                .Select(f => f.FileBox!.Name)
-                                .Distinct().OrderBy(n => n))
+                                .Select(f => f.FileBox!.Name).Distinct().OrderBy(n => n))
                             {
                                 <MudSelectItem Value="@box">@box</MudSelectItem>
                             }
@@ -281,16 +282,16 @@ else
         {
             try
             {
-                using var scope = ServiceProvider.CreateScope();
-                var currentUserService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
-                var currentUserName = await currentUserService.GetCurrentFullNameAsync();
-                var archCtx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                
-                folder.IsArchived = true;
-                folder.ArchivedAt = DateTime.UtcNow.AddHours(8);
-                folder.ArchivedBy = currentUserName;
-                archCtx.Folders.Update(folder);
-                await archCtx.SaveChangesAsync();
+                var currentUserName = await CurrentUserService.GetCurrentFullNameAsync();
+
+                await using var archCtx = await DbFactory.CreateDbContextAsync();
+                await archCtx.Folders
+                    .Where(f => f.Id == folder.Id)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(f => f.IsArchived, true)
+                        .SetProperty(f => f.ArchivedAt, DateTime.UtcNow.AddHours(8))
+                        .SetProperty(f => f.ArchivedBy, currentUserName));
+
                 await LoadFolders();
                 Snackbar.Add("Folder archived successfully.", Severity.Success);
             }
@@ -308,14 +309,14 @@ else
         {
             try
             {
-                using var scope = ServiceProvider.CreateScope();
-                var restCtx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                
-                folder.IsArchived = false;
-                folder.ArchivedAt = null;
-                folder.ArchivedBy = null;
-                restCtx.Folders.Update(folder);
-                await restCtx.SaveChangesAsync();
+                await using var restCtx = await DbFactory.CreateDbContextAsync();
+                await restCtx.Folders
+                    .Where(f => f.Id == folder.Id)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(f => f.IsArchived, false)
+                        .SetProperty(f => f.ArchivedAt, (DateTime?)null)
+                        .SetProperty(f => f.ArchivedBy, (string?)null));
+
                 await LoadFolders();
                 Snackbar.Add("Restored.", Severity.Success);
             }

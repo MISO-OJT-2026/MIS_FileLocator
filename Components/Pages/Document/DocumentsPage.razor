@@ -38,15 +38,17 @@
                      Style="font-weight:100; letter-spacing:0.05em;">
                 <div class="pa-4" style="min-width: 280px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Search Filters</MudText>
-                    <MudSelect T="string" Label="Status" @bind-Value="_selectedStatus"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                    <MudSelect T="string" @bind-Value="_selectedStatus" Label="Status"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All Status</MudSelectItem>
                         <MudSelectItem Value="@("In Storage")">In Storage</MudSelectItem>
                         <MudSelectItem Value="@("Borrowed")">Borrowed</MudSelectItem>
                     </MudSelect>
                     <MudSelect T="string" Label="Cabinet" Value="_selectedCabinet"
                                ValueChanged="@(e => OnCabinetChanged(e))"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
                         @foreach (var cabinet in GetAvailableCabinets())
                         {
@@ -55,7 +57,8 @@
                     </MudSelect>
                     <MudSelect T="string" Label="Box" Value="_selectedBox"
                                ValueChanged="@(e => OnBoxChanged(e))"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-2"
                                Disabled="@string.IsNullOrWhiteSpace(_selectedCabinet)">
                         <MudSelectItem Value="@("")">All Boxes</MudSelectItem>
                         @foreach (var box in GetAvailableBoxes())
@@ -63,8 +66,9 @@
                             <MudSelectItem Value="@box">@box</MudSelectItem>
                         }
                     </MudSelect>
-                    <MudSelect T="string" Label="Confidentiality" @bind-Value="_selectedConfidentiality"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                    <MudSelect T="string" @bind-Value="_selectedConfidentiality" Label="Confidentiality"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All Levels</MudSelectItem>
                         @foreach (var level in GetAvailableConfidentialityLevels())
                         {
@@ -75,8 +79,9 @@
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2" />
                     <MudDatePicker Label="Document Date (To)" @bind-Date="_docDateTo"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2" />
-                    <MudSelect T="string" Label="Disposal Retention" @bind-Value="_selectedDisposalStatus"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                    <MudSelect T="string" @bind-Value="_selectedDisposalStatus" Label="Disposal Retention"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All</MudSelectItem>
                         <MudSelectItem Value="@("pending")">Pending Disposal</MudSelectItem>
                         <MudSelectItem Value="@("disposed")">Already Disposed</MudSelectItem>

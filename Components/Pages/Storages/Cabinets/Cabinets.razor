@@ -42,16 +42,37 @@
             }
         </div>
         <div class="toolbar-filters">
-            <MudSelect T="string" @bind-Value="_selectedCabinetName" Clearable="true"
-                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                       
-                       AdornmentIcon="@Icons.Material.Filled.FilterList">
-                <MudSelectItem Value="@("")">ALL CABINETS</MudSelectItem>
-                @foreach (var name in _cabinets.Select(c => c.Name).Distinct().OrderBy(n => n))
-                {
-                    <MudSelectItem Value="@name">@name</MudSelectItem>
-                }
-            </MudSelect>
+            <MudMenu Label="Filter Cabinets" Variant="Variant.Outlined" Dense="true"
+                     EndIcon="@Icons.Material.Filled.FilterList">
+                <div class="pa-4" style="min-width: 300px;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
+
+                    <MudSelect T="string" @bind-Value="_selectedCabinetNumber" Label="Cabinet No."
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-3">
+                        <MudSelectItem Value="@("")">All Numbers</MudSelectItem>
+                        @foreach (var num in _cabinetNumbers)
+                        {
+                            <MudSelectItem Value="@num">Cabinet @num</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect T="string" @bind-Value="_selectedCabinetLevel" Label="Level"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-3">
+                        <MudSelectItem Value="@("")">All Levels</MudSelectItem>
+                        @foreach (var lvl in _cabinetLevels)
+                        {
+                            <MudSelectItem Value="@lvl">Level @lvl</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true"
+                               OnClick="ResetFilters" Class="mt-2">
+                        Reset Filters
+                    </MudButton>
+                </div>
+            </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search..."
                           Adornment="Adornment.Start" Immediate="true"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -124,10 +145,35 @@
 
 @code {
     private List<FillingCabinet> _cabinets = new();
-    private string _selectedCabinetName = ""; 
+    private string _selectedCabinetNumber = "";
+    private string _selectedCabinetLevel = "";
     private string _searchString = "";
     private int _activeTab = 0;
-    
+
+    // Parsed distinct numbers (e.g. "1","2","3") and levels (e.g. "A","B","C") from cabinet names
+    private IEnumerable<string> _cabinetNumbers =>
+        _cabinets.Select(c => ParseCabinetNumber(c.Name))
+                 .Where(n => n != null).Select(n => n!)
+                 .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<string> _cabinetLevels =>
+        _cabinets.Select(c => ParseCabinetLevel(c.Name))
+                 .Where(l => l != null).Select(l => l!)
+                 .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
+
+    // Parses "Cabinet 1A" -> "1", "Cabinet 12B" -> "12"
+    private static string? ParseCabinetNumber(string name)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)[A-Za-z]?$");
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    // Parses "Cabinet 1A" -> "A", "Cabinet 12B" -> "B"
+    private static string? ParseCabinetLevel(string name)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(name, @"\d+([A-Za-z])$");
+        return match.Success ? match.Groups[1].Value.ToUpper() : null;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,43 +182,45 @@
 
     private async Task LoadCabinets()
     {
-
         _cabinets = await _context.FillingCabinets
             .Include(c => c.FileBox)
                 .ThenInclude(b => b.Folders)
                     .ThenInclude(f => f.Documents)
             .ToListAsync();
 
-        
-
         StateHasChanged();
-
-    }
-    private string ExtractLevel(string description)
-    {
-        var parts = description.Split(',');
-        return parts[0].Trim();
     }
 
     private Func<FillingCabinet, bool> _quickFilter => x =>
-{
-    
-    if (!string.IsNullOrWhiteSpace(_selectedCabinetName))
     {
-        if (!x.Name.Equals(_selectedCabinetName, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(_selectedCabinetNumber))
+        {
+            if (ParseCabinetNumber(x.Name) != _selectedCabinetNumber) return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_selectedCabinetLevel))
+        {
+            if (!string.Equals(ParseCabinetLevel(x.Name), _selectedCabinetLevel, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+            if (x.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
             return false;
-    }
+        }
 
-    
-    if (!string.IsNullOrWhiteSpace(_searchString))
+        return true;
+    };
+
+    private void ResetFilters()
     {
-        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-        if (x.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
-        return false;
+        _selectedCabinetNumber = "";
+        _selectedCabinetLevel = "";
+        _searchString = "";
+        StateHasChanged();
     }
-
-    return true;
-};
 
     private void ViewBoxes(int cabinetId)
     {

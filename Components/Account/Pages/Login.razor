@@ -203,15 +203,15 @@
         var user = await UserManager.Users
             .FirstOrDefaultAsync(u => u.EmployeeId == Input.EmployeeId);
 
-        bool IsDisabled = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         if (user == null)
         {
-            errorMessage = "User not found.";
-            ClearFields(); // Reset the UI
+            errorMessage = "Invalid Employee ID or password.";
+            ClearFields();
             _isProcessing = false;
             return;
         }
 
+        bool IsDisabled = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         if (IsDisabled)
         {
             errorMessage = "You are currently disabled by the admin.";
