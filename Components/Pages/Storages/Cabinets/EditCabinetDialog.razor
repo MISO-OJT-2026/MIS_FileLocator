@@ -23,80 +23,54 @@
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUpdates">Save Changes</MudButton>
+        <MudButton OnClick="Cancel" Disabled="@_isSaving">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUpdates" Disabled="@_isSaving">
+            @(_isSaving ? "Saving..." : "Save Changes")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code{
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!; //  parang $SESSION to pass the value between components,the it allows you to open the modal and close. "DEFAULT!" ALLOWS TO SET VALUES LATER 
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public FillingCabinet CabinetToEdit { get; set; } = default!;
+    private FillingCabinet _editCabinet = new();
+    private bool _isSaving = false;
 
-    [Parameter] public FillingCabinet CabinetToEdit { get; set;} = default!; // how its receive data from cabinet.razor.this line catches it. noal na catch 
-
-    private FillingCabinet _editCabinet = new(); // creating temporary holder for new values
-
-    protected override void OnInitialized() // put it here ganun for the boxes to have something to display. SERVES AS TEMPORARY COPY SO THE USER CAN STILL CANCEL THE CHANGESSSSS 
+    protected override void OnInitialized()
     {
         _editCabinet.Id = CabinetToEdit.Id;
         _editCabinet.Name = CabinetToEdit.Name;
         _editCabinet.Description = CabinetToEdit.Description;
-
-
     }
 
     private async Task SaveUpdates()
     {
-        if (string.IsNullOrWhiteSpace(_editCabinet.Name))
-        {
-            Snackbar.Add("Cabinet name is required.", Severity.Warning);
-            return;
-        }
+        if (_isSaving) return;
+        if (string.IsNullOrWhiteSpace(_editCabinet.Name)) { Snackbar.Add("Cabinet name is required.", Severity.Warning); return; }
+        _isSaving = true;
+        StateHasChanged();
         try
         {
             bool isDuplicate = await _context.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _editCabinet.Name.ToLower() && c.Id != _editCabinet.Id);
-
-            if (isDuplicate)
-            {
-                Snackbar.Add($"Cabinet name '{_editCabinet.Name}'is already taken (naol taken).Please use different name. ", Severity.Error);
-                return;
-            }
-
+            if (isDuplicate) { Snackbar.Add($"Cabinet name '{_editCabinet.Name}' is already taken.", Severity.Error); return; }
             var realCabinet = await _context.FillingCabinets.FindAsync(_editCabinet.Id);
-            if(realCabinet == null)
+            if (realCabinet == null) { Snackbar.Add("Cabinet not found.", Severity.Error); return; }
+            realCabinet.Name = _editCabinet.Name;
+            realCabinet.Description = _editCabinet.Description;
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+            _context.TransactionLogs.Add(new TransactionLog
             {
-                Snackbar.Add("Cabinet not found. It may have been deleted by another users", Severity.Error);
-                return; 
-            }   
-                realCabinet.Name = _editCabinet.Name;
-                realCabinet.Description = _editCabinet.Description;
-
-                //create transaction log
-                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-                var log = new TransactionLog
-
-                {
-                    FullName = currentAdmin,
-                    EventName = "Cabinet Updated",
-                    Description = $"Updated the details for cabinet '{realCabinet.Name}'.",
-                    Status = "Success",
-                    PerformedAt = DateTime.UtcNow.AddHours(8)
-                };
-                _context.TransactionLogs.Add(log);
-                await _context.SaveChangesAsync();
-                Snackbar.Add($"Cabinet updated successfully!", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
-            }
-        
-        catch(DbUpdateException ex)
-        {
-            Snackbar.Add("Database Error: Could not save changes. Ensure the name is unique.", Severity.Error);
-
-           
-            Console.WriteLine(ex.InnerException?.Message);
+                FullName = currentAdmin, EventName = "Cabinet Updated",
+                Description = $"Updated the details for cabinet '{realCabinet.Name}'.",
+                Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+            await _context.SaveChangesAsync();
+            Snackbar.Add("Cabinet updated successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
         }
-   
-
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _isSaving = false; StateHasChanged(); }
     }
-    private void Cancel() => MudDialog.Cancel();
 
+    private void Cancel() { if (!_isSaving) MudDialog.Cancel(); }
 }

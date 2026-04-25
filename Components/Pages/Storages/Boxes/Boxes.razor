@@ -42,7 +42,7 @@
                     <MudSelect T="string" @bind-Value="_selectedCabinet" Label="Cabinet"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                Searchable="true" Class="mb-3">
-                        <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                        <MudSelectItem Value="@("")" Style="font-weight:100 !important;">All Cabinets</MudSelectItem>
                         @foreach (var name in _cabinetNames)
                         {
                             <MudSelectItem Value="@name">@name</MudSelectItem>

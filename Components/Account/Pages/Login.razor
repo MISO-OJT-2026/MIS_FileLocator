@@ -85,8 +85,19 @@
 
 <style>
     .login-page-wrapper {
-       
-        background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('images/LOGBG.png');
+        background:
+            /* bright white sun glow — center-left */
+            radial-gradient(ellipse 38% 38% at 42% 45%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.6) 30%, transparent 70%),
+            /* warm golden streak — center-right */
+            radial-gradient(ellipse 22% 10% at 68% 38%, rgba(220,180,100,0.7) 0%, rgba(200,160,80,0.3) 50%, transparent 80%),
+            /* teal-mint — top-left */
+            radial-gradient(ellipse 55% 50% at 10% 15%, rgba(100,195,195,0.85) 0%, rgba(120,200,210,0.4) 50%, transparent 75%),
+            /* deep blue — top-right */
+            radial-gradient(ellipse 50% 55% at 95% 5%, rgba(30,100,200,0.95) 0%, rgba(50,130,210,0.6) 45%, transparent 75%),
+            /* muted blue-grey — bottom-left */
+            radial-gradient(ellipse 45% 40% at 5% 90%, rgba(80,120,170,0.8) 0%, rgba(100,140,185,0.4) 50%, transparent 75%),
+            /* sky blue base */
+            linear-gradient(160deg, #a8d4e8 0%, #c5e0f0 35%, #e8f4fb 55%, #b8d8ee 100%);
         background-size: cover;
         background-position: center;
         height: 100vh;

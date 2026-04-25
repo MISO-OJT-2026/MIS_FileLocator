@@ -202,7 +202,7 @@
             var deleteResult = await UserManager.DeleteAsync(user);
             if (deleteResult.Succeeded)
             {
-                Snackbar.Add("User deleted.", Severity.Info);
+                Snackbar.Add("User deleted.", Severity.Success);
                 await LoadUsersAsync();
             }
         }

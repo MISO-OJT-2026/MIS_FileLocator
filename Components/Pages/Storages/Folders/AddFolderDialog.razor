@@ -61,120 +61,57 @@
     </DialogContent>
 
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            Cancel
-        </MudButton>
-
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="SaveFolder"
-                   StartIcon="@Icons.Material.Filled.Save">
-            Save Folder
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Disabled="@_isSaving">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveFolder"
+                   StartIcon="@Icons.Material.Filled.Save" Disabled="@_isSaving">
+            @(_isSaving ? "Saving..." : "Save Folder")
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
-
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private Folder _newFolder = new();
     private List<FileBoxes> _activeBoxes = new();
+    private bool _isSaving = false;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load active boxes and include their parent cabinets so we can show them in the dropdown
-        _activeBoxes = await _context.FileBoxes
-            .Include(b => b.FillingCabinet)
-            .Where(b => !b.IsArchived)
-            .OrderBy(b => b.Name)
-            .ToListAsync();
+        _activeBoxes = await _context.FileBoxes.Include(b => b.FillingCabinet).Where(b => !b.IsArchived).OrderBy(b => b.Name).ToListAsync();
     }
 
     private async Task SaveFolder()
     {
-        
-        if (_newFolder.FileBoxId == 0)
-        {
-            Snackbar.Add("Please select a storage box.", Severity.Warning);
-            return;
-        }
+        if (_isSaving) return;
+        if (_newFolder.FileBoxId == 0) { Snackbar.Add("Please select a storage box.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_newFolder.Name)) { Snackbar.Add("Folder name is required.", Severity.Warning); return; }
+        var normalizedName = _newFolder.Name.Trim().ToLower();
+        var currentCabinetId = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.FillingCabinetId).FirstOrDefaultAsync();
+        var nameExistsInCabinet = await _context.Folders.AnyAsync(f => f.Name.ToLower() == normalizedName && f.FileBox.FillingCabinetId == currentCabinetId && !f.IsArchived);
+        if (nameExistsInCabinet) { Snackbar.Add("A folder with this name already exists in this cabinet.", Severity.Error); return; }
+        var existingArchived = await _context.Folders.FirstOrDefaultAsync(f => f.Name.ToLower() == normalizedName && f.FileBoxId == _newFolder.FileBoxId && f.IsArchived);
+        if (existingArchived != null) { Snackbar.Add("This folder name exists in Archives. Restore it or use a different name.", Severity.Error); return; }
 
-        if (string.IsNullOrWhiteSpace(_newFolder.Name))
-        {
-            Snackbar.Add("Folder name is required.", Severity.Warning);
-            return;
-        }
-
-        // Check if duplicate names sa same boxxx 
-		var normalizedName = _newFolder.Name.Trim().ToLower();
-
-        var nameExists = await _context.Folders.AnyAsync(f =>
-            f.Name.ToLower() == normalizedName &&
-            f.FileBoxId == _newFolder.FileBoxId &&
-            !f.IsArchived);
-
-        var currentCabinetId = await _context.FileBoxes
-            .Where(b => b.Id == _newFolder.FileBoxId)
-            .Select(b => b.FillingCabinetId)
-            .FirstOrDefaultAsync();
-
-        // 2. Check if ANY box in that cabinet already has this folder name
-        var nameExistsInCabinet = await _context.Folders
-            .AnyAsync(f => f.Name.ToLower() == normalizedName &&
-                           f.FileBox.FillingCabinetId == currentCabinetId &&
-                           !f.IsArchived);
-
-        if (nameExistsInCabinet)
-        {
-            Snackbar.Add("A folder with this name already exists in the selected box.", Severity.Error);
-            return;
-        }
-
-        //Check if an archived 
-        var existingArchived = await _context.Folders
-            .FirstOrDefaultAsync(f => f.Name.ToLower() == _newFolder.Name.ToLower() &&
-                                     f.FileBoxId == _newFolder.FileBoxId &&
-                                     f.IsArchived);
-
-        if (existingArchived != null)
-        {
-            Snackbar.Add("This folder name exists in the Archives. Restore it or use a different name.", Severity.Error);
-            return;
-        }
-
+        _isSaving = true;
+        StateHasChanged();
         try
         {
-            
-            var parentBox = await _context.FileBoxes
-                .Where(b => b.Id == _newFolder.FileBoxId)
-                .Select(b => b.Name)
-                .FirstOrDefaultAsync();
-
-            _context.Folders.Add(_newFolder);
-
+            var parentBox = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-
-            var log = new TransactionLog
+            _context.Folders.Add(_newFolder);
+            _context.TransactionLogs.Add(new TransactionLog
             {
-                FullName = currentAdmin,
-                EventName = "Folder Created",
+                FullName = currentAdmin, EventName = "Folder Created",
                 Description = $"Created folder '{_newFolder.Name}' inside Box '{parentBox}'.",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            };
-
-            _context.TransactionLogs.Add(log);
+                Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
             await _context.SaveChangesAsync();
-
             Snackbar.Add("Folder created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _isSaving = false; StateHasChanged(); }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() { if (!_isSaving) MudDialog.Cancel(); }
 }

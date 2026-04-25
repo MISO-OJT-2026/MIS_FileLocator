@@ -56,7 +56,7 @@
         <MudIcon Icon="@_levelIcon" Size="Size.Medium" />
     </div>
     <div>
-        <MudText Typo="Typo.h5" Style="font-weight:800;">@_levelTitle</MudText>
+        <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:800;">@_levelTitle</MudText>
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@_levelSubtitle</MudText>
     </div>
 </div>
@@ -76,26 +76,35 @@ else
         @* ── CABINETS ── *@
         @if (_level == Level.Cabinets)
         {
-            @foreach (var cab in _cabinets)
+            @foreach (var group in _cabinets
+                .GroupBy(c => System.Text.RegularExpressions.Regex.Match(c.Name.Trim(), @"^[A-Za-z]+").Value, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => g.Key))
             {
-                var boxCount = cab.FileBox?.Count(b => !b.IsArchived) ?? 0;
-                var c = cab;
-                <div class="showroom-item" @onclick="@(async (e) => { await JS.InvokeVoidAsync("showroom.burst", e.ClientX, e.ClientY, "#1a3a52"); await DrillIntoCabinet(c); })">
-                    <div class="object-wrap">
-                        <div class="filing-cabinet">
-                            <div class="cabinet-body">
-                                <div class="cabinet-top"></div>
-                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
-                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
-                                <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
-                                <div class="cabinet-base"></div>
-                            </div>
-                            <div class="cabinet-side"></div>
-                        </div>
-                    </div>
-                    <div class="item-label">@cab.Name</div>
-                    <div class="item-meta">@boxCount box@(boxCount != 1 ? "es" : "")</div>
+                <div class="cabinet-group-header">
+                    <span class="cabinet-group-label">@group.Key</span>
+                    <span class="cabinet-group-line"></span>
                 </div>
+                @foreach (var cab in group.OrderBy(c => c.Name))
+                {
+                    var boxCount = cab.FileBox?.Count(b => !b.IsArchived) ?? 0;
+                    var c = cab;
+                    <div class="showroom-item" @onclick="@(async (e) => { await JS.InvokeVoidAsync("showroom.burst", e.ClientX, e.ClientY, "#1a3a52"); await DrillIntoCabinet(c); })">
+                        <div class="object-wrap">
+                            <div class="filing-cabinet">
+                                <div class="cabinet-body">
+                                    <div class="cabinet-top"></div>
+                                    <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                    <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                    <div class="cabinet-drawer"><div class="drawer-handle"></div></div>
+                                    <div class="cabinet-base"></div>
+                                </div>
+                                <div class="cabinet-side"></div>
+                            </div>
+                        </div>
+                        <div class="item-label">@cab.Name</div>
+                        <div class="item-meta">@boxCount box@(boxCount != 1 ? "es" : "")</div>
+                    </div>
+                }
             }
             @if (!_cabinets.Any())
             {
@@ -423,6 +432,33 @@ else
 /* ── Grid ── */
 .showroom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
 @@media (max-width: 599px) { .showroom-grid { grid-template-columns: 1fr 1fr; gap: 14px; } }
+
+/* ── Cabinet group header ── */
+.cabinet-group-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+.cabinet-group-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mud-palette-primary);
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(94,181,247,0.1);
+    border: 1px solid rgba(94,181,247,0.25);
+}
+.cabinet-group-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(94,181,247,0.3), transparent);
+}
 
 /* ── Item wrapper ── */
 .showroom-item {
@@ -877,7 +913,7 @@ else
     FileBoxes? _selectedBox;
     Folder? _selectedFolder;
 
-    string _levelTitle = "All Cabinets";
+    string _levelTitle = "All Storages";
     string _levelSubtitle = "Click a cabinet to explore what's inside";
     string _levelIcon = Icons.Material.Filled.Inventory2;
     string _levelColor = "level-cabinet";

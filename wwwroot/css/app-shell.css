@@ -47,8 +47,11 @@ h1, h2, h3, h4, h5, h6, p, div, span {
 
 /* Dark mode appbar */
 .dark .appbar-glass,
-[data-mud-theme="dark"] .appbar-glass {
-    background: rgba(11, 15, 26, 0.8) !important;
+[data-mud-theme="dark"] .appbar-glass,
+[data-mud-color-scheme="dark"] .appbar-glass,
+html.dark .appbar-glass,
+body.dark-theme .appbar-glass {
+    background: rgba(11, 15, 26, 0.95) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
@@ -352,6 +355,12 @@ h1, h2, h3, h4, h5, h6, p, div, span {
 
 .mud-button-outlined {
     font-weight: 600 !important;
+}
+
+/* Filter menu buttons in toolbar — light weight label */
+.page-toolbar .toolbar-filters .mud-button-label {
+    font-weight: 100 !important;
+    letter-spacing: 0.05em !important;
 }
 
 .mud-icon-button {

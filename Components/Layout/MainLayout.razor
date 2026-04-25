@@ -10,7 +10,10 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="0" Class="appbar-glass mud-border-bottom">
+    <MudAppBar Elevation="0" Class="mud-border-bottom"
+               Style="@(_isDarkMode
+                   ? "background: rgba(11,15,26,0.85) !important; backdrop-filter: blur(16px) saturate(180%) !important; -webkit-backdrop-filter: blur(16px) saturate(180%) !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important;"
+                   : "background: rgba(255,255,255,0.75) !important; backdrop-filter: blur(16px) saturate(180%) !important; -webkit-backdrop-filter: blur(16px) saturate(180%) !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important;")">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
                        OnClick="@(() => { _drawerOpen = !_drawerOpen; })" />
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-2">
@@ -104,7 +107,7 @@
             DrawerBackground = "#111827",
             DrawerText = "#f9fafb",
             DrawerIcon = "#f9fafb",
-            AppbarBackground = "#1a3a52",
+            AppbarBackground = "#0b0f1a",
             AppbarText = "#f9fafb",
             TextPrimary = "#f9fafb",
             TextSecondary = "rgba(249, 250, 251, 0.7)"

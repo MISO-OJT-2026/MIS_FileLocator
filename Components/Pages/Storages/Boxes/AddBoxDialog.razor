@@ -57,94 +57,55 @@
     </DialogContent>
 
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">
-            Cancel
-        </MudButton>
-
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="SaveBox"
-                   StartIcon="@Icons.Material.Filled.Save">
-            Save Box
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Disabled="@_isSaving">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveBox"
+                   StartIcon="@Icons.Material.Filled.Save" Disabled="@_isSaving">
+            @(_isSaving ? "Saving..." : "Save Box")
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
-
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     private FileBoxes _newBox = new();
     private List<FillingCabinet> _activeCabinets = new();
+    private bool _isSaving = false;
 
     protected override async Task OnInitializedAsync()
     {
-        _activeCabinets = await _context.FillingCabinets
-            .Where(c => !c.IsArchived)
-            .OrderBy(c => c.Name)
-            .ToListAsync();
+        _activeCabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).OrderBy(c => c.Name).ToListAsync();
     }
 
     private async Task SaveBox()
     {
-        if (_newBox.FillingCabinetId == 0)
-        {
-            Snackbar.Add("Please select a cabinet.", Severity.Warning);
-            return;
-        }
+        if (_isSaving) return;
+        if (_newBox.FillingCabinetId == 0) { Snackbar.Add("Please select a cabinet.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_newBox.Name)) { Snackbar.Add("Box name is required.", Severity.Warning); return; }
+        var nameExists = await _context.FileBoxes.AnyAsync(b => b.Name.ToLower() == _newBox.Name.ToLower() && b.FillingCabinetId == _newBox.FillingCabinetId && !b.IsArchived);
+        if (nameExists) { Snackbar.Add("A box with this name already exists in the selected cabinet.", Severity.Error); return; }
+        var existingArchived = await _context.FileBoxes.FirstOrDefaultAsync(c => c.Name.ToLower() == _newBox.Name.ToLower() && c.IsArchived);
+        if (existingArchived != null) { Snackbar.Add("This box name exists in Archives. Restore it or use a different name.", Severity.Info); return; }
 
-        if (string.IsNullOrWhiteSpace(_newBox.Name))
-        {
-            Snackbar.Add("Box name is required.", Severity.Warning);
-            return;
-        }
-
-        var nameExists = await _context.FileBoxes.AnyAsync(b =>
-            b.Name.ToLower() == _newBox.Name.ToLower() &&
-            b.FillingCabinetId == _newBox.FillingCabinetId &&
-            !b.IsArchived);
-
-        if (nameExists)
-        {
-            Snackbar.Add("A box with this name already exists in the selected cabinet.", Severity.Error);
-            return;
-        }
-        //check box archivedddd
-        var existingArchived = await _context.FileBoxes.FirstOrDefaultAsync(c => c.Name.ToLower() == _newBox.Name.ToLower() && c.IsArchived); _context.FileBoxes.Add(_newBox);
-
-        if(existingArchived != null)
-        {
-            Snackbar.Add("A box with this name exists in the Archives. Please restore it or use a different name.", Severity.Info);
-            return;
-        }
-
+        _isSaving = true;
+        StateHasChanged();
         try
         {
             var parentCabinet = await _context.FillingCabinets.Where(c => c.Id == _newBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
-            _context.FileBoxes.Add(_newBox);
-
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-
-            var log = new TransactionLog
+            _context.FileBoxes.Add(_newBox);
+            _context.TransactionLogs.Add(new TransactionLog
             {
-                FullName = currentAdmin,
-                EventName = "Box Created",
-                Description = $"Created box '{_newBox.Name}' in Cabinet ' {parentCabinet}'.",
-                Status = "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            };
-
-            _context.TransactionLogs.Add(log);
+                FullName = currentAdmin, EventName = "Box Created",
+                Description = $"Created box '{_newBox.Name}' in Cabinet '{parentCabinet}'.",
+                Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
             await _context.SaveChangesAsync();
-
             Snackbar.Add("Box created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _isSaving = false; StateHasChanged(); }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() { if (!_isSaving) MudDialog.Cancel(); }
 }

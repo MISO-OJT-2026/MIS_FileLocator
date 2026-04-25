@@ -16,7 +16,7 @@
             <MudList T="string" Class="static-list" ReadOnly="true">
                 @foreach (var box in SelectedCabinet.FileBox. Where (b => !b.IsArchived))
                 {
-                    <MudListItem Text="@($"Box {box.Name}")"
+                    <MudListItem Text="@($"{box.Name}")"
                                  Icon="@Icons.Material.Filled.Inventory2"
                                  SecondaryText="@box.Description" 
                                  />

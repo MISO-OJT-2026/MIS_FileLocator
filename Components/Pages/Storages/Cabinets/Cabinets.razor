@@ -44,8 +44,8 @@
         <div class="toolbar-filters">
             <MudMenu Label="Filter Cabinets" Variant="Variant.Outlined" Dense="true"
                      EndIcon="@Icons.Material.Filled.FilterList">
-                <div class="pa-4" style="min-width: 300px;">
-                    <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
+                <div class="pa-4" style="min-width: 300px;" >
+                    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="font-weight:100 !important;">Filter Options</MudText>
 
                     <MudSelect T="string" @bind-Value="_selectedCabinetNumber" Label="Cabinet No."
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
@@ -142,6 +142,12 @@
 
 </MudTabs>
 
+<style>
+
+
+</style>
+
+
 
 @code {
     private List<FillingCabinet> _cabinets = new();
@@ -150,7 +156,9 @@
     private string _searchString = "";
     private int _activeTab = 0;
 
-    // Parsed distinct numbers (e.g. "1","2","3") and levels (e.g. "A","B","C") from cabinet names
+
+    // FOR FILTERING ETU
+    // Parsed distinct numbers ( "1","2","3"...) and levels ("A","B","C"..) from cabinet names
     private IEnumerable<string> _cabinetNumbers =>
         _cabinets.Select(c => ParseCabinetNumber(c.Name))
                  .Where(n => n != null).Select(n => n!)
@@ -161,14 +169,14 @@
                  .Where(l => l != null).Select(l => l!)
                  .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
 
-    // Parses "Cabinet 1A" -> "1", "Cabinet 12B" -> "12"
+    // FOR CABINET NUM- Parses "Cabinet 1A" -> "1", "Cabinet 12B" -> "12"
     private static string? ParseCabinetNumber(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)[A-Za-z]?$");
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    // Parses "Cabinet 1A" -> "A", "Cabinet 12B" -> "B"
+    //FOR CABINET LEVEL- Parses "Cabinet 1A" -> "A", "Cabinet 12B" -> "B"
     private static string? ParseCabinetLevel(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"\d+([A-Za-z])$");

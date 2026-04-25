@@ -6,70 +6,86 @@
 @using MIS_FileLocator.Models
 
 @inject UserManager<ApplicationUser> UserManager
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ICurrentUserService _currentUserService
 @inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
-        <EditForm Model="_editUser" OnValidSubmit="UpdateUser">
-            <DataAnnotationsValidator />
-
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_editUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" />
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_editUser.UserName" Label="Username" Required="true" Variant="Variant.Outlined" />
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_editUser.FullName" Label="Full Name" Required="true" Variant="Variant.Outlined" />
-                </MudItem>
-
-                @* FIX: Corrected T-"string" typo to T="string" *@
-                <MudItem xs="12" md="6">
-                    <MudSelect T="string" @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined">
-                        <MudSelectItem Value="@("Network Unit")">Network Unit</MudSelectItem>
-                        <MudSelectItem Value="@("Hardware Unit")">Hardware Unit</MudSelectItem>
-                        <MudSelectItem Value="@("Software Unit/Front Desk")">Software Unit/Front Desk</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    <MudSelect @bind-Value="_editUser.Role" Label="Role" Required="true" Variant="Variant.Outlined">
-                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
-                        <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
-                        <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-
-                @* --- NEW: Account Status Toggle --- *@
-                <MudItem xs="12" md="6" Class="d-flex align-center">
-                    <MudSwitch @bind-Value="_editUser.IsDisabled"
-                               Label="@(_editUser.IsDisabled ? "Account Disabled (Locked)" : "Account Active")"
-                               Color="@(_editUser.IsDisabled? Color.Error: Color.Success)" />
-                </MudItem>
-            </MudGrid>
-
-            <div class="d-flex justify-end mt-4">
-                <MudButton OnClick="Cancel" Class="mr-2">Cancel</MudButton>
-                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled">
-                    Update
-                </MudButton>
+        @if (_loading)
+        {
+            <div class="d-flex flex-column align-center justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                <MudText Typo="Typo.body2" Class="mt-3 mud-text-secondary">Loading user data...</MudText>
             </div>
-        </EditForm>
+        }
+        else
+        {
+            <EditForm Model="_editUser" OnValidSubmit="UpdateUser">
+                <DataAnnotationsValidator />
+
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_editUser.EmployeeId" Label="Employee ID" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_editUser.UserName" Label="Username" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_editUser.FullName" Label="Full Name" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving">
+                            <MudSelectItem Value="@("Network Unit")">Network Unit</MudSelectItem>
+                            <MudSelectItem Value="@("Hardware Unit")">Hardware Unit</MudSelectItem>
+                            <MudSelectItem Value="@("Software Unit/Front Desk")">Software Unit/Front Desk</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="_editUser.Role" Label="Role" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving">
+                            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                            <MudSelectItem Value="@("Editor")">Editor</MudSelectItem>
+                            <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6" Class="d-flex align-center">
+                        <MudSwitch @bind-Value="_editUser.IsDisabled"
+                                   Label="@(_editUser.IsDisabled ? "Account Disabled (Locked)" : "Account Active")"
+                                   Color="@(_editUser.IsDisabled ? Color.Error : Color.Success)"
+                                   Disabled="@_isSaving" />
+                    </MudItem>
+                </MudGrid>
+
+                @if (_isSaving)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+                    <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-1 mud-text-secondary d-block">Updating user...</MudText>
+                }
+
+                <div class="d-flex justify-end mt-4 gap-2">
+                    <MudButton OnClick="Cancel" Disabled="@_isSaving">Cancel</MudButton>
+                    <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled" Disabled="@_isSaving">
+                        @(_isSaving ? "Updating..." : "Update")
+                    </MudButton>
+                </div>
+            </EditForm>
+        }
     </DialogContent>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-
     [Parameter] public string UserId { get; set; } = "";
 
     private EditUserModel _editUser = new();
     private ApplicationUser? _user;
+    private bool _loading = true;
+    private bool _isSaving = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,13 +93,12 @@
 
         if (_user != null)
         {
-            // Get current role
-            var role = await _context.UserRoles
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var role = await db.UserRoles
                 .Where(ur => ur.UserId == _user.Id)
-                .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
                 .FirstOrDefaultAsync() ?? "Viewer";
 
-            // Populate form model directly from _user
             _editUser = new EditUserModel
             {
                 EmployeeId = _user.EmployeeId ?? "",
@@ -91,73 +106,105 @@
                 FullName = _user.FullName ?? "",
                 Department = _user.Department ?? "",
                 Role = role,
-                // Check if user is currently locked out (Disabled)
                 IsDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow
             };
         }
+
+        _loading = false;
     }
 
     private async Task UpdateUser(EditContext context)
     {
-        if (_user == null) return;
+        if (_user == null || _isSaving) return;
 
-        // 1. Update basic properties
-        _user.EmployeeId = _editUser.EmployeeId;
-        _user.UserName = _editUser.UserName;
-        _user.FullName = _editUser.FullName;
-        _user.Department = _editUser.Department;
+        _isSaving = true;
+        StateHasChanged();
 
-        var updateResult = await UserManager.UpdateAsync(_user);
-
-        if (!updateResult.Succeeded)
+        try
         {
-            foreach (var error in updateResult.Errors)
-                Snackbar.Add(error.Description, Severity.Error);
-            return;
+            // Update basic properties
+            _user.EmployeeId = _editUser.EmployeeId;
+            _user.UserName = _editUser.UserName;
+            _user.FullName = _editUser.FullName;
+            _user.Department = _editUser.Department;
+
+            var updateResult = await UserManager.UpdateAsync(_user);
+            if (!updateResult.Succeeded)
+            {
+                foreach (var error in updateResult.Errors)
+                    Snackbar.Add(error.Description, Severity.Error);
+                return;
+            }
+
+            //  Update Role — remove old, add new atomically
+            var currentRoles = await UserManager.GetRolesAsync(_user);
+            if (currentRoles.Any())
+            {
+                var removeResult = await UserManager.RemoveFromRolesAsync(_user, currentRoles);
+                if (!removeResult.Succeeded)
+                {
+                    Snackbar.Add("Failed to update role.", Severity.Error);
+                    return;
+                }
+            }
+            var addResult = await UserManager.AddToRoleAsync(_user, _editUser.Role);
+            if (!addResult.Succeeded)
+            {
+                // Rollback: re-add old roles so user isn't left with nothing
+                if (currentRoles.Any())
+                    await UserManager.AddToRolesAsync(_user, currentRoles);
+                Snackbar.Add("Failed to assign new role.", Severity.Error);
+                return;
+            }
+
+            // Update lockout status
+            bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+            string statusLog = "";
+
+            if (_editUser.IsDisabled && !currentlyDisabled)
+            {
+                await UserManager.SetLockoutEnabledAsync(_user, true);
+                await UserManager.SetLockoutEndDateAsync(_user, DateTimeOffset.MaxValue);
+                statusLog = " | Status changed to: Disabled";
+            }
+            else if (!_editUser.IsDisabled && currentlyDisabled)
+            {
+                await UserManager.SetLockoutEndDateAsync(_user, null);
+                statusLog = " | Status changed to: Active";
+            }
+
+            // Log — use DbFactory to avoid SaveChangesAsync audit scope issue
+            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+            await using var db = await DbFactory.CreateDbContextAsync();
+            await db.TransactionLogs.AddAsync(new TransactionLog
+            {
+                FullName = currentAdmin,
+                EventName = "User Updated",
+                Description = $"Updated profile for {_editUser.FullName}.{statusLog}",
+                Status = _editUser.IsDisabled ? "Warning" : "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
+            });
+            await db.SaveChangesAsync();
+
+            Snackbar.Add("User updated successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
         }
-
-        // 2. Update Role
-        var currentRoles = await UserManager.GetRolesAsync(_user);
-        await UserManager.RemoveFromRolesAsync(_user, currentRoles);
-        await UserManager.AddToRoleAsync(_user, _editUser.Role);
-
-        // 3. --- NEW: UPDATE LOCKOUT / DISABLED STATUS ---
-        bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
-        string statusLog = "";
-
-        if (_editUser.IsDisabled && !currentlyDisabled)
+        catch (Exception ex)
         {
-            // Disable the user (Lockout until year 9999)
-            await UserManager.SetLockoutEnabledAsync(_user, true);
-            await UserManager.SetLockoutEndDateAsync(_user, DateTimeOffset.MaxValue);
-            statusLog = " | Status changed to: Disabled";
+            Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
         }
-        else if (!_editUser.IsDisabled && currentlyDisabled)
+        finally
         {
-            // Re-activate the user (Remove Lockout)
-            await UserManager.SetLockoutEndDateAsync(_user, null);
-            statusLog = " | Status changed to: Active";
+            _isSaving = false;
+            StateHasChanged();
         }
-
-        // 4. Create Transaction Log
-        var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-        var log = new TransactionLog
-        {
-            FullName = currentAdmin,
-            EventName = "User Updated",
-            Description = $"Updated profile for {_editUser.FullName}.{statusLog}",
-            Status = _editUser.IsDisabled ? "Warning" : "Success",
-            PerformedAt = DateTime.UtcNow.AddHours(8)
-        };
-
-        _context.TransactionLogs.Add(log);
-        await _context.SaveChangesAsync();
-
-        Snackbar.Add("User updated successfully!", Severity.Success);
-        MudDialog.Close(DialogResult.Ok(true));
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel()
+    {
+        if (_isSaving) return;
+        MudDialog.Cancel();
+    }
 
     public class EditUserModel
     {
@@ -166,8 +213,6 @@
         [Required] public string FullName { get; set; } = "";
         [Required] public string Department { get; set; } = "";
         [Required] public string Role { get; set; } = "";
-
-        // --- NEW PROPERTY ---
         public bool IsDisabled { get; set; } = false;
     }
 }
