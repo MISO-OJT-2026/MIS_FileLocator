@@ -13,7 +13,7 @@
         <EditForm Model="_editBox" OnValidSubmit="SaveUpdates">
             <DataAnnotationsValidator />
 
-            @* MOVE LOGIC: Dropdown to change the parent Cabinet *@
+           
             <MudSelect T="int" Label="Current Cabinet" @bind-Value="_editBox.FillingCabinetId"
                        Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" HelperText="Change this to move the box to another cabinet" Class="mb-3">
                 @foreach (var cab in _activeCabinets)
@@ -35,8 +35,8 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public FileBoxes BoxToEdit { get; set; } = default!;
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!; //DIALOG CONTROLLER
+    [Parameter] public FileBoxes BoxToEdit { get; set; } = default!; // assign selected box from parent to BoxToEDIT
     private FileBoxes _editBox = new();
     private List<FillingCabinet> _activeCabinets = new();
     private bool _isSaving = false;
@@ -54,25 +54,63 @@
     {
         if (_isSaving) return;
         if (string.IsNullOrWhiteSpace(_editBox.Name)) { Snackbar.Add("Box name is required.", Severity.Error); return; }
+
+        _editBox.Name = _editBox.Name.Trim();
+
+        // Detect changes
+        var changes = new List<string>();
+        if (!string.Equals(BoxToEdit.Name, _editBox.Name, StringComparison.OrdinalIgnoreCase))
+            changes.Add($"Name: '{BoxToEdit.Name}' → '{_editBox.Name}'");
+        if ((BoxToEdit.Description ?? "") != (_editBox.Description ?? ""))
+            changes.Add("Description updated");
+        if (BoxToEdit.FillingCabinetId != _editBox.FillingCabinetId)
+            changes.Add("Moved to a different cabinet");
+
+        if (!changes.Any())
+        {
+            Snackbar.Add("No changes were made.", Severity.Info);
+            MudDialog.Cancel();
+            return;
+        }
+
         _isSaving = true;
         StateHasChanged();
+
         try
         {
-            bool isDuplicate = await _context.FileBoxes.AnyAsync(b => b.Name.ToLower() == _editBox.Name.ToLower() && b.Id != _editBox.Id && b.FillingCabinetId == _editBox.FillingCabinetId);
-            if (isDuplicate) { Snackbar.Add($"Box name '{_editBox.Name}' is already taken in this cabinet.", Severity.Error); return; }
+            var nameLower = _editBox.Name.ToLower();
+            var existingNames = await _context.FileBoxes
+                .Where(b => b.FillingCabinetId == _editBox.FillingCabinetId && b.Id != _editBox.Id && !b.IsArchived)
+                .Select(b => b.Name)
+                .ToListAsync();
+
+            if (existingNames.Any(n => n.Trim().ToLower() == nameLower))
+            {
+                Snackbar.Add($"A box named '{_editBox.Name}' already exists in this cabinet.", Severity.Error);
+                return;
+            }
+
             var realBox = await _context.FileBoxes.FindAsync(_editBox.Id);
             if (realBox == null) return;
+
             bool isMoving = realBox.FillingCabinetId != _editBox.FillingCabinetId;
             realBox.Name = _editBox.Name;
             realBox.Description = _editBox.Description;
             realBox.FillingCabinetId = _editBox.FillingCabinetId;
-            var cabinetName = await _context.FillingCabinets.Where(c => c.Id == _editBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
+
+            var cabinetName = await _context.FillingCabinets
+                .Where(c => c.Id == _editBox.FillingCabinetId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync();
+
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = isMoving ? "Box Moved" : "Box Updated",
-                Description = isMoving ? $"Moved box '{realBox.Name}' to Cabinet '{cabinetName}'." : $"Updated details for box '{realBox.Name}'.",
+                Description = isMoving
+                    ? $"Box '{BoxToEdit.Name}' moved to Cabinet '{cabinetName}'"
+                    : $"Box '{BoxToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
             await _context.SaveChangesAsync();

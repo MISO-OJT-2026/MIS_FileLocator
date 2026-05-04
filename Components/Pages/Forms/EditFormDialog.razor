@@ -207,7 +207,7 @@
             {
                 if (_selectedFile != null)
                 {
-                    // Generate local preview for newly selected file
+                    
                     using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
@@ -215,7 +215,7 @@
                 }
                 else if (!string.IsNullOrEmpty(_editForm.PdfUrl))
                 {
-                    // Use existing Azure URL
+                   
                     _previewUrl = _editForm.PdfUrl;
                 }
             }
@@ -253,12 +253,21 @@
         try
         {
             _isUploading = true;
+            StateHasChanged();
+
             var dbEntry = await _context.FormTemplates.FindAsync(_editForm.Id);
             if (dbEntry == null) return;
 
-            List<string> changes = new();
-            if (dbEntry.FormName != _editForm.FormName) changes.Add("Name Updated");
-            if (dbEntry.Category != _editForm.Category) changes.Add("Category Updated");
+            // TO Detect changes 
+            var changes = new List<string>();
+            if (dbEntry.FormName != _editForm.FormName)
+                changes.Add($"Name: '{dbEntry.FormName}' → '{_editForm.FormName}'");
+            if ((dbEntry.FormNumber ?? "") != (_editForm.FormNumber ?? ""))
+                changes.Add($"Form No.: '{dbEntry.FormNumber}' → '{_editForm.FormNumber}'");
+            if (dbEntry.Category != _editForm.Category)
+                changes.Add($"Category: '{dbEntry.Category}' → '{_editForm.Category}'");
+            if ((dbEntry.PdfUrl ?? "") != (_editForm.PdfUrl ?? "") && _selectedFile == null)
+                changes.Add("Link updated");
 
             if (_selectedFile != null)
             {
@@ -266,21 +275,25 @@
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("templates");
                 await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-                // SANITIZATION: Replace spaces with underscores for Azure compatibility
                 string safeName = Regex.Replace(_selectedFile.Name, @"\s+", "_");
                 string fileName = $"TEMPLATE_UPD_{Guid.NewGuid()}_{safeName}";
                 var blob = container.GetBlobClient(fileName);
 
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                
-                // FORCE DOWNLOAD HEADERS
-                await blob.UploadAsync(stream, new BlobHttpHeaders { 
+                await blob.UploadAsync(stream, new BlobHttpHeaders {
                     ContentType = _selectedFile.ContentType,
-                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
+                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\""
                 });
 
                 _editForm.PdfUrl = blob.Uri.ToString();
-                changes.Add("Replaced Digital File");
+                changes.Add($"Digital file replaced with '{_selectedFile.Name}'");
+            }
+
+            if (!changes.Any())
+            {
+                Snackbar.Add("No changes were made.", Severity.Info);
+                MudDialog.Cancel();
+                return;
             }
 
             dbEntry.FormName = _editForm.FormName;
@@ -290,8 +303,9 @@
 
             var user = await _currentUserService.GetCurrentFullNameAsync();
             _context.TransactionLogs.Add(new TransactionLog {
-                FullName = user, EventName = "Form Updated",
-                Description = $"Edited '{dbEntry.FormName}': {string.Join(", ", changes)}",
+                FullName = user,
+                EventName = "Form Updated",
+                Description = $"Form '{FormToEdit.FormName}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
@@ -300,7 +314,7 @@
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
-        finally { _isUploading = false; }
+        finally { _isUploading = false; StateHasChanged(); }
     }
 
     private async Task DeleteForm()

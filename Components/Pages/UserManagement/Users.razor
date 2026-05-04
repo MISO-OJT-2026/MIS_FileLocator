@@ -16,14 +16,14 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">User Management</MudText>
 
-@* ── Toolbar above tabs ── *@
+
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     @RenderToolbar()
 </MudPaper>
 
 <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" SliderColor="Color.Primary">
 
-    @* --- ACTIVE USERS TAB --- *@
+    
     <MudTabPanel Text="Active Users" Icon="@Icons.Material.Filled.Person">
         <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users.Where(u => !u.IsDisabled)" Hover="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
             <Columns>
@@ -49,7 +49,7 @@
         </MudDataGrid>
     </MudTabPanel>
 
-    @* --- DISABLED USERS TAB --- *@
+  
     <MudTabPanel Text="Disabled Users" Icon="@Icons.Material.Filled.PersonOff">
         <MudDataGrid T="UserDisplayModel" Dense="true" Items="@_users.Where(u => u.IsDisabled)" Hover="true" QuickFilter="@_quickFilter" RowClick="HandleGridRowClick">
             <Columns>
@@ -163,7 +163,7 @@
         var user = await UserManager.FindByIdAsync(userModel.Id);
         if (user == null) return;
 
-        // Disabling sets lockout to far future, restoring clears it
+    
         if (disable)
             await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
         else

@@ -16,18 +16,18 @@
 @inject ISnackbar Snackbar
 
 
-    @* --- Header Section --- *@
+    
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
         <MudText Typo="Typo.h4" Color="Color.Primary">University Forms Repository</MudText>
         
     </MudStack>
 
-    @* --- Filter & Search Section --- *@
+    
 <MudPaper Elevation="3" Class="pa-2 mb-3">
    
     <MudGrid Spacing="2" AlignItems="AlignItems.Center">
 
-        @* 1. Add Button *@
+       
         <MudItem>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
@@ -35,14 +35,14 @@
                        Size="Size.Medium"
                        OnClick="OpenAddDialog"
                        Style="height: 40px; text-transform: none;">
-                @* Fixed Height *@
+                
                 Add New Form
             </MudButton>
         </MudItem>
 
         <MudSpacer />
 
-        @* 2. Search Field *@
+    
         <MudItem xs="12" md="4">
             <MudTextField @bind-Value="_searchString"
                           PlaceHolder="Search Forms"
@@ -51,7 +51,7 @@
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
                           Immediate="true"
-                          Style="height: 40px;" /> @* Matching Height *@
+                          Style="height: 40px;" /> 
         </MudItem>
 
       
@@ -62,7 +62,7 @@
                        Margin="Margin.Dense"
                        Clearable="true"
                        Style="height: 40px;">
-                @* Matching Height *@
+              
                 <MudSelectItem Value="@((string)null)">All Offices</MudSelectItem>
                 @foreach (var cat in _categories)
                 {
@@ -75,7 +75,7 @@
         </MudGrid>
     </MudPaper>
 
-    @* --- Repository Table --- *@
+   
     <MudTable Items="@FilteredForms" 
               Hover="true" 
               Breakpoint="Breakpoint.Sm" 
@@ -153,7 +153,7 @@
                 .OrderByDescending(f => f.DateAdded)
                 .ToListAsync();
 
-            // Populate the filter dropdown from actual database values
+            
             _categories = _allForms
                 .Select(f => f.Category)
                 .Distinct()
@@ -170,7 +170,7 @@
         }
     }
 
-    // Logic for filtering the list in memory for better performance
+    
     private IEnumerable<FormTemplate> FilteredForms => _allForms
         .Where(f => 
             (string.IsNullOrWhiteSpace(_searchString) || 

@@ -18,7 +18,7 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Storage Boxes</MudText>
 
-@* ── Toolbar above tabs ── *@
+
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-actions">
@@ -107,7 +107,7 @@
     </MudTabPanel>
 
 
-    @* --- ARCHIVED BOXES PANEL --- *@
+    
     <MudTabPanel Text="Archived Boxes" Icon="@Icons.Material.Filled.Archive">
         <MudDataGrid T="FileBoxes"
                      Items="@(_boxes?.Where(b => b.IsArchived) ?? Enumerable.Empty<FileBoxes>())"
@@ -187,7 +187,7 @@
         bool matchesName = x.Name?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false;
         bool matchesDesc = x.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false;
         
-        // Return true only if it matches name OR description
+       
         if (matchesName || matchesDesc) return true;
         
         return false;
@@ -205,24 +205,42 @@
 
     private async Task OpenAddDialog()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions
+        { 
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true
+        };
+
         var dialog = await DialogService.ShowAsync<AddBoxDialog>("Add New Box", options);
         if (!(await dialog.Result).Canceled) await LoadBoxes();
     }
 
     private async Task OpenEditDialog(FileBoxes box)
     {
-        var parameters = new DialogParameters { ["BoxToEdit"] = box };
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var parameters = new DialogParameters 
+        { 
+            ["BoxToEdit"] = box 
+        };
+
+        var options = new DialogOptions
+        { 
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true
+        };
+
         var dialog = await DialogService.ShowAsync<EditBoxDialog>("Edit / Move Box", parameters, options);
         if (!(await dialog.Result).Canceled) await LoadBoxes();
     }
 
     private async Task OpenBoxExplorer(FileBoxes box)
     {
-        var parameters = new DialogParameters { ["SelectedBox"] = box };
+        var parameters = new DialogParameters 
+        { 
+            ["SelectedBox"] = box
+        };
 
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions 
+        {
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true 
+        };
 
         await DialogService.ShowAsync<BoxExplorerDialog>($"Contents of  {box.Name}", parameters, options);
     }
@@ -252,7 +270,7 @@
 
     private async Task UnarchiveBox(FileBoxes box)
     {
-        // 1. Show Confirmation Dialog
+       
         bool? result = await DialogService.ShowMessageBoxAsync(
             "Restore Box",
             $"Are you sure you want to restore '{box.Name}' to active status?",
@@ -271,12 +289,12 @@
                 .Select(b => b.FillingCabinet.Name)
                 .FirstOrDefaultAsync();
 
-                // 2. Reset Archive Metadata
+              
                 box.IsArchived = false;
                 box.ArchivedAt = null;
                 box.ArchivedBy = null;
 
-                // 3. Create Transaction Log entry
+                
                 var log = new TransactionLog
                 {
                     FullName = currentAdmin,
@@ -286,14 +304,14 @@
                     PerformedAt = DateTime.UtcNow.AddHours(8)
                 };
 
-                // 4. Update Database context
+              
                 _context.FileBoxes.Update(box);
                 _context.TransactionLogs.Add(log);
                 await _context.SaveChangesAsync();
 
-                // 5. Refresh UI and Notify User
+                
                 Snackbar.Add($"Box '{box.Name}' has been restored successfully.", Severity.Success);
-                await LoadBoxes(); // This will move the item from the Archived tab to Active tab
+                await LoadBoxes(); 
             }
             catch (Exception ex)
             {

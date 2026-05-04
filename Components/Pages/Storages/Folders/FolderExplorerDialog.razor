@@ -10,7 +10,7 @@
         </MudStack>
     </TitleContent>
     <DialogContent>
-        @* Filter out deleted or archived documents *@
+       
         @if (SelectedFolder.Documents == null || !SelectedFolder.Documents.Any(d => !d.IsDeleted))
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">
@@ -32,7 +32,7 @@
                                     </MudText>
                                 </MudStack>
 
-                                @* Displaying your model's Confidentiality Level *@
+                                
                                 <MudChip T="string"
                                          Size="Size.Small"
                                          Variant="Variant.Text"
@@ -59,7 +59,9 @@
 
     private void Close() => MudDialog.Close();
 
-    // Helper to make the Confidentiality Levels look professional
+    
+
+
     private Color GetConfidentialityColor(string? level) => level?.ToLower() switch
     {
         "highly confidential" => Color.Error,

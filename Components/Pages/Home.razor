@@ -7,7 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @rendermode InteractiveServer
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JS
 
 <PageTitle>Home – MIS File Locator</PageTitle>
@@ -61,7 +61,7 @@
     </div>
 </div>
 
-@* ── Loading ── *@
+@* ── Loading showroon ── *@
 @if (_loading)
 {
     <div class="showroom-loading">
@@ -212,42 +212,33 @@ else
     </div>
 }
 
-@* ════════════════════════════════════════════════════════════
-   STORYTELLING SECTION — Our Journey · Process · Thank You
-   ════════════════════════════════════════════════════════════ *@
+@*  Our Journey  *@
 <div class="story-section">
 
-    @* ── Divider ── *@
+
     <div class="story-divider">
         <span class="story-divider-line"></span>
         <span class="story-divider-label">Our Story</span>
         <span class="story-divider-line"></span>
     </div>
 
-    @* ══════════════════════════════════════
-       1. OUR JOURNEY — glass blue
-    ══════════════════════════════════════ *@
+    @* *@
     <div class="story-card story-journey glass-blue">
         <div class="glass-blob blob-1"></div>
 
-        @* ── Carousel: Our Journey
-           ADD YOUR PHOTOS: replace placeholder src values below.
-           To add more slides, copy a <div class="carousel-slide"> block.
-           Recommended: team photos, office environment, working together.
-           Path example: src="images/story/journey-1.jpg"
-        ── *@
+       
         <div class="story-carousel" id="carousel-journey">
             <div class="carousel-track" id="track-journey">
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/1a3a52/5eb5f7?text=Our+Journey+1"
+                    <img src="images/journey/JOURNEY-1.jpg"
                          alt="Our Journey — slide 1 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/1e4d73/7ec8f0?text=Our+Journey+2"
+                    <img src="images/journey/JOURNEY-2.jpg"
                          alt="Our Journey — slide 2 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/0e2233/4a9fd4?text=Our+Journey+3"
+                    <img src=images/journey/JOURNEY-3.jpg"
                          alt="Our Journey — slide 3 (replace with your photo)" class="carousel-img" />
                 </div>
             </div>
@@ -273,29 +264,23 @@ else
         </div>
     </div>
 
-    @* ══════════════════════════════════════
-       2. DEVELOPMENT PROCESS — glass purple
-    ══════════════════════════════════════ *@
+    @*dev process*@
     <div class="story-card story-process story-reverse glass-purple">
         <div class="glass-blob blob-2"></div>
 
-        @* ── Carousel: Development Process
-           ADD YOUR PHOTOS: replace placeholder src values below.
-           Recommended: coding setup, system screenshots, workflow diagrams, dev environment.
-           Path example: src="images/story/process-1.jpg"
-        ── *@
+       
         <div class="story-carousel" id="carousel-process">
             <div class="carousel-track" id="track-process">
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/0e1824/a78bfa?text=Dev+Process+1"
+                    <img src="images/process/PROCESS-1.jpg"
                          alt="Development Process — slide 1 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/1a0e33/c4a8ff?text=Dev+Process+2"
+                    <img src="images/process/PROCESS-2.jpg"
                          alt="Development Process — slide 2 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/0d0d1f/8b6fd4?text=Dev+Process+3"
+                      <img src="images/process/PROCESS-3.jpg"
                          alt="Development Process — slide 3 (replace with your photo)" class="carousel-img" />
                 </div>
             </div>
@@ -325,34 +310,26 @@ else
         </div>
     </div>
 
-    @* ══════════════════════════════════════
-       3. THANK YOU — glass green
-    ══════════════════════════════════════ *@
+    @* THANKIEEE *@
     <div class="story-card story-thankyou glass-green">
         <div class="glass-blob blob-3"></div>
 
-        @* ── Carousel: Thank You
-           ADD YOUR PHOTOS: replace placeholder src values below.
-           Recommended: team celebration, graduation, OJT group photos, warm moments.
-           Path example: src="images/story/thankyou-1.jpg"
-           To add more slides, copy a <div class="carousel-slide"> block and add a dot.
-        ── *@
         <div class="story-carousel" id="carousel-thanks">
             <div class="carousel-track" id="track-thanks">
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/1a3a2a/6fcf97?text=Thank+You+1"
+                    <img src="images/thanks/OJT-1.jpg"
                          alt="Thank You — slide 1 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/0f2a1e/4caf7d?text=Thank+You+2"
+                    <img src="images/thanks/OJT-2.jpg"
                          alt="Thank You — slide 2 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/3a6351/a8e6c8?text=Thank+You+3"
+                    <img src="images/thanks/OJT-3.jpg"
                          alt="Thank You — slide 3 (replace with your photo)" class="carousel-img" />
                 </div>
                 <div class="carousel-slide">
-                    <img src="https://placehold.co/600x400/2d5040/8fd4b0?text=OJT+Team+%F0%9F%8E%93"
+                    <img src="images/thanks/OJT-4.jpg"
                          alt="OJT Team — slide 4 (replace with your group photo)" class="carousel-img" />
                 </div>
             </div>
@@ -368,14 +345,12 @@ else
             <div class="story-tag">💚 Thank You</div>
             <h2 class="story-title">To Everyone Who Made This Possible</h2>
             <p class="story-body">
-                To our adviser, our institution, and the MIS office staff who trusted us with this project —
-                thank you. Your patience, feedback, and encouragement shaped every feature in this system.
+                To the MIS Office, thank you for giving us more than just a project to complete—you gave us an experience that helped us grow. Your guidance, patience, and trust shaped not only our skills, but also our confidence as future professionals. 
             </p>
             <p class="story-body">
-                To future users: we hope this tool saves you time, reduces frustration, and makes every
-                document feel exactly where it belongs. This system was built for you.
+                This journey as OJTs will always be something we carry with us.
             </p>
-            <div class="story-signature">— The Development Team 🎓</div>
+            <div class="story-signature">- CCS OJTs (2026) 🎓</div>
         </div>
     </div>
 
@@ -490,9 +465,7 @@ else
 /* ── Empty ── */
 .showroom-empty { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; padding: 60px 16px; opacity: 0.5; }
 
-/* ════════════════════════════════════════
-   3-D FILING CABINET
-════════════════════════════════════════ */
+/*  FILING CABINET YUNG 3-D EFFECTS */
 .filing-cabinet {
     position: relative;
     width: 72px; height: 90px;
@@ -546,9 +519,7 @@ else
     border-radius: 0 2px 2px 0;
 }
 
-/* ════════════════════════════════════════
-   3-D CARDBOARD BOX
-════════════════════════════════════════ */
+
 .cardboard-box {
     position: relative;
     width: 80px; height: 72px;
@@ -597,9 +568,7 @@ else
     transform: skewX(-1deg);
 }
 
-/* ════════════════════════════════════════
-   MANILA FOLDER
-════════════════════════════════════════ */
+/*FOLDER*/
 .manila-folder {
     position: relative;
     width: 84px; height: 72px;
@@ -645,9 +614,7 @@ else
 .p2 { width: 75%; }
 .p3 { width: 60%; }
 
-/* ════════════════════════════════════════
-   DOCUMENT SHEET
-════════════════════════════════════════ */
+/* DOCUMENT SHEET */
 .document-sheet {
     position: relative;
     width: 68px; height: 88px;
@@ -686,9 +653,7 @@ else
     .document-sheet { width: 54px; height: 70px; }
 }
 
-/* ════════════════════════════════════════
-   STORYTELLING SECTION
-════════════════════════════════════════ */
+/*STORYTELLING SECTION */
 
 /* ── Divider ── */
 .story-section {
@@ -921,9 +886,16 @@ else
     record Crumb(string Label, Level Level, FillingCabinet? Cabinet = null, FileBoxes? Box = null, Folder? Folder = null);
     List<Crumb> _breadcrumbs = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        _cabinets = await _context.FillingCabinets
+        _loading = true;
+        _level = Level.Cabinets;
+        _selectedCabinet = null;
+        _selectedBox = null;
+        _selectedFolder = null;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _cabinets = await db.FillingCabinets
             .Where(c => !c.IsArchived)
             .Include(c => c.FileBox.Where(b => !b.IsArchived))
                 .ThenInclude(b => b.Folders.Where(f => !f.IsArchived))
@@ -940,7 +912,10 @@ else
         if (firstRender)
         {
             await JS.InvokeVoidAsync("showroom.initParticles", "particle-canvas");
+        }
 
+        if (!_loading)
+        {
             var totalBoxes   = _cabinets.Sum(c => c.FileBox?.Count(b => !b.IsArchived) ?? 0);
             var totalFolders = _cabinets.Sum(c => c.FileBox?.Sum(b => b.Folders?.Count(f => !f.IsArchived) ?? 0) ?? 0);
             var totalDocs    = _cabinets.Sum(c => c.FileBox?.Sum(b => b.Folders?.Sum(f => f.Documents?.Count(d => !d.IsDeleted && !d.IsDisposal) ?? 0) ?? 0) ?? 0);
@@ -950,6 +925,7 @@ else
             await JS.InvokeVoidAsync("showroom.animateCounter", "stat-folders",  totalFolders);
             await JS.InvokeVoidAsync("showroom.animateCounter", "stat-docs",     totalDocs);
         }
+
         await JS.InvokeVoidAsync("showroom.staggerCards", "#card-container");
     }
 

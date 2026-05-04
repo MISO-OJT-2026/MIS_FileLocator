@@ -8,7 +8,7 @@
 
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog MaxWidth="MaxWidth.Small" FullWidth="true">
     <DialogContent>
@@ -73,7 +73,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _activeCabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).OrderBy(c => c.Name).ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _activeCabinets = await db.FillingCabinets.Where(c => !c.IsArchived).OrderBy(c => c.Name).ToListAsync();
     }
 
     private async Task SaveBox()
@@ -81,25 +82,45 @@
         if (_isSaving) return;
         if (_newBox.FillingCabinetId == 0) { Snackbar.Add("Please select a cabinet.", Severity.Warning); return; }
         if (string.IsNullOrWhiteSpace(_newBox.Name)) { Snackbar.Add("Box name is required.", Severity.Warning); return; }
-        var nameExists = await _context.FileBoxes.AnyAsync(b => b.Name.ToLower() == _newBox.Name.ToLower() && b.FillingCabinetId == _newBox.FillingCabinetId && !b.IsArchived);
-        if (nameExists) { Snackbar.Add("A box with this name already exists in the selected cabinet.", Severity.Error); return; }
-        var existingArchived = await _context.FileBoxes.FirstOrDefaultAsync(c => c.Name.ToLower() == _newBox.Name.ToLower() && c.IsArchived);
-        if (existingArchived != null) { Snackbar.Add("This box name exists in Archives. Restore it or use a different name.", Severity.Info); return; }
 
+       
         _isSaving = true;
         StateHasChanged();
+
         try
         {
-            var parentCabinet = await _context.FillingCabinets.Where(c => c.Id == _newBox.FillingCabinetId).Select(c => c.Name).FirstOrDefaultAsync();
+            _newBox.Name = _newBox.Name.Trim();
+            var nameLower = _newBox.Name.ToLower();
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            
+            var existingNames = await db.FileBoxes
+                .Where(b => b.FillingCabinetId == _newBox.FillingCabinetId && !b.IsArchived)
+                .Select(b => b.Name)
+                .ToListAsync();
+
+            if (existingNames.Any(n => n.Trim().ToLower() == nameLower))
+            {
+                Snackbar.Add("A box with this name already exists in the selected cabinet.", Severity.Error);
+                return;
+            }
+
+            var parentCabinet = await db.FillingCabinets
+                .Where(c => c.Id == _newBox.FillingCabinetId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync();
+
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-            _context.FileBoxes.Add(_newBox);
-            _context.TransactionLogs.Add(new TransactionLog
+            db.CurrentUserOverride = currentAdmin;
+            db.FileBoxes.Add(_newBox);
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin, EventName = "Box Created",
                 Description = $"Created box '{_newBox.Name}' in Cabinet '{parentCabinet}'.",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
-            await _context.SaveChangesAsync();
+            await db.SaveChangesAsync();
             Snackbar.Add("Box created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

@@ -16,7 +16,6 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Borrowed Inventory Tracking</MudText>
 
-@* ── Toolbar above grid ── *@
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-filters">
@@ -58,7 +57,7 @@ else
 {
 <MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="false" Hover="true" RowClick="OnRowClicked" Dense="true" QuickFilter="@_quickFilter">
     <Columns>
-        @* Overdue Indication Column *@
+      
         <TemplateColumn Title="Alert" Size="Size.Small">
             <CellTemplate>
                 @if (context.Item.ExpectedReturnDate.HasValue && context.Item.ExpectedReturnDate.Value < DateTime.Today)
@@ -149,11 +148,11 @@ else
 
     private Func<Documents, bool> _quickFilter => x =>
     {
-        // Borrow date range
+       
         if (_borrowDateFrom.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date < _borrowDateFrom.Value.Date) return false;
         if (_borrowDateTo.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date > _borrowDateTo.Value.Date) return false;
 
-        // Overdue status
+        
         if (!string.IsNullOrWhiteSpace(_selectedOverdue))
         {
             var isOverdue = x.ExpectedReturnDate.HasValue && x.ExpectedReturnDate.Value < DateTime.Today;
@@ -161,7 +160,7 @@ else
             if (_selectedOverdue == "ontime" && isOverdue) return false;
         }
 
-        // Search
+       
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;

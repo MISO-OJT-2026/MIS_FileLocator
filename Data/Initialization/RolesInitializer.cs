@@ -3,7 +3,7 @@ namespace MIS_FileLocator.Data.Initialization
 {
     public static class RolesInitializer
     {
-        public static async Task InitializationRolesAsync (RoleManager<IdentityRole> roleManager) // manages roles in identity
+        public static async Task InitializationRolesAsync (RoleManager<IdentityRole> roleManager) 
         {
             string[] roles = { "Admin", "Editor", "Viewer" };
 
@@ -11,7 +11,7 @@ namespace MIS_FileLocator.Data.Initialization
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    // if not exist then create one
+                    
                     await roleManager.CreateAsync(new IdentityRole(role));
                 }
             }

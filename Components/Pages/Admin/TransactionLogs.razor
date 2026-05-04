@@ -7,7 +7,7 @@
 
 <MudText Typo="Typo.h4" Class="mb-4 " Color="Color.Primary">System Activity Logs</MudText>
 
-@* ── Toolbar above grid ── *@
+
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-filters">
@@ -68,13 +68,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Fetch the data when the page loads
+        
         _logs = await _context.TransactionLogs
                               .OrderByDescending(x => x.PerformedAt)
                               .ToListAsync();
     }
 
-    // 2. Change the chip color based on the status text
+   
     private Color GetStatusColor(string status)
     {
         return status switch
@@ -86,16 +86,16 @@
         };
     }
 
-    // 3. The logic for the search bar and filters
+    
     private Func<TransactionLog, bool> _quickFilter => x =>
     {
-        // Filter by Action
+        
         if (!string.IsNullOrWhiteSpace(_selectedAction))
         {
             if (x.EventName != _selectedAction) return false;
         }
 
-        // Filter by Date Range
+        
         if (_fromDate.HasValue)
         {
             if (x.PerformedAt < _fromDate.Value) return false;
@@ -106,7 +106,7 @@
             if (x.PerformedAt > _toDate.Value.AddDays(1).AddTicks(-1)) return false;
         }
 
-        // Search text
+        
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
             if (x.FullName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;

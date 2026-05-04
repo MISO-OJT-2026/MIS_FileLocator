@@ -217,14 +217,8 @@ body.dark-theme .appbar-glass {
     cursor: default !important;
 }
 
-/* ============================================
-   MOBILE-FIRST RESPONSIVE DESIGN
-   ============================================ */
 
-/* --- MOBILE DRAWER BEHAVIOR --- */
-/* Handled above in the SIDEBAR & DRAWER section */
-
-/* --- APPBAR MOBILE FIXES --- */
+/* --- APPBAR MOBILE  --- */
 @media (max-width: 959px) {
     .mud-appbar {
         padding: 8px 12px !important;
@@ -234,23 +228,17 @@ body.dark-theme .appbar-glass {
         font-size: 1rem !important;
     }
     
-    /* Ensure hamburger and dark mode button are properly spaced */
     .mud-appbar .mud-icon-button {
         min-width: 48px !important;
         min-height: 48px !important;
     }
     
-    /* Logo sizing on mobile */
+    
     .mud-appbar img {
         height: 28px !important;
     }
 }
 
-/* ============================================
-   PAGE TOOLBAR — responsive across all pages
-   ============================================ */
-
-/* Wrapper applied to every ToolBarContent MudStack */
 .page-toolbar {
     width: 100%;
     display: flex;
@@ -260,7 +248,6 @@ body.dark-theme .appbar-glass {
     padding: 8px 0;
 }
 
-/* Action buttons group (left side on desktop) */
 .page-toolbar .toolbar-actions {
     display: flex;
     flex-wrap: wrap;
@@ -269,7 +256,7 @@ body.dark-theme .appbar-glass {
     flex-shrink: 0;
 }
 
-/* Filters/search group (right side on desktop) */
+
 .page-toolbar .toolbar-filters {
     display: flex;
     flex-wrap: wrap;
@@ -278,7 +265,7 @@ body.dark-theme .appbar-glass {
     margin-left: auto;
 }
 
-/* All inputs/selects/menus inside toolbar: natural width on desktop */
+
 .page-toolbar .toolbar-filters .mud-input-control,
 .page-toolbar .toolbar-filters .mud-select,
 .page-toolbar .toolbar-filters .mud-text-field {
@@ -286,7 +273,7 @@ body.dark-theme .appbar-glass {
     max-width: 280px;
 }
 
-/* ── Mobile overrides ── */
+
 @media (max-width: 959px) {
     .page-toolbar {
         flex-direction: column;
@@ -299,14 +286,14 @@ body.dark-theme .appbar-glass {
         width: 100%;
     }
 
-    /* Each action button fills half the row (2 per row) */
+    
     .page-toolbar .toolbar-actions .mud-button {
         flex: 1 1 calc(50% - 4px);
         min-width: 0;
         justify-content: center;
     }
 
-    /* Icon-only buttons stay compact */
+    
     .page-toolbar .toolbar-actions .mud-icon-button {
         flex: 0 0 44px;
     }
@@ -317,7 +304,7 @@ body.dark-theme .appbar-glass {
         flex-direction: column;
     }
 
-    /* Every filter/search input goes full width on mobile */
+    
     .page-toolbar .toolbar-filters > *,
     .page-toolbar .toolbar-filters .mud-input-control,
     .page-toolbar .toolbar-filters .mud-select,
@@ -328,12 +315,12 @@ body.dark-theme .appbar-glass {
         min-width: 0 !important;
     }
 
-    /* MudMenu button full width */
+    
     .page-toolbar .toolbar-filters .mud-button-root {
         width: 100% !important;
     }
 
-    /* Hide MudSpacer on mobile — we use flex-direction:column */
+   
     .page-toolbar .mud-spacer {
         display: none !important;
     }
@@ -341,7 +328,6 @@ body.dark-theme .appbar-glass {
 
 
 
-/* --- PAGER: show on desktop, hide on mobile (scroll instead) --- */
 @media (max-width: 959px) {
     .mud-table-pagination,
     .mud-datagrid-pagination {
@@ -357,7 +343,7 @@ body.dark-theme .appbar-glass {
     font-weight: 600 !important;
 }
 
-/* Filter menu buttons in toolbar — light weight label */
+
 .page-toolbar .toolbar-filters .mud-button-label {
     font-weight: 100 !important;
     letter-spacing: 0.05em !important;
@@ -367,28 +353,38 @@ body.dark-theme .appbar-glass {
     border-radius: 8px !important;
 }
 
-/* --- SEARCH & FILTER INPUTS --- */
+
 .mud-input-root,
 .mud-select {
     border-radius: 8px !important;
 }
 
-/* Prevent iOS zoom on input focus */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px var(--mud-palette-surface) inset !important;
+    -webkit-text-fill-color: var(--mud-palette-text-primary) !important;
+    caret-color: var(--mud-palette-text-primary) !important;
+    transition: background-color 9999s ease-in-out 0s !important;
+}
+
 @media (max-width: 959px) {
     .mud-input-root .mud-input {
         font-size: 16px !important;
     }
 }
 
-/* --- TABLE MOBILE OPTIMIZATION --- */
+
 @media (max-width: 959px) {
-    /* Make tables more mobile-friendly */
+    
     .mud-table-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
     
-    /* Increase row height for touch */
+   
     .mud-table-row {
         min-height: 56px !important;
     }
@@ -398,13 +394,13 @@ body.dark-theme .appbar-glass {
         font-size: 0.875rem !important;
     }
     
-    /* Hide less important columns on mobile */
+    
     .mud-table-cell[data-label="Description"],
     .mud-table-cell:has(> .mud-text-secondary) {
         display: none !important;
     }
     
-    /* Make action buttons stack */
+   
     .mud-table-cell .mud-stack[row="true"] {
         flex-direction: column !important;
         gap: 4px !important;
@@ -415,7 +411,6 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- DIALOG MOBILE OPTIMIZATION --- */
 @media (max-width: 959px) {
     .mud-dialog {
         margin: 8px !important;
@@ -439,7 +434,7 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- TABS MOBILE OPTIMIZATION --- */
+
 @media (max-width: 959px) {
     .mud-tabs .mud-tab {
         min-width: auto !important;
@@ -452,8 +447,6 @@ body.dark-theme .appbar-glass {
         -webkit-overflow-scrolling: touch !important;
     }
 }
-
-/* --- CHIP MOBILE OPTIMIZATION --- */
 @media (max-width: 959px) {
     .mud-chip {
         font-size: 0.8125rem !important;
@@ -461,8 +454,6 @@ body.dark-theme .appbar-glass {
         padding: 0 10px !important;
     }
 }
-
-/* --- CONTAINER PADDING --- */
 @media (max-width: 599px) {
     .mud-container {
         padding-left: 12px !important;
@@ -489,7 +480,7 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- TYPOGRAPHY MOBILE --- */
+
 @media (max-width: 959px) {
     .mud-typography-h4 {
         font-size: 1.75rem !important;
@@ -505,7 +496,7 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- GRID MOBILE OPTIMIZATION --- */
+
 @media (max-width: 959px) {
     .mud-grid {
         margin: 0 !important;
@@ -516,7 +507,7 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- MENU MOBILE OPTIMIZATION --- */
+
 @media (max-width: 959px) {
     .mud-menu-popover {
         max-width: calc(100vw - 32px) !important;
@@ -527,7 +518,7 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- APPBAR MOBILE --- */
+
 @media (max-width: 959px) {
     .mud-appbar {
         padding: 8px 12px !important;
@@ -538,23 +529,23 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- PREVENT HORIZONTAL SCROLL --- */
+
 .mud-grid,
 .mud-stack,
 .mud-toolbar {
     max-width: 100% !important;
 }
 
-/* --- TOUCH TARGETS --- */
+
 @media (max-width: 959px) {
-    /* Only icon buttons and list items need larger touch targets */
+    
     .mud-icon-button,
     .mud-list-item {
         min-height: 44px !important;
     }
 }
 
-/* --- GLASSMORPHISM EFFECTS --- */
+
 .glass-midnight {
     background: var(--mud-palette-surface-70) !important;
     backdrop-filter: blur(16px) saturate(140%) !important;
@@ -571,7 +562,7 @@ body.dark-theme .appbar-glass {
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* --- PROGRESS BAR --- */
+
 .custom-progress-bar.mud-progress-linear {
     height: 16px !important;
     border-radius: 20px !important;
@@ -585,7 +576,7 @@ body.dark-theme .appbar-glass {
     border-radius: 20px !important;
 }
 
-/* --- PRINT STYLES --- */
+
 @media print {
     .mud-appbar,
     .mud-drawer,
@@ -605,14 +596,14 @@ body.dark-theme .appbar-glass {
     }
 }
 
-/* --- APP-LIKE MOBILE EXPERIENCE --- */
+
 @media (max-width: 959px) {
-    /* Remove desktop-style borders and shadows for cleaner mobile look */
+    
     .mud-paper {
         border-radius: 12px !important;
     }
     
-    /* Consistent spacing */
+    
     .mb-4 {
         margin-bottom: 16px !important;
     }
@@ -621,18 +612,18 @@ body.dark-theme .appbar-glass {
         margin-top: 16px !important;
     }
     
-    /* Full-width cards on mobile */
+    
     .mud-card {
         width: 100% !important;
     }
     
-    /* Better visual hierarchy */
+   
     .mud-typography-h4 {
         font-weight: 700 !important;
     }
 }
 
-/* --- DATAGRID SPECIFIC MOBILE FIXES --- */
+
 @media (max-width: 959px) {
     .mud-datagrid {
         font-size: 0.875rem !important;

@@ -254,12 +254,12 @@
         box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
     }
 
-    /* Chart scroll wrapper - desktop: normal, mobile: horizontal scroll */
+    
     .chart-scroll-wrapper {
         width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        /* Extra bottom padding so the legend isn't clipped */
+        
         padding-bottom: 8px;
     }
 
@@ -269,9 +269,9 @@
 
     @@media (max-width: 959px) {
         .chart-inner {
-            min-width: 560px; /* Keep chart at a readable size, user scrolls */
+            min-width: 560px; 
         }
-        /* Show a subtle scroll hint */
+        
         .chart-scroll-wrapper {
             border-radius: 8px;
         }
@@ -432,7 +432,7 @@
 
         if (borrowStats != null)
         {
-            _totalDocsForSelectedYear = borrowStats.Total; // Store the year-specific total
+            _totalDocsForSelectedYear = borrowStats.Total; 
             _totalBorrowed = borrowStats.Borrowed;
 
             _borrowedPercent = _totalDocsForSelectedYear <= 0
@@ -459,7 +459,7 @@
             .Select(d => new OverdueItem
             {
                 Title = d.Title,
-                Borrower = d.CurrentBorrower ?? "Unknown", // Adjust to your property name
+                Borrower = d.CurrentBorrower ?? "Unknown", 
                 DueDate = d.ExpectedReturnDate ?? DateTime.Now,
 
             })

@@ -9,8 +9,11 @@ namespace MIS_FileLocator.Data
 {
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUserService) : IdentityDbContext<ApplicationUser>(options)
     {
+       
+        public string? CurrentUserOverride { get; set; }
+        public string? CurrentUserIdOverride { get; set; }
 
-         public DbSet<FillingCabinet> FillingCabinets { get; set; }
+        public DbSet<FillingCabinet> FillingCabinets { get; set; }
          public DbSet<FileBoxes> FileBoxes { get; set; }
 
         public DbSet<Folder> Folders { get; set; }
@@ -72,14 +75,14 @@ namespace MIS_FileLocator.Data
                 );
         }
 
-       // LIKE A TRIGGER
+       
          public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            // for deletion- doc 
-
-      
-            var currentUsername = await currentUserService.GetCurrentFullNameAsync();
-            var currentUserId = await currentUserService.GetCurrentUserIdAsync();
+           
+            var currentUsername = CurrentUserOverride
+                ?? await currentUserService.GetCurrentFullNameAsync();
+            var currentUserId = CurrentUserIdOverride
+                ?? await currentUserService.GetCurrentUserIdAsync();
 
 
 

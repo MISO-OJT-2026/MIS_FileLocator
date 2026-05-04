@@ -12,14 +12,14 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject IDialogService DialogService // to open dialog but cannot control (IMudDialogInstance)
 @inject IJSRuntime JSRuntime
 @inject IServiceProvider ServiceProvider
 @inject ICurrentUserService CurrentUserService
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Storage Folders</MudText>
 
-@* ── Toolbar above tabs ── *@
+
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-actions">
@@ -96,7 +96,7 @@ else
 {
 <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3" SliderColor="Color.Primary">
 
-    @* --- ACTIVE FOLDERS TAB --- *@
+  
     <MudTabPanel Text="Active Folders" Icon="@Icons.Material.Filled.Folder">
         <MudDataGrid T="Folder"
                      Items="@(_folders?.Where(f => !f.IsArchived) ?? Enumerable.Empty<Folder>())"
@@ -136,7 +136,7 @@ else
         </MudDataGrid>
     </MudTabPanel>
 
-    @* --- ARCHIVED FOLDERS TAB --- *@
+    
     <MudTabPanel Text="Archived Folders" Icon="@Icons.Material.Filled.Archive">
         <MudDataGrid T="Folder" Items="@(_folders?.Where(f => f.IsArchived) ?? Enumerable.Empty<Folder>())" QuickFilter="@_quickFilter">
             <Columns>
@@ -248,24 +248,46 @@ else
 
     private async Task OpenAddDialog()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true
+        };
+
         var dialog = await DialogService.ShowAsync<AddFolderDialog>("Add New Folder", options);
+
         var result = await dialog.Result;
+
         if (!result.Canceled) await LoadFolders();
     }
 
     private async Task OpenEditDialog(Folder folder)
     {
-        var parameters = new DialogParameters { ["FolderToEdit"] = folder };
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var parameters = new DialogParameters
+        { 
+            ["FolderToEdit"] = folder 
+        };
+        var options = new DialogOptions 
+        {
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true 
+        };
+
         var dialog = await DialogService.ShowAsync<EditFolderDialog>("Edit / Move Folder", parameters, options);
+
         if (!(await dialog.Result).Canceled) await LoadFolders();
     }
 
     private async Task OpenFolderExplorer(Folder folder)
     {
-        var parameters = new DialogParameters { ["SelectedFolder"] = folder };
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var parameters = new DialogParameters 
+        { 
+            ["SelectedFolder"] = folder 
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true 
+        };
+
         await DialogService.ShowAsync<FolderExplorerDialog>($"Contents of {folder.Name}", parameters, options);
     }
 

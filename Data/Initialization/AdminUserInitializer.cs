@@ -12,10 +12,10 @@ namespace MIS_FileLocator.Data.Initialization
             var employeeId = "19-01690";
             var adminPassword = "Admin@123";
 
-            var existingUser = await userManager.Users.FirstOrDefaultAsync(u => u.EmployeeId == employeeId); //search the first match user table using lambda 
+            var existingUser = await userManager.Users.FirstOrDefaultAsync(u => u.EmployeeId == employeeId); 
 
 
-            if (existingUser == null) // if not, edi create new admin user 
+            if (existingUser == null) 
             {
                 var adminUser = new ApplicationUser
                 {
@@ -35,7 +35,7 @@ namespace MIS_FileLocator.Data.Initialization
                 }
                 else
                 {
-                    // THIS WILL TELL YOU WHY IT FAILED
+                    
                     foreach (var error in result.Errors)
                     {
                         Console.WriteLine($"Error: {error.Description}");

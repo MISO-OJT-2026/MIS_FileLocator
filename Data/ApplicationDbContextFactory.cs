@@ -29,7 +29,7 @@ namespace MIS_FileLocator.Data
 
         class DummyUserService : ICurrentUserService
         {
-            // If you named this GetCurrentFullNameAsync earlier, use that instead!
+           
             public Task<string> GetCurrentFullNameAsync()
             {
                 return Task.FromResult("System Migration");

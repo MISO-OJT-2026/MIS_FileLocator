@@ -32,7 +32,7 @@
 
 @code{
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public FillingCabinet CabinetToEdit { get; set; } = default!;
+    [Parameter] public FillingCabinet CabinetToEdit { get; set; } = default!; //to identify what cabinet is slected 
     private FillingCabinet _editCabinet = new();
     private bool _isSaving = false;
 
@@ -47,6 +47,21 @@
     {
         if (_isSaving) return;
         if (string.IsNullOrWhiteSpace(_editCabinet.Name)) { Snackbar.Add("Cabinet name is required.", Severity.Warning); return; }
+
+        // Detect changes before saving
+        var changes = new List<string>();
+        if (CabinetToEdit.Name != _editCabinet.Name)
+            changes.Add($"Name: '{CabinetToEdit.Name}' → '{_editCabinet.Name}'");
+        if ((CabinetToEdit.Description ?? "") != (_editCabinet.Description ?? ""))
+            changes.Add("Description updated");
+
+        if (!changes.Any())
+        {
+            Snackbar.Add("No changes were made.", Severity.Info);
+            MudDialog.Cancel();
+            return;
+        }
+
         _isSaving = true;
         StateHasChanged();
         try
@@ -60,8 +75,9 @@
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
             _context.TransactionLogs.Add(new TransactionLog
             {
-                FullName = currentAdmin, EventName = "Cabinet Updated",
-                Description = $"Updated the details for cabinet '{realCabinet.Name}'.",
+                FullName = currentAdmin,
+                EventName = "Cabinet Updated",
+                Description = $"Cabinet '{CabinetToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
             await _context.SaveChangesAsync();

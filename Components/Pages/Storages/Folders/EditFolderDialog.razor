@@ -13,7 +13,6 @@
         <EditForm Model="_editFolder" OnValidSubmit="SaveUpdates">
             <DataAnnotationsValidator />
 
-            @* MOVE LOGIC: Dropdown to change the parent Box *@
             <MudSelect T="int"
                        Label="Current Storage Box"
                        @bind-Value="_editFolder.FileBoxId"
@@ -61,25 +60,48 @@
     {
         if (_isSaving) return;
         if (string.IsNullOrWhiteSpace(_editFolder.Name)) { Snackbar.Add("Folder name is required.", Severity.Error); return; }
+
+        // Detect changes
+        var changes = new List<string>();
+        if (!string.Equals(FolderToEdit.Name, _editFolder.Name, StringComparison.OrdinalIgnoreCase))
+            changes.Add($"Name: '{FolderToEdit.Name}' → '{_editFolder.Name}'");
+        if ((FolderToEdit.Description ?? "") != (_editFolder.Description ?? ""))
+            changes.Add("Description updated");
+        if (FolderToEdit.FileBoxId != _editFolder.FileBoxId)
+            changes.Add("Moved to a different box");
+
+        if (!changes.Any())
+        {
+            Snackbar.Add("No changes were made.", Severity.Info);
+            MudDialog.Cancel();
+            return;
+        }
+
         _isSaving = true;
         StateHasChanged();
         try
         {
             bool isDuplicate = await _context.Folders.AnyAsync(f => f.Name.ToLower() == _editFolder.Name.ToLower() && f.Id != _editFolder.Id && f.FileBoxId == _editFolder.FileBoxId);
             if (isDuplicate) { Snackbar.Add($"Folder name '{_editFolder.Name}' is already taken in this box.", Severity.Error); return; }
+
             var realFolder = await _context.Folders.FindAsync(_editFolder.Id);
             if (realFolder == null) return;
+
             bool isMoving = realFolder.FileBoxId != _editFolder.FileBoxId;
             realFolder.Name = _editFolder.Name;
             realFolder.Description = _editFolder.Description;
             realFolder.FileBoxId = _editFolder.FileBoxId;
+
             var boxName = await _context.FileBoxes.Where(b => b.Id == _editFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = isMoving ? "Folder Moved" : "Folder Updated",
-                Description = isMoving ? $"Moved folder '{realFolder.Name}' to Box '{boxName}'." : $"Updated details for folder '{realFolder.Name}'.",
+                Description = isMoving
+                    ? $"Folder '{FolderToEdit.Name}' moved to Box '{boxName}'"
+                    : $"Folder '{FolderToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
             await _context.SaveChangesAsync();

@@ -23,7 +23,6 @@
                 <EditForm Model="_newFolder" OnValidSubmit="SaveFolder">
                     <DataAnnotationsValidator />
 
-                    @* Select which BOX this folder belongs to *@
                     <MudSelect T="int"
                                Label="Assign to Storage Box"
                                @bind-Value="_newFolder.FileBoxId"
@@ -35,7 +34,7 @@
 
                         @foreach (var box in _activeBoxes)
                         {
-                            @* Showing Cabinet Name in parenthesis for better clarity *@
+                            
                             <MudSelectItem Value="@box.Id">
                                 @($"{box.Name} (Cabinet: {box.FillingCabinet?.Name ?? "N/A"})")
                             </MudSelectItem>
@@ -83,32 +82,56 @@
     private async Task SaveFolder()
     {
         if (_isSaving) return;
-        if (_newFolder.FileBoxId == 0) { Snackbar.Add("Please select a storage box.", Severity.Warning); return; }
-        if (string.IsNullOrWhiteSpace(_newFolder.Name)) { Snackbar.Add("Folder name is required.", Severity.Warning); return; }
+
+        if (_newFolder.FileBoxId == 0) 
+        { 
+            Snackbar.Add("Please select a storage box.", Severity.Warning); return; 
+        }
+
+        if (string.IsNullOrWhiteSpace(_newFolder.Name)) 
+        { 
+            Snackbar.Add("Folder name is required.", Severity.Warning); return;
+        }
         var normalizedName = _newFolder.Name.Trim().ToLower();
+
         var currentCabinetId = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.FillingCabinetId).FirstOrDefaultAsync();
+
         var nameExistsInCabinet = await _context.Folders.AnyAsync(f => f.Name.ToLower() == normalizedName && f.FileBox.FillingCabinetId == currentCabinetId && !f.IsArchived);
-        if (nameExistsInCabinet) { Snackbar.Add("A folder with this name already exists in this cabinet.", Severity.Error); return; }
+
+        if (nameExistsInCabinet) 
+        {
+            Snackbar.Add("A folder with this name already exists in this cabinet.", Severity.Error); return; 
+        }
+
         var existingArchived = await _context.Folders.FirstOrDefaultAsync(f => f.Name.ToLower() == normalizedName && f.FileBoxId == _newFolder.FileBoxId && f.IsArchived);
-        if (existingArchived != null) { Snackbar.Add("This folder name exists in Archives. Restore it or use a different name.", Severity.Error); return; }
+
+        if (existingArchived != null) 
+        { 
+            Snackbar.Add("This folder name exists in Archives. Restore it or use a different name.", Severity.Error); return; 
+        }
 
         _isSaving = true;
         StateHasChanged();
         try
         {
             var parentBox = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
+
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+
             _context.Folders.Add(_newFolder);
+
             _context.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin, EventName = "Folder Created",
                 Description = $"Created folder '{_newFolder.Name}' inside Box '{parentBox}'.",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
+
             await _context.SaveChangesAsync();
             Snackbar.Add("Folder created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
+
         catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
         finally { _isSaving = false; StateHasChanged(); }
     }

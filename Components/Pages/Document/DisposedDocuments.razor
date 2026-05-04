@@ -15,7 +15,7 @@
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Disposal Management</MudText>
 
-@* ── Toolbar above tabs ── *@
+
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-actions">
@@ -66,7 +66,7 @@
 
 <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3">
 
-    @* --- PANEL 1: PENDING DISPOSAL --- *@
+
     <MudTabPanel Text="Pending Disposal" Icon="@Icons.Material.Filled.HourglassEmpty">
         <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Class="mt-4">
             The following documents have reached or exceeded their retention period.
@@ -101,7 +101,7 @@
         </MudDataGrid>
     </MudTabPanel>
 
-    @* --- PANEL 2: DISPOSAL HISTORY --- *@
+   
     <MudTabPanel Text="Disposal History" Icon="@Icons.Material.Filled.History">
         <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mb-3">
             Permanent record of documents physically destroyed or removed.
@@ -138,11 +138,10 @@
     private HashSet<Documents> _selectedItems = new();
     private int _activeTab = 0;
 
-    // Search Strings
+  
     private string _searchPending = "";
     private string _searchHistory = "";
 
-    // Date Range Filters
     private DateRange _pendingDateRange = new DateRange(null, null);
     private DateRange _historyDateRange = new DateRange(null, null);
 
@@ -173,7 +172,7 @@
             .ToListAsync();
     }
 
-    // --- QUICK FILTER LOGIC ---
+   
 
     private Func<Documents, bool> _pendingFilter => x =>
     {
@@ -201,7 +200,7 @@
                date.Value.Date <= (range.End?.Date ?? DateTime.MaxValue);
     }
 
-    // --- EXISTING FUNCTIONS (UNTOUCHED) ---
+    
 
     private async Task ProcessOfficialDisposal()
     {

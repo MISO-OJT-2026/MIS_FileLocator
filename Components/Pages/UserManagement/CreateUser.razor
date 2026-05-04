@@ -61,13 +61,21 @@
 
                 @* Password *@
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_newUser.Password"
-                                  Label="Password"
-                                  Variant="Variant.Outlined"
-                                  ReadOnly="true"
-                                  Adornment="Adornment.End"
-                                  AdornmentIcon="@Icons.Material.Filled.Refresh"
-                                  OnAdornmentClick="GeneratePassword" />
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudTextField @bind-Value="_newUser.Password"
+                                      Label="Password"
+                                      Variant="Variant.Outlined"
+                                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                      OnAdornmentClick="@(() => _showPassword = !_showPassword)"
+                                      Disabled="@_isSaving"
+                                      Class="flex-grow-1" />
+                        <MudTooltip Text="Generate password">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
+                                           OnClick="GeneratePassword" Disabled="@_isSaving" />
+                        </MudTooltip>
+                    </MudStack>
                 </MudItem>
 
                 @* Role *@
@@ -100,6 +108,7 @@
     private AddUserModel _newUser = new() { Role = "Viewer" };
     private bool _isUsernameManuallyEdited = false;
     private bool _isSaving = false;
+    private bool _showPassword = false;
 
     private void OnFullNameChanged(string value)
     {
@@ -168,6 +177,7 @@
         const string all = upper + lower + numbers + specials;
         password.AddRange(Enumerable.Repeat(all, 6).Select(s => s[random.Next(s.Length)]));
         _newUser.Password = new string(password.OrderBy(x => random.Next()).ToArray());
+        _showPassword = true; // Show it so admin can verify before saving
     }
 
     private void Cancel() { if (!_isSaving) MudDialog.Cancel(); }

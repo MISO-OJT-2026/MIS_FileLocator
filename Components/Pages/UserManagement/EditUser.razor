@@ -122,7 +122,26 @@
 
         try
         {
-            // Update basic properties
+            
+            var changes = new List<string>();
+            var originalRole = (await UserManager.GetRolesAsync(_user)).FirstOrDefault() ?? "No Role";
+            bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+
+            if (_user.EmployeeId != _editUser.EmployeeId) changes.Add($"Employee ID: '{_user.EmployeeId}' → '{_editUser.EmployeeId}'");
+            if (_user.UserName != _editUser.UserName) changes.Add($"Username: '{_user.UserName}' → '{_editUser.UserName}'");
+            if (_user.FullName != _editUser.FullName) changes.Add($"Full Name: '{_user.FullName}' → '{_editUser.FullName}'");
+            if (_user.Department != _editUser.Department) changes.Add($"Department: '{_user.Department}' → '{_editUser.Department}'");
+            if (originalRole != _editUser.Role) changes.Add($"Role: '{originalRole}' → '{_editUser.Role}'");
+            if (_editUser.IsDisabled != currentlyDisabled) changes.Add(_editUser.IsDisabled ? "Account disabled" : "Account re-activated");
+
+            if (!changes.Any())
+            {
+                Snackbar.Add("No changes were made.", Severity.Info);
+                MudDialog.Cancel();
+                return;
+            }
+
+            
             _user.EmployeeId = _editUser.EmployeeId;
             _user.UserName = _editUser.UserName;
             _user.FullName = _editUser.FullName;
@@ -136,7 +155,7 @@
                 return;
             }
 
-            //  Update Role — remove old, add new atomically
+            
             var currentRoles = await UserManager.GetRolesAsync(_user);
             if (currentRoles.Any())
             {
@@ -150,37 +169,31 @@
             var addResult = await UserManager.AddToRoleAsync(_user, _editUser.Role);
             if (!addResult.Succeeded)
             {
-                // Rollback: re-add old roles so user isn't left with nothing
+                
                 if (currentRoles.Any())
                     await UserManager.AddToRolesAsync(_user, currentRoles);
                 Snackbar.Add("Failed to assign new role.", Severity.Error);
                 return;
             }
 
-            // Update lockout status
-            bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
-            string statusLog = "";
-
+            
             if (_editUser.IsDisabled && !currentlyDisabled)
             {
                 await UserManager.SetLockoutEnabledAsync(_user, true);
                 await UserManager.SetLockoutEndDateAsync(_user, DateTimeOffset.MaxValue);
-                statusLog = " | Status changed to: Disabled";
             }
             else if (!_editUser.IsDisabled && currentlyDisabled)
             {
                 await UserManager.SetLockoutEndDateAsync(_user, null);
-                statusLog = " | Status changed to: Active";
             }
 
-            // Log — use DbFactory to avoid SaveChangesAsync audit scope issue
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
             await using var db = await DbFactory.CreateDbContextAsync();
             await db.TransactionLogs.AddAsync(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = "User Updated",
-                Description = $"Updated profile for {_editUser.FullName}.{statusLog}",
+                Description = $"User '{_editUser.FullName}': {string.Join(" | ", changes)}",
                 Status = _editUser.IsDisabled ? "Warning" : "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });

@@ -3,7 +3,7 @@
 
 <MudDialog>
     <DialogContent>
-        @* --- EMPHASIZED LOCATION HEADER --- *@
+      
         <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Icon="@Icons.Material.Filled.LocationOn" Class="mb-6 py-4">
             <MudStack Spacing="0">
                 <MudText Typo="Typo.caption" Style="text-transform: uppercase; letter-spacing: 1px;">Physical Storage Location</MudText>
@@ -17,7 +17,6 @@
             </MudStack>
         </MudAlert>
 
-        @* --- DOCUMENT INFO SECTION --- *@
         <MudText Typo="Typo.subtitle2" Color="Color.Primary">DOCUMENT TITLE</MudText>
         <MudText Typo="Typo.h4" Class="mb-4">@SelectedDoc.Title</MudText>
 
@@ -37,7 +36,7 @@
 
         <MudDivider Class="my-4" />
 
-        @* --- BORROWING DETAILS SECTION --- *@
+      
         @if (SelectedDoc.IsBorrowed)
         {
             <MudPaper Outlined="true" Class="pa-4 mb-4 border-dashed" Style="border-color: var(--mud-palette-error); background-color: #fff8f8;">
@@ -63,7 +62,7 @@
 
         <MudDivider Class="my-4" />
 
-        @* --- DIGITAL ASSETS & METADATA SECTION --- *@
+      
         <MudGrid Spacing="2">
             <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">DIGITAL ASSETS</MudText>

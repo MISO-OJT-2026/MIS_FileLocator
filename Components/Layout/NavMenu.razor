@@ -12,7 +12,7 @@
     {
         <div class="nav-full-layout">
 
-            @* ── Profile card ── *@
+            
             <div class="nav-profile-card">
                 <MudAvatar Class="nav-avatar">@_currentUserInitials</MudAvatar>
                 <div class="nav-profile-text">
@@ -25,7 +25,7 @@
                                OnClick="@(() => OnNavLinkClicked.InvokeAsync())" />
             </div>
 
-            @* ── Scrollable links ── *@
+            
             <div class="nav-menu-scroll no-scrollbar">
 
                 <div class="nav-section-label">GENERAL</div>
@@ -47,7 +47,7 @@
 
                 @if (RoleService.CanAccessStorage(_currentUserRole))
                 {
-                    @* Flat nav links — no indented MudNavGroup *@
+                    
                     <div class="nav-section-label mt-2">STORAGE</div>
                     <MudNavLink Href="/storages/cabinets" Icon="@Icons.Material.Filled.Inventory2">Filing Cabinets</MudNavLink>
                     <MudNavLink Href="/storages/boxes" Icon="@Icons.Material.Filled.Archive">Filing Boxes</MudNavLink>
@@ -85,7 +85,7 @@
                 }
             </div>
 
-            @* ── Logout ── *@
+           
             <div class="nav-footer">
                 <AuthorizeView>
                     <Authorized>
@@ -108,7 +108,7 @@
     }
     else
     {
-        @* ── Mini / icon-only state ── *@
+        
         <div class="nav-mini-layout">
             <MudTooltip Text="@_currentUserName" Placement="Placement.Right">
                 <MudAvatar Class="nav-mini-avatar">@_currentUserInitials</MudAvatar>
@@ -220,7 +220,7 @@
         display: block;
     }
 
-    /* Close button — only visible on mobile */
+    
     .nav-close-btn {
         opacity: 0.7;
         flex-shrink: 0;
@@ -232,7 +232,7 @@
         }
     }
 
-    /* ── Section labels ── */
+    
     .nav-section-label {
         font-size: 0.65rem;
         font-weight: 800;
@@ -246,7 +246,7 @@
         margin-top: 4px;
     }
 
-    /* ── Scrollable area ── */
+    
     .nav-menu-scroll {
         flex: 1;
         overflow-y: auto;
@@ -287,10 +287,10 @@
         font-size: 1.1rem !important;
     }
 
-    /* ── Caret icon stays white ── */
+   
     ::deep .mud-nav-group-caret-icon { color: rgba(255,255,255,0.6) !important; }
 
-    /* ── Footer / logout ── */
+    
     .nav-footer {
         flex-shrink: 0;
         padding: 8px 0 12px;

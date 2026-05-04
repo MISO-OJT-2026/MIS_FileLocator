@@ -18,7 +18,7 @@
     else
     {
         <MudGrid Spacing="4">
-            @* --- IDENTITY CARD --- *@
+           
             <MudItem xs="12" md="4">
                 <MudPaper Class="pa-6 text-center d-flex flex-column align-center" Elevation="3" Style="height: 100%; border-top: 6px solid #800000;">
                     <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Style="height:100px; width:100px; font-size:2rem;">
@@ -28,14 +28,14 @@
                     <MudText Typo="Typo.h6" Class="mt-4">@_user.FullName</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.UserName</MudText>
 
-                    @* Displaying the Role we fetched from UserManager *@
+                    
                     <MudChip T="string" Color="Color.Info" Variant="Variant.Text" Size="Size.Small" Icon="@Icons.Material.Filled.Badge" Class="mt-2">
                         @_userRole
                     </MudChip>
                 </MudPaper>
             </MudItem>
 
-            @* --- DETAILS TABLE --- *@
+            
             <MudItem xs="12" md="8">
                 <MudCard Elevation="3">
                     <MudCardHeader>
@@ -71,7 +71,7 @@
                 <MudPaper Class="pa-4 mt-6 d-flex align-center justify-space-between"
                           Elevation="2"
                           Style="border-left: 6px solid #ff9800;">
-                    @* Orange accent for security *@
+                   
                     <div class="d-flex align-center">
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Class="mr-3" />
                         <div>
@@ -113,7 +113,7 @@
 
         if (!result.Canceled)
         {
-            // Optional: You can refresh data or just show a success snackbar
+            
             Snackbar.Add("Profile security updated.", Severity.Success);
         }
     }

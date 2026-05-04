@@ -18,7 +18,7 @@
     <DialogContent>
         <MudTabs Centered="true" Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" Color="Color.Primary" TabClass="px-7 mx-4">
 
-            @* TAB 1: General Info *@
+            
             <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.Info">
                 <MudStack Spacing="4" Class="mt-4">
                     <MudTextField @bind-Value="_editDoc.Title" Label="Document Title" Variant="Variant.Outlined" Required="true" />
@@ -54,13 +54,13 @@
                                        Variant="Variant.Outlined" 
                                        ReadOnly="true"
                                        Color="Color.Secondary"
-                                       HelperText="Calculated from Document Date"
+                                       
                                        DateFormat="MMM dd, yyyy" />
                     </MudStack>
                 </MudStack>
             </MudTabPanel>
 
-            @* TAB 2: Digital Copy (RESTORED) *@
+            
             <MudTabPanel Text="Digital Copy" Icon="@Icons.Material.Filled.Cloud">
                 <MudStack Spacing="4" Class="mt-4">
                     @if (!string.IsNullOrEmpty(_editDoc.FilePath))
@@ -96,7 +96,7 @@
                 </MudStack>
             </MudTabPanel>
 
-            @* TAB 3: Borrowing *@
+            
             <MudTabPanel Text="Borrowing" Icon="@Icons.Material.Filled.Outbound">
                 <MudStack Spacing="3" Class="mt-4">
                     <MudAlert Severity="@(_editDoc.IsBorrowed ? Severity.Error : Severity.Success)" Variant="Variant.Outlined">
@@ -130,9 +130,8 @@
     private IBrowserFile? _selectedFile;
     private bool _isUploading = false;
     private int _retentionYears = 2;
-    private string _oldValuesJson = "";
 
-    // CONFIG: Fixes the cycle crash
+    // Deep-copy options — prevents circular reference crash when cloning the document
     private JsonSerializerOptions _jsonOptions = new() { ReferenceHandler = ReferenceHandler.IgnoreCycles };
 
     protected override async Task OnInitializedAsync()
@@ -141,10 +140,8 @@
         
         if (DocumentToEdit != null)
         {
-            // Fix: Safe clone to prevent crash
             var json = JsonSerializer.Serialize(DocumentToEdit, _jsonOptions);
             _editDoc = JsonSerializer.Deserialize<Documents>(json)!;
-            _oldValuesJson = json;
 
             if (_editDoc.DocumentDate.HasValue && _editDoc.DateOfDisposal.HasValue)
             {
@@ -188,7 +185,7 @@
             StateHasChanged();
             var user = await _currentUserService.GetCurrentFullNameAsync();
             
-            // --- DETAILED LOGGING LOGIC ---
+           
             List<string> changeLog = new();
 
             if (DocumentToEdit.Title != _editDoc.Title) 
@@ -206,16 +203,16 @@
 
             if (DocumentToEdit.Description != _editDoc.Description) 
                 changeLog.Add("Description updated");
-            // --- END DETAILED LOGGING LOGIC ---
+           
 
 
-            // Handle New File Upload
+            
             if (_selectedFile != null)
             {
                 string conn = _config.GetConnectionString("AzureStorage");
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
                 
-                // SAFE FILENAME & FORCED DOWNLOAD HEADERS FIX
+                
                 string safeFileName = _selectedFile.Name.Replace(" ", "_");
                 string fileName = $"{Guid.NewGuid()}_{safeFileName}";
                 var blob = container.GetBlobClient(fileName);
@@ -231,7 +228,7 @@
 
                 realDoc.FilePath = blob.Uri.ToString();
                 realDoc.FileName = _selectedFile.Name;
-                _editDoc.FilePath = realDoc.FilePath; // Keep in sync for audit trail
+                _editDoc.FilePath = realDoc.FilePath; 
                 changeLog.Add("Replaced digital attachment");
             }
 
@@ -239,36 +236,29 @@
             if (!DocumentToEdit.IsBorrowed && _editDoc.IsBorrowed) changeLog.Add($"Borrowed by {_editDoc.CurrentBorrower}");
             else if (DocumentToEdit.IsBorrowed && !_editDoc.IsBorrowed) changeLog.Add($"Returned by {DocumentToEdit.CurrentBorrower}");
 
-            // Sync Database record
+            if (!changeLog.Any() && _selectedFile == null)
+            {
+                Snackbar.Add("No changes were made.", Severity.Info);
+                MudDialog.Cancel();
+                return;
+            }
+
             _context.Entry(realDoc).CurrentValues.SetValues(_editDoc);
             realDoc.UpdatedBy = user;
 
-            // Manage Borrowing Dates
             if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null) realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
             if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; realDoc.ExpectedReturnDate = null; realDoc.BorrowRemarks = null; }
 
-            // 1. Audit Trail (Detailed JSON)
-            _context.AuditTrails.Add(new AuditTrails {
-                FullName = user,
-                Action = "Modified",
-                TableName = "Documents",
-                RecordId = realDoc.Id.ToString(),
-                OldValues = _oldValuesJson,
-                NewValues = JsonSerializer.Serialize(_editDoc, _jsonOptions),
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            });
-
-            // 2. Transaction Log (Friendly & Highly Specified)
             _context.TransactionLogs.Add(new TransactionLog {
                 FullName = user,
                 EventName = "Document Modified",
-                Description = $"{realDoc.Title}: {(changeLog.Any() ? string.Join(" | ", changeLog) : "No major changes")}",
+                Description = $"Document '{DocumentToEdit.Title}': {string.Join(" | ", changeLog)}",
                 Status = "Success",
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
-            Snackbar.Add("Saved and Audit Trail created.", Severity.Success);
+            Snackbar.Add("Document updated successfully.", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
@@ -294,7 +284,7 @@
                 realDoc.FileName = null;
                 _editDoc.FilePath = null;
 
-                // Add to transaction log for deletion
+                
                 var user = await _currentUserService.GetCurrentFullNameAsync();
                 _context.TransactionLogs.Add(new TransactionLog {
                     FullName = user,

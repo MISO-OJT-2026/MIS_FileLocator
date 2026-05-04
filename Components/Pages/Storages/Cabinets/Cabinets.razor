@@ -9,12 +9,12 @@
 @using MIS_FileLocator.Components.Pages.Storages
 @using System.Text
 
-@inject ApplicationDbContext _context
+@inject ApplicationDbContext _context 
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject IDialogService DialogService //DONT FORGETTI
 @inject ICurrentUserService _currentUserService
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JSRuntime // calls javascript
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Filing Cabinets</MudText>
 
@@ -150,7 +150,7 @@
 
 
 @code {
-    private List<FillingCabinet> _cabinets = new();
+    private List<FillingCabinet> _cabinets = new(); 
     private string _selectedCabinetNumber = "";
     private string _selectedCabinetLevel = "";
     private string _searchString = "";
@@ -158,7 +158,7 @@
 
 
     // FOR FILTERING ETU
-    // Parsed distinct numbers ( "1","2","3"...) and levels ("A","B","C"..) from cabinet names
+    
     private IEnumerable<string> _cabinetNumbers =>
         _cabinets.Select(c => ParseCabinetNumber(c.Name))
                  .Where(n => n != null).Select(n => n!)
@@ -196,7 +196,9 @@
                     .ThenInclude(f => f.Documents)
             .ToListAsync();
 
-        StateHasChanged();
+        StateHasChanged(); //reloading
+
+        //SELECT THEN JOIN JOIN JOIN
     }
 
     private Func<FillingCabinet, bool> _quickFilter => x =>
@@ -351,6 +353,8 @@
             await LoadCabinets();
         }
     }
+
+
     private async Task EditCabinet(FillingCabinet cabinet)
     {
         

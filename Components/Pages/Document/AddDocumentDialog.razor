@@ -5,8 +5,6 @@
 @using Microsoft.EntityFrameworkCore
 @using Azure.Storage.Blobs
 @using Azure.Storage.Blobs.Models
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @using System.IO
 @using System.Text.RegularExpressions
 @inject ApplicationDbContext _context
@@ -23,7 +21,7 @@
     </TitleContent>
     <DialogContent>
         <MudGrid Spacing="2">
-            @* --- Physical Location Section --- *@
+            
             <MudItem xs="12" md="4">
                 <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged"
                            Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
@@ -52,13 +50,13 @@
                 </MudSelect>
             </MudItem>
 
-            @* --- UNRESTRICTED FILE ATTACHMENT SECTION --- *@
+         
             <MudItem xs="12">
                 <MudPaper Variant="Variant.Outlined" Class="pa-4 d-flex flex-column align-center border-dashed" Style="min-height: 120px; background-color: #fafafa;">
                     
                     @if (_selectedFile != null)
                     {
-                        @* File Identity Card (Professional Look) *@
+                        
                         <MudPaper Elevation="2" Class="pa-3 rounded-lg d-flex align-center gap-4 w-100 mb-2" Style="max-width: 600px; border-left: 6px solid; border-color: var(--file-color, #9e9e9e);">
                             <MudIcon Icon="@_fileIcon" Color="@_fileColor" Size="Size.Large" />
                             <div class="flex-grow-1 overflow-hidden">
@@ -78,7 +76,7 @@
                             </MudStack>
                         </MudPaper>
 
-                        @* CONDITIONAL PREVIEW AREA (Hidden by default) *@
+                       
                         @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
                         {
                             <MudPaper Outlined="true" Class="w-100 mt-2 rounded-lg overflow-hidden" Style="height: 450px; background: white;">
@@ -105,7 +103,7 @@
                 </MudPaper>
             </MudItem>
 
-            @* --- other info Section --- *@
+            
             <MudItem xs="12" md="8">
                 <MudTextField @bind-Value="_newDoc.Title" Label="Document Title" Required="true" Variant="Variant.Outlined" Immediate="true" />
             </MudItem>
@@ -123,7 +121,7 @@
                 </MudSelect>
             </MudItem>
 
-            @* --- Retention Policy --- *@
+            
             <MudItem xs="12" md="3">
                 <MudSelect T="int?" Label="Retention (Years)" @bind-Value="_disposalYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
                     <MudSelectItem T="int?" Value="null">Permanent (No Disposal)</MudSelectItem>
@@ -179,9 +177,8 @@
 
         _selectedFile = file;
         _previewUrl = null;
-        _showPreview = false; // Always hide preview when a new file is picked
-
-        // Sync Title with Filename automatically
+        _showPreview = false; 
+        
         _newDoc.Title = Path.GetFileNameWithoutExtension(file.Name);
 
         string ext = Path.GetExtension(file.Name).ToLower();
@@ -203,12 +200,11 @@
     {
         _showPreview = !_showPreview;
         
-        // Only generate the expensive Base64 string if the user actually wants to see the preview
+        
         if (_showPreview && _selectedFile != null && string.IsNullOrEmpty(_previewUrl))
         {
             try 
             {
-                // Note: Large files might still cause a white screen in iframes due to browser memory limits
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
                 using var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
@@ -224,7 +220,7 @@
         _selectedFile = null; 
         _previewUrl = null; 
         _showPreview = false;
-        _newDoc.Title = ""; // Clear title field when file is removed
+        _newDoc.Title = ""; 
         _fileIcon = Icons.Material.Filled.InsertDriveFile;
         _fileColor = Color.Default;
         StateHasChanged();
@@ -272,7 +268,7 @@
                 string conn = _config.GetConnectionString("AzureStorage");
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
                 
-                // SANITIZATION: Replaces spaces with underscores to fix the "BlobNotFound" error
+               
                 string safeName = Regex.Replace(_selectedFile.Name, @"[^a-zA-Z0-9\._-]", "_");
                 string fileName = $"{Guid.NewGuid()}_{safeName}";
                 var blob = container.GetBlobClient(fileName);
@@ -292,14 +288,15 @@
             _newDoc.FiledBy = user;
             _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
             _newDoc.CreatedBy = user;
-            
-            _context.Documents.Add(_newDoc);
 
-            // Audit Trail
-            var jsonOptions = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles };
-            _context.AuditTrails.Add(new AuditTrails {
-                FullName = user, Action = "Added", TableName = "Documents", RecordId = "NEW",
-                NewValues = JsonSerializer.Serialize(_newDoc, jsonOptions), PerformedAt = DateTime.UtcNow.AddHours(8)
+            _context.Documents.Add(_newDoc);
+            _context.TransactionLogs.Add(new TransactionLog
+            {
+                FullName = user,
+                EventName = "Document Filed",
+                Description = $"Filed new document '{_newDoc.Title}' in folder '{_newDoc.FolderId}'.",
+                Status = "Success",
+                PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
             await _context.SaveChangesAsync();
