@@ -89,7 +89,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Default: today only — fast initial load
+        
         _fromDate = DateTime.Today;
         _toDate = DateTime.Today;
         await LoadLogs();
@@ -108,10 +108,10 @@ else
         _logs = await db.TransactionLogs
             .Where(x => x.PerformedAt >= from && x.PerformedAt <= to)
             .OrderByDescending(x => x.PerformedAt)
-            .Take(500) // Safety cap — prevents accidental huge loads
+            .Take(500) 
             .ToListAsync();
 
-        // Build action list from loaded data
+        
         _availableActions = _logs
             .Select(l => l.EventName)
             .Distinct()
