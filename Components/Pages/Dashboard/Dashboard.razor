@@ -11,7 +11,7 @@
 @using System.Globalization
 @rendermode InteractiveServer
 
-@inject ApplicationDbContext Db
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject ICurrentUserService CurrentUser
 @inject IRoleService RoleService
@@ -309,6 +309,7 @@
 
     private async Task LoadAsync()
     {
+		using var Db = await DbFactory.CreateDbContextAsync();
         _loading = true;
         var now = DateTime.Now;
 
@@ -413,6 +414,7 @@
     //DITO DITO YUNG BORROW WAG KANA TUMINGIN SA IBA SAKIN NALANG
     private async Task LoadBorrowStatsAsync()
     {
+		using var Db = await DbFactory.CreateDbContextAsync();
         var start = new DateTime(_selectedCirculationYear, 1, 1);
         var end = start.AddYears(1);
 
@@ -482,6 +484,7 @@
 
 private string GetBorrowDonutStyle()
 {
+		
     var p = Math.Clamp(_borrowedPercent, 0, 100);
     return $"background: conic-gradient(#f59e0b 0% {p:F2}%, #1f2937 {p:F2}% 100%);";
 }
@@ -490,6 +493,7 @@ private string GetBorrowDonutStyle()
 
     private async Task LoadDisposalYearDataAsync()
     {
+        using var Db = DbFactory.CreateDbContext();
         var y = _selectedDisposalYear; var now = DateTime.Now; var ys = new DateTime(y, 1, 1); var ye = ys.AddYears(1);
         _disposedInSelectedYear = await Db.Documents.CountAsync(d => d.IsDisposal && !d.IsDeleted && d.DateOfDisposal >= ys && d.DateOfDisposal < ye);
         _totalPipelineYear = await Db.Documents.CountAsync(d => !d.IsDeleted && d.DateOfDisposal != null && d.DateOfDisposal >= ys && d.DateOfDisposal < ye);

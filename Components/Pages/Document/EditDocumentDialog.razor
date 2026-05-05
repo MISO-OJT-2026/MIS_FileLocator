@@ -8,7 +8,8 @@
 @using Microsoft.EntityFrameworkCore
 @using Azure.Storage.Blobs
 @using Azure.Storage.Blobs.Models
-@inject ApplicationDbContext _context
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 @inject IDialogService DialogService
@@ -136,6 +137,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         _levels = await _context.ConfidentialityLevels.ToListAsync();
         
         if (DocumentToEdit != null)
@@ -172,7 +174,9 @@
     }
 
     private async Task SaveUpdates()
+
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         var confirm = await DialogService.ShowMessageBoxAsync("Confirm Changes", "Update document record?", yesText: "Save", cancelText: "Cancel");
         if (confirm == null || confirm == false) return;
 
@@ -267,6 +271,7 @@
 
     private async Task RemoveDigitalFile()
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Delete the cloud file?", yesText: "Remove", cancelText: "Cancel");
         if (confirmed == true)
         {
