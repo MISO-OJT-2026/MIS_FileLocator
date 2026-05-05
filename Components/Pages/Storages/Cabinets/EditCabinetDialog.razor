@@ -7,7 +7,7 @@
 @using MudBlazor
 @using Microsoft.AspNetCore.Components.Forms
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 
@@ -66,21 +66,23 @@
         StateHasChanged();
         try
         {
-            bool isDuplicate = await _context.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _editCabinet.Name.ToLower() && c.Id != _editCabinet.Id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+            bool isDuplicate = await db.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _editCabinet.Name.ToLower() && c.Id != _editCabinet.Id);
             if (isDuplicate) { Snackbar.Add($"Cabinet name '{_editCabinet.Name}' is already taken.", Severity.Error); return; }
-            var realCabinet = await _context.FillingCabinets.FindAsync(_editCabinet.Id);
+            var realCabinet = await db.FillingCabinets.FindAsync(_editCabinet.Id);
             if (realCabinet == null) { Snackbar.Add("Cabinet not found.", Severity.Error); return; }
             realCabinet.Name = _editCabinet.Name;
             realCabinet.Description = _editCabinet.Description;
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-            _context.TransactionLogs.Add(new TransactionLog
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = "Cabinet Updated",
                 Description = $"Cabinet '{CabinetToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
             Snackbar.Add("Cabinet updated successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

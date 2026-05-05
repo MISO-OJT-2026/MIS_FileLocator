@@ -4,7 +4,7 @@
 @using MIS_FileLocator.Services
 @using Microsoft.EntityFrameworkCore
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 
@@ -43,11 +43,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await using var db = await DbFactory.CreateDbContextAsync();
         _editBox.Id = BoxToEdit.Id;
         _editBox.Name = BoxToEdit.Name;
         _editBox.Description = BoxToEdit.Description;
         _editBox.FillingCabinetId = BoxToEdit.FillingCabinetId;
-        _activeCabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
+        _activeCabinets = await db.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
     }
 
     private async Task SaveUpdates()
@@ -78,8 +79,9 @@
 
         try
         {
+            await using var db = await DbFactory.CreateDbContextAsync();
             var nameLower = _editBox.Name.ToLower();
-            var existingNames = await _context.FileBoxes
+            var existingNames = await db.FileBoxes
                 .Where(b => b.FillingCabinetId == _editBox.FillingCabinetId && b.Id != _editBox.Id && !b.IsArchived)
                 .Select(b => b.Name)
                 .ToListAsync();
@@ -90,7 +92,7 @@
                 return;
             }
 
-            var realBox = await _context.FileBoxes.FindAsync(_editBox.Id);
+            var realBox = await db.FileBoxes.FindAsync(_editBox.Id);
             if (realBox == null) return;
 
             bool isMoving = realBox.FillingCabinetId != _editBox.FillingCabinetId;
@@ -98,13 +100,13 @@
             realBox.Description = _editBox.Description;
             realBox.FillingCabinetId = _editBox.FillingCabinetId;
 
-            var cabinetName = await _context.FillingCabinets
+            var cabinetName = await db.FillingCabinets
                 .Where(c => c.Id == _editBox.FillingCabinetId)
                 .Select(c => c.Name)
                 .FirstOrDefaultAsync();
 
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-            _context.TransactionLogs.Add(new TransactionLog
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = isMoving ? "Box Moved" : "Box Updated",
@@ -113,7 +115,8 @@
                     : $"Box '{BoxToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
             Snackbar.Add("Box updated successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

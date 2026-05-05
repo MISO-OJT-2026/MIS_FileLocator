@@ -7,7 +7,7 @@
 @using FileLocator.Services
 @using Microsoft.EntityFrameworkCore
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ICurrentUserService _currentUserService
 @inject UserManager<ApplicationUser> UserManager
 @inject ISnackbar Snackbar
@@ -127,7 +127,8 @@
     private async Task SaveUser()
     {
         if (_isSaving) return;
-        var idExists = await _context.Users.AnyAsync(u => u.EmployeeId == _newUser.EmployeeId);
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var idExists = await db.Users.AnyAsync(u => u.EmployeeId == _newUser.EmployeeId);
         if (idExists) { Snackbar.Add($"Employee ID '{_newUser.EmployeeId}' is already registered.", Severity.Error); return; }
         var userExists = await UserManager.FindByNameAsync(_newUser.UserName);
         if (userExists != null) { Snackbar.Add($"Username '{_newUser.UserName}' is already taken.", Severity.Error); return; }
@@ -150,13 +151,14 @@
                     Snackbar.Add("User created but role assignment failed. Please edit the user to assign a role.", Severity.Warning);
                 }
                 var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-                _context.TransactionLogs.Add(new TransactionLog
+                db.TransactionLogs.Add(new TransactionLog
                 {
                     FullName = currentAdmin, EventName = "User Registered",
                     Description = $"Created account for {_newUser.FullName}.",
                     Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
                 });
-                await _context.SaveChangesAsync();
+                db.CurrentUserOverride = currentAdmin;
+                await db.SaveChangesAsync();
                 Snackbar.Add($"User {_newUser.UserName} created successfully!", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }

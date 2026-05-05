@@ -4,7 +4,7 @@
 @using MIS_FileLocator.Services
 @using Microsoft.EntityFrameworkCore
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 
@@ -49,11 +49,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await using var db = await DbFactory.CreateDbContextAsync();
         _editFolder.Id = FolderToEdit.Id;
         _editFolder.Name = FolderToEdit.Name;
         _editFolder.Description = FolderToEdit.Description;
         _editFolder.FileBoxId = FolderToEdit.FileBoxId;
-        _activeBoxes = await _context.FileBoxes.Include(b => b.FillingCabinet).Where(b => !b.IsArchived).OrderBy(b => b.Name).ToListAsync();
+        _activeBoxes = await db.FileBoxes.Include(b => b.FillingCabinet).Where(b => !b.IsArchived).OrderBy(b => b.Name).ToListAsync();
     }
 
     private async Task SaveUpdates()
@@ -81,10 +82,11 @@
         StateHasChanged();
         try
         {
-            bool isDuplicate = await _context.Folders.AnyAsync(f => f.Name.ToLower() == _editFolder.Name.ToLower() && f.Id != _editFolder.Id && f.FileBoxId == _editFolder.FileBoxId);
+            await using var db = await DbFactory.CreateDbContextAsync();
+            bool isDuplicate = await db.Folders.AnyAsync(f => f.Name.ToLower() == _editFolder.Name.ToLower() && f.Id != _editFolder.Id && f.FileBoxId == _editFolder.FileBoxId);
             if (isDuplicate) { Snackbar.Add($"Folder name '{_editFolder.Name}' is already taken in this box.", Severity.Error); return; }
 
-            var realFolder = await _context.Folders.FindAsync(_editFolder.Id);
+            var realFolder = await db.Folders.FindAsync(_editFolder.Id);
             if (realFolder == null) return;
 
             bool isMoving = realFolder.FileBoxId != _editFolder.FileBoxId;
@@ -92,10 +94,10 @@
             realFolder.Description = _editFolder.Description;
             realFolder.FileBoxId = _editFolder.FileBoxId;
 
-            var boxName = await _context.FileBoxes.Where(b => b.Id == _editFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
+            var boxName = await db.FileBoxes.Where(b => b.Id == _editFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
 
-            _context.TransactionLogs.Add(new TransactionLog
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin,
                 EventName = isMoving ? "Folder Moved" : "Folder Updated",
@@ -104,7 +106,8 @@
                     : $"Folder '{FolderToEdit.Name}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
             Snackbar.Add("Folder updated successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

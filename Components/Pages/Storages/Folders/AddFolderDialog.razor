@@ -8,7 +8,7 @@
 
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog MaxWidth="MaxWidth.Small" FullWidth="true">
     <DialogContent>
@@ -76,7 +76,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _activeBoxes = await _context.FileBoxes.Include(b => b.FillingCabinet).Where(b => !b.IsArchived).OrderBy(b => b.Name).ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _activeBoxes = await db.FileBoxes.Include(b => b.FillingCabinet).Where(b => !b.IsArchived).OrderBy(b => b.Name).ToListAsync();
     }
 
     private async Task SaveFolder()
@@ -94,16 +95,17 @@
         }
         var normalizedName = _newFolder.Name.Trim().ToLower();
 
-        var currentCabinetId = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.FillingCabinetId).FirstOrDefaultAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var currentCabinetId = await db.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.FillingCabinetId).FirstOrDefaultAsync();
 
-        var nameExistsInCabinet = await _context.Folders.AnyAsync(f => f.Name.ToLower() == normalizedName && f.FileBox.FillingCabinetId == currentCabinetId && !f.IsArchived);
+        var nameExistsInCabinet = await db.Folders.AnyAsync(f => f.Name.ToLower() == normalizedName && f.FileBox.FillingCabinetId == currentCabinetId && !f.IsArchived);
 
         if (nameExistsInCabinet) 
         {
             Snackbar.Add("A folder with this name already exists in this cabinet.", Severity.Error); return; 
         }
 
-        var existingArchived = await _context.Folders.FirstOrDefaultAsync(f => f.Name.ToLower() == normalizedName && f.FileBoxId == _newFolder.FileBoxId && f.IsArchived);
+        var existingArchived = await db.Folders.FirstOrDefaultAsync(f => f.Name.ToLower() == normalizedName && f.FileBoxId == _newFolder.FileBoxId && f.IsArchived);
 
         if (existingArchived != null) 
         { 
@@ -114,20 +116,21 @@
         StateHasChanged();
         try
         {
-            var parentBox = await _context.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
+            var parentBox = await db.FileBoxes.Where(b => b.Id == _newFolder.FileBoxId).Select(b => b.Name).FirstOrDefaultAsync();
 
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
 
-            _context.Folders.Add(_newFolder);
+            db.Folders.Add(_newFolder);
 
-            _context.TransactionLogs.Add(new TransactionLog
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin, EventName = "Folder Created",
                 Description = $"Created folder '{_newFolder.Name}' inside Box '{parentBox}'.",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
             Snackbar.Add("Folder created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

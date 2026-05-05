@@ -7,7 +7,7 @@
 @using System.Threading
 @using System.IO
 @using System.Text.RegularExpressions
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
 @inject IConfiguration _config
@@ -143,7 +143,8 @@
     protected override async Task OnInitializedAsync()
     {
         var defaultCategories = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
-        var dbCategories = await _context.FormTemplates
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var dbCategories = await db.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
             .Select(f => f.Category)
             .Distinct()
@@ -267,9 +268,10 @@
             _newForm.DateAdded = DateTime.UtcNow.AddHours(8);
             string source = _selectedFile != null ? "Uploaded File" : "Manual Link";
             
-            _context.FormTemplates.Add(_newForm);
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.FormTemplates.Add(_newForm);
 
-            _context.TransactionLogs.Add(new TransactionLog
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
                 EventName = "Form Created",
@@ -278,7 +280,8 @@
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = user;
+            await db.SaveChangesAsync();
             
             Snackbar.Add("Form successfully added!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));

@@ -8,7 +8,7 @@
 @using System.Text
 @using System.Security.Claims
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
@@ -192,8 +192,8 @@
 
     private async Task LoadDocuments()
     {
-       
-        _allDocuments = await _context.Documents
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _allDocuments = await db.Documents
             .AsNoTracking()
             .Include(d => d.ConfidentialityLevel)
             .Include(d => d.Folder)

@@ -9,7 +9,7 @@
 
 @using MIS_FileLocator.Components.Pages.Storages
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -149,7 +149,8 @@
 
     private async Task LoadBoxes()
     {
-        _boxes = await _context.FileBoxes
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _boxes = await db.FileBoxes
             .Include(b => b.FillingCabinet)
             .Include(b => b.Folders)
             .ToListAsync();
@@ -261,8 +262,10 @@
             box.ArchivedAt = DateTime.UtcNow.AddHours(8);
             box.ArchivedBy = admin;
 
-            _context.FileBoxes.Update(box);
-            await _context.SaveChangesAsync();
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.FileBoxes.Update(box);
+            db.CurrentUserOverride = admin;
+            await db.SaveChangesAsync();
             await LoadBoxes();
             Snackbar.Add("Box archived.", Severity.Success);
         }
@@ -284,7 +287,8 @@
             {
                 var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
 
-                var cabinetName = await _context.FileBoxes
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var cabinetName = await db.FileBoxes
                 .Where(b => b.Id == box.Id)
                 .Select(b => b.FillingCabinet.Name)
                 .FirstOrDefaultAsync();
@@ -305,9 +309,10 @@
                 };
 
               
-                _context.FileBoxes.Update(box);
-                _context.TransactionLogs.Add(log);
-                await _context.SaveChangesAsync();
+                db.FileBoxes.Update(box);
+                db.TransactionLogs.Add(log);
+                db.CurrentUserOverride = currentAdmin;
+                await db.SaveChangesAsync();
 
                 
                 Snackbar.Add($"Box '{box.Name}' has been restored successfully.", Severity.Success);

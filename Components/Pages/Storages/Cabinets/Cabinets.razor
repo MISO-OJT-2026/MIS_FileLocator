@@ -9,7 +9,7 @@
 @using MIS_FileLocator.Components.Pages.Storages
 @using System.Text
 
-@inject ApplicationDbContext _context 
+@inject IDbContextFactory<ApplicationDbContext> DbFactory 
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService //DONT FORGETTI
@@ -190,7 +190,8 @@
 
     private async Task LoadCabinets()
     {
-        _cabinets = await _context.FillingCabinets
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _cabinets = await db.FillingCabinets
             .Include(c => c.FileBox)
                 .ThenInclude(b => b.Folders)
                     .ThenInclude(f => f.Documents)
@@ -265,9 +266,11 @@
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             };
 
-        _context.FillingCabinets.Update(cabinet);
-        _context.TransactionLogs.Add(log);
-        await _context.SaveChangesAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.FillingCabinets.Update(cabinet);
+        db.TransactionLogs.Add(log);
+        db.CurrentUserOverride = currentAdmin;
+        await db.SaveChangesAsync();
 
         Snackbar.Add($"Cabinet '{cabinet.Name}' successfully archived.", Severity.Success);
         await LoadCabinets(); // Refresh the table
@@ -326,9 +329,11 @@
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             };
 
-            _context.FillingCabinets.Update(cabinet);
-            _context.TransactionLogs.Add(log); 
-            await _context.SaveChangesAsync();
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.FillingCabinets.Update(cabinet);
+            db.TransactionLogs.Add(log);
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
 
             Snackbar.Add($"Cabinet '{cabinet.Name}' successfully restored.", Severity.Success);
             await LoadCabinets();

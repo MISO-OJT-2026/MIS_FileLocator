@@ -7,7 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Text
 
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
@@ -152,6 +152,7 @@
 
     private async Task LoadData()
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         _pendingDisposal = await _context.Documents
             .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
             .Where(d => !d.IsDisposal && !d.IsDeleted && d.DateOfDisposal <= DateTime.Now)
@@ -166,6 +167,7 @@
 
     private async Task LoadPendingDisposal()
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         _pendingDisposal = await _context.Documents
             .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
             .Where(d => !d.IsDisposal && !d.IsDeleted && d.DateOfDisposal <= DateTime.Now)
@@ -204,6 +206,7 @@
 
     private async Task ProcessOfficialDisposal()
     {
+        using var _context = await DbFactory.CreateDbContextAsync();
         bool? result = await DialogService.ShowMessageBoxAsync(
             "Confirm Official Disposal",
             $"Are you sure you want to officially dispose of {_selectedItems.Count} documents?",

@@ -3,32 +3,41 @@
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
 @using Microsoft.EntityFrameworkCore
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
-<MudText Typo="Typo.h4" Class="mb-4 " Color="Color.Primary">System Activity Logs</MudText>
-
+<MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">System Activity Logs</MudText>
 
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
         <div class="toolbar-filters">
             <MudMenu Label="Filter Logs" Variant="Variant.Outlined" Dense="true"
                      EndIcon="@Icons.Material.Filled.FilterList">
-                <div class="pa-4" style="min-width: 280px;">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Logs</MudText>
+                <div class="pa-4" style="min-width: 300px;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Logs</MudText>
+
                     <MudSelect T="string" @bind-Value="_selectedAction" Label="Action"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
-                               Searchable="true">
+                               Searchable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All Actions</MudSelectItem>
-                        @foreach (var action in GetAvailableActions())
+                        @foreach (var action in _availableActions)
                         {
                             <MudSelectItem Value="@action">@action</MudSelectItem>
                         }
                     </MudSelect>
+
                     <MudDatePicker Label="From Date" @bind-Date="_fromDate"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2" />
                     <MudDatePicker Label="To Date" @bind-Date="_toDate"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="mb-2" />
-                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters" Class="mt-2">Reset All Filters</MudButton>
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               OnClick="ApplyFilters" StartIcon="@Icons.Material.Filled.Search" Class="mb-2">
+                        Apply
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true"
+                               OnClick="ResetFilters">
+                        Reset
+                    </MudButton>
                 </div>
             </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search..."
@@ -39,98 +48,111 @@
     </div>
 </MudPaper>
 
-<MudDataGrid T="TransactionLog" Items="@_logs" SortMode="SortMode.Multiple" Filterable="false" QuickFilter="@_quickFilter">
-    <Columns>
-        <PropertyColumn Property="x => x.PerformedAt" Title="Date & Time" Format="MMM dd, yyyy hh:mm tt" />
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+    <MudText Align="Align.Center" Class="mud-text-secondary">Loading logs...</MudText>
+}
+else
+{
+    <MudText Typo="Typo.caption" Class="mb-2 mud-text-secondary d-block">
+        Showing @_logs.Count log@(_logs.Count != 1 ? "s" : "") 
+        for @_fromDate?.ToString("MMM dd, yyyy") – @_toDate?.ToString("MMM dd, yyyy")
+        @if (_logs.Count == 500)
+        {
+            <span> (limited to 500 — narrow your date range for more specific results)</span>
+        }
+    </MudText>
 
-        <PropertyColumn Property="x => x.FullName" Title="Full Name" />
-
-        <PropertyColumn Property="x => x.EventName" Title="Action" />
-
-        <PropertyColumn Property="x => x.Description" Title="Details" />
-
-    </Columns>
-
-    <PagerContent>
-
-        <MudDataGridPager T="TransactionLog" />
-
-    </PagerContent>
-
-</MudDataGrid>
+    <MudDataGrid T="TransactionLog" Items="@FilteredLogs" SortMode="SortMode.Multiple"
+                 Filterable="false" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.PerformedAt" Title="Date & Time" Format="MMM dd, yyyy hh:mm tt" />
+            <PropertyColumn Property="x => x.FullName" Title="Full Name" />
+            <PropertyColumn Property="x => x.EventName" Title="Action" />
+            <PropertyColumn Property="x => x.Description" Title="Details" />
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="TransactionLog" />
+        </PagerContent>
+    </MudDataGrid>
+}
 
 @code {
     private string _searchString = string.Empty;
     private string _selectedAction = "";
-    private DateTime? _fromDate = null;
-    private DateTime? _toDate = null;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
     private List<TransactionLog> _logs = new();
+    private List<string> _availableActions = new();
+    private bool _loading = false;
 
     protected override async Task OnInitializedAsync()
     {
-        
-        _logs = await _context.TransactionLogs
-                              .OrderByDescending(x => x.PerformedAt)
-                              .ToListAsync();
+        // Default: today only — fast initial load
+        _fromDate = DateTime.Today;
+        _toDate = DateTime.Today;
+        await LoadLogs();
     }
 
-   
-    private Color GetStatusColor(string status)
+    private async Task LoadLogs()
     {
-        return status switch
-        {
-            "Success" => Color.Success,
-            "Warning" => Color.Warning,
-            "Error" => Color.Error,
-            _ => Color.Default
-        };
-    }
+        _loading = true;
+        StateHasChanged();
 
-    
-    private Func<TransactionLog, bool> _quickFilter => x =>
-    {
-        
-        if (!string.IsNullOrWhiteSpace(_selectedAction))
-        {
-            if (x.EventName != _selectedAction) return false;
-        }
+        await using var db = await DbFactory.CreateDbContextAsync();
 
-        
-        if (_fromDate.HasValue)
-        {
-            if (x.PerformedAt < _fromDate.Value) return false;
-        }
+        var from = (_fromDate ?? DateTime.Today).Date;
+        var to = (_toDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
 
-        if (_toDate.HasValue)
-        {
-            if (x.PerformedAt > _toDate.Value.AddDays(1).AddTicks(-1)) return false;
-        }
+        _logs = await db.TransactionLogs
+            .Where(x => x.PerformedAt >= from && x.PerformedAt <= to)
+            .OrderByDescending(x => x.PerformedAt)
+            .Take(500) // Safety cap — prevents accidental huge loads
+            .ToListAsync();
 
-        
-        if (!string.IsNullOrWhiteSpace(_searchString))
-        {
-            if (x.FullName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
-            if (x.EventName.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-            if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
-        }
-
-        return true;
-    };
-
-    private void ResetFilters()
-    {
-        _selectedAction = "";
-        _fromDate = null;
-        _toDate = null;
-        _searchString = "";
-    }
-
-    private IEnumerable<string> GetAvailableActions()
-    {
-        return _logs
+        // Build action list from loaded data
+        _availableActions = _logs
             .Select(l => l.EventName)
             .Distinct()
-            .OrderBy(a => a);
+            .OrderBy(a => a)
+            .ToList();
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task ApplyFilters() => await LoadLogs();
+
+    private async Task ResetFilters()
+    {
+        _selectedAction = "";
+        _searchString = "";
+        _fromDate = DateTime.Today;
+        _toDate = DateTime.Today;
+        await LoadLogs();
+    }
+
+    // In-memory filter for action + search (applied on already-fetched date-range data)
+    private IEnumerable<TransactionLog> FilteredLogs
+    {
+        get
+        {
+            var q = _logs.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_selectedAction))
+                q = q.Where(x => x.EventName == _selectedAction);
+
+            if (!string.IsNullOrWhiteSpace(_searchString))
+            {
+                var s = _searchString.Trim();
+                q = q.Where(x =>
+                    (x.FullName?.Contains(s, StringComparison.OrdinalIgnoreCase) == true) ||
+                    x.EventName.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                    x.Description.Contains(s, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return q;
+        }
     }
 }

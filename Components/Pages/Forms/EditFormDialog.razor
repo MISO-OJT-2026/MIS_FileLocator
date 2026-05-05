@@ -7,7 +7,7 @@
 @using System.Threading
 @using System.IO
 @using System.Text.RegularExpressions
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
 @inject IConfiguration _config
@@ -148,7 +148,8 @@
     protected override async Task OnInitializedAsync()
     {
         var defaults = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
-        var dbCats = await _context.FormTemplates
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var dbCats = await db.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
             .Select(f => f.Category)
             .Distinct()
@@ -255,7 +256,8 @@
             _isUploading = true;
             StateHasChanged();
 
-            var dbEntry = await _context.FormTemplates.FindAsync(_editForm.Id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var dbEntry = await db.FormTemplates.FindAsync(_editForm.Id);
             if (dbEntry == null) return;
 
             // TO Detect changes 
@@ -302,14 +304,15 @@
             dbEntry.PdfUrl = _editForm.PdfUrl;
 
             var user = await _currentUserService.GetCurrentFullNameAsync();
-            _context.TransactionLogs.Add(new TransactionLog {
+            db.TransactionLogs.Add(new TransactionLog {
                 FullName = user,
                 EventName = "Form Updated",
                 Description = $"Form '{FormToEdit.FormName}': {string.Join(" | ", changes)}",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = user;
+            await db.SaveChangesAsync();
             Snackbar.Add("Updated successfully", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
@@ -322,10 +325,11 @@
         var confirmed = await DialogService.ShowMessageBoxAsync("Confirm Delete", "Permanently remove this form template?", yesText: "Delete", cancelText: "Cancel");
         if (confirmed == true)
         {
-            var doc = await _context.FormTemplates.FindAsync(_editForm.Id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var doc = await db.FormTemplates.FindAsync(_editForm.Id);
             if (doc != null) {
-                _context.FormTemplates.Remove(doc);
-                await _context.SaveChangesAsync();
+                db.FormTemplates.Remove(doc);
+                await db.SaveChangesAsync();
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }

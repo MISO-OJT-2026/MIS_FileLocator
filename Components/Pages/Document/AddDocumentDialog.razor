@@ -7,7 +7,7 @@
 @using Azure.Storage.Blobs.Models
 @using System.IO
 @using System.Text.RegularExpressions
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 @inject IConfiguration _config
@@ -165,8 +165,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _cabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
-        _levels = await _context.ConfidentialityLevels.ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _cabinets = await db.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
+        _levels = await db.ConfidentialityLevels.ToListAsync();
         _newDoc.DocumentDate = DateTime.Today;
         CalculateDisposal();
     }
@@ -230,14 +231,16 @@
     {
         _boxes.Clear(); _folders.Clear(); _newDoc.FolderId = 0;
         if (id == null) return;
-        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _boxes = await db.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
     }
 
     private async Task OnBoxChanged(int? id)
     {
         _folders.Clear(); _newDoc.FolderId = 0;
         if (id == null) return;
-        _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _folders = await db.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
     }
 
     private void OnDocumentDateChanged(DateTime? newDate) { _newDoc.DocumentDate = newDate; CalculateDisposal(); }
@@ -289,8 +292,9 @@
             _newDoc.FiledAt = DateTime.UtcNow.AddHours(8);
             _newDoc.CreatedBy = user;
 
-            _context.Documents.Add(_newDoc);
-            _context.TransactionLogs.Add(new TransactionLog
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Documents.Add(_newDoc);
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = user,
                 EventName = "Document Filed",
@@ -299,7 +303,8 @@
                 PerformedAt = DateTime.UtcNow.AddHours(8)
             });
 
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = user;
+            await db.SaveChangesAsync();
             Snackbar.Add("Document filed successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }

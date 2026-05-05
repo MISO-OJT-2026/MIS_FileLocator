@@ -9,7 +9,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 
 
@@ -45,9 +45,10 @@
             Snackbar.Add("Cabinet name is required.", Severity.Error);
             return;
         }
-        var existingActive = await _context.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && !c.IsArchived);
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var existingActive = await db.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && !c.IsArchived);
         if (existingActive) { Snackbar.Add("A cabinet with this name already exists.", Severity.Error); return; }
-        var existingArchived = await _context.FillingCabinets.FirstOrDefaultAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && c.IsArchived);
+        var existingArchived = await db.FillingCabinets.FirstOrDefaultAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && c.IsArchived);
         if (existingArchived != null) { Snackbar.Add("This name exists in Archives. Restore it or use a different name.", Severity.Info); return; }
 
         _isSaving = true;
@@ -55,14 +56,15 @@
         try
         {
             var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-            _context.FillingCabinets.Add(_newCabinet);
-            _context.TransactionLogs.Add(new TransactionLog
+            db.FillingCabinets.Add(_newCabinet);
+            db.TransactionLogs.Add(new TransactionLog
             {
                 FullName = currentAdmin, EventName = "Cabinet Created",
                 Description = $"Added a new physical cabinet named '{_newCabinet.Name}'.",
                 Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8)
             });
-            await _context.SaveChangesAsync();
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
             Snackbar.Add("Cabinet created successfully!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
