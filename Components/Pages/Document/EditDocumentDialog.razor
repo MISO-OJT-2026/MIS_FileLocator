@@ -207,6 +207,22 @@
 
             if (DocumentToEdit.Description != _editDoc.Description) 
                 changeLog.Add("Description updated");
+
+            if (DocumentToEdit.DateOfDisposal != _editDoc.DateOfDisposal)
+                changeLog.Add($"Disposal Date: {DocumentToEdit.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"} → {_editDoc.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"}");
+
+            if (DocumentToEdit.IsBorrowed != _editDoc.IsBorrowed)
+                changeLog.Add(_editDoc.IsBorrowed ? $"Marked as Borrowed by {_editDoc.CurrentBorrower}" : $"Returned by {DocumentToEdit.CurrentBorrower}");
+
+            if (DocumentToEdit.IsBorrowed && _editDoc.IsBorrowed)
+            {
+                if (DocumentToEdit.CurrentBorrower != _editDoc.CurrentBorrower)
+                    changeLog.Add($"Borrower: '{DocumentToEdit.CurrentBorrower}' → '{_editDoc.CurrentBorrower}'");
+                if (DocumentToEdit.ExpectedReturnDate != _editDoc.ExpectedReturnDate)
+                    changeLog.Add($"Due Date: {DocumentToEdit.ExpectedReturnDate?.ToString("MMM dd, yyyy")} → {_editDoc.ExpectedReturnDate?.ToString("MMM dd, yyyy")}");
+                if (DocumentToEdit.BorrowRemarks != _editDoc.BorrowRemarks)
+                    changeLog.Add("Borrow remarks updated");
+            }
            
 
 
@@ -236,10 +252,6 @@
                 changeLog.Add("Replaced digital attachment");
             }
 
-            // Borrowing logic logs
-            if (!DocumentToEdit.IsBorrowed && _editDoc.IsBorrowed) changeLog.Add($"Borrowed by {_editDoc.CurrentBorrower}");
-            else if (DocumentToEdit.IsBorrowed && !_editDoc.IsBorrowed) changeLog.Add($"Returned by {DocumentToEdit.CurrentBorrower}");
-
             if (!changeLog.Any() && _selectedFile == null)
             {
                 Snackbar.Add("No changes were made.", Severity.Info);
@@ -250,6 +262,7 @@
             _context.Entry(realDoc).CurrentValues.SetValues(_editDoc);
             realDoc.UpdatedBy = user;
 
+            // Borrowing logic — update dates
             if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null) realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
             if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; realDoc.ExpectedReturnDate = null; realDoc.BorrowRemarks = null; }
 

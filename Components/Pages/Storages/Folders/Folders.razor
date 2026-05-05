@@ -123,7 +123,7 @@ else
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Actions" HeaderStyle="text-align: right;" CellStyle="text-align:right;">
+                <TemplateColumn Title="Actions" CellStyle="text-align:right;">
                     <CellTemplate>
                         <MudStack Spacing="1" Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
                             <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" OnClick="@(() => OpenEditDialog(context.Item))" />

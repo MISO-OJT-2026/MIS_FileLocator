@@ -83,7 +83,7 @@
             <Columns>
                 <SelectColumn T="Documents" />
                 <PropertyColumn Property="x => x.Title" Title="Document" />
-                <PropertyColumn Property="x => x.DocumentDate" Title="Year" />
+                <PropertyColumn Property="x => x.DocumentDate" Title="Year" Format="MMM dd, yyyy" />
                 <TemplateColumn Title="Scheduled Date">
                     <CellTemplate>
                         @context.Item.DateOfDisposal?.ToString("MMM dd, yyyy")
@@ -117,7 +117,7 @@
                             </MudText>
                         </CellTemplate>
                     </TemplateColumn>
-                    <PropertyColumn Property="x => x.DocumentDate" Title="Year" />
+                    <PropertyColumn Property="x => x.DocumentDate" Title="Year" Format="MMM dd, yyyy" />
                     <PropertyColumn Property="x => x.UpdatedBy" Title="Handled By" />
                     <TemplateColumn Title="Former Location">
                         <CellTemplate>
@@ -206,7 +206,6 @@
 
     private async Task ProcessOfficialDisposal()
     {
-        using var _context = await DbFactory.CreateDbContextAsync();
         bool? result = await DialogService.ShowMessageBoxAsync(
             "Confirm Official Disposal",
             $"Are you sure you want to officially dispose of {_selectedItems.Count} documents?",
@@ -220,23 +219,35 @@
             {
                 var user = await _currentUserService.GetCurrentFullNameAsync();
                 var now = DateTime.UtcNow.AddHours(8);
+                var selectedIds = _selectedItems.Select(d => d.Id).ToList();
 
-                foreach (var doc in _selectedItems)
+                await using var db = await DbFactory.CreateDbContextAsync();
+                db.CurrentUserOverride = user;
+
+                // Re-fetch by ID in this context so EF tracks them properly
+                var docsToDispose = await db.Documents
+                    .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+                    .Where(d => selectedIds.Contains(d.Id))
+                    .ToListAsync();
+
+                foreach (var doc in docsToDispose)
                 {
                     doc.IsDisposal = true;
                     doc.DateOfDisposal = now;
                     doc.UpdatedBy = user;
 
-                    _context.TransactionLogs.Add(new TransactionLog
+                    db.TransactionLogs.Add(new TransactionLog
                     {
                         FullName = user,
                         EventName = "Document Disposed",
-                        Description = $"Officially disposed document '{doc.Title}' from {doc.Folder?.FileBox?.FillingCabinet.Name} > {doc.Folder?.FileBox?.Name} > {doc.Folder?.Name}.",
+                        Description = $"Officially disposed '{doc.Title}' from {doc.Folder?.FileBox?.FillingCabinet?.Name} > {doc.Folder?.FileBox?.Name} > {doc.Folder?.Name}.",
+                        Status = "Warning",
                         PerformedAt = now
                     });
                 }
-                await _context.SaveChangesAsync();
-                Snackbar.Add($"{_selectedItems.Count} documents disposed.", Severity.Success);
+
+                await db.SaveChangesAsync();
+                Snackbar.Add($"{docsToDispose.Count} documents disposed.", Severity.Success);
                 _selectedItems.Clear();
                 await LoadData();
             }

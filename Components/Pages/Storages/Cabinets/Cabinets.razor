@@ -47,13 +47,24 @@
                 <div class="pa-4" style="min-width: 300px;" >
                     <MudText Typo="Typo.subtitle2" Class="mb-3" Style="font-weight:100 !important;">Filter Options</MudText>
 
-                    <MudSelect T="string" @bind-Value="_selectedCabinetNumber" Label="Cabinet No."
+                    <MudSelect T="string" Value="_selectedStorageType" Label="Storage Type"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               Searchable="true" Class="mb-3"
+                               ValueChanged="OnStorageTypeChanged">
+                        <MudSelectItem Value="@("")">All Types</MudSelectItem>
+                        @foreach (var type in _storageTypes)
+                        {
+                            <MudSelectItem Value="@type">@type</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect T="string" @bind-Value="_selectedCabinetNumber" Label="@(_selectedStorageType is { Length: > 0 } t ? $"{t} No." : "Number")"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                Searchable="true" Class="mb-3">
                         <MudSelectItem Value="@("")">All Numbers</MudSelectItem>
                         @foreach (var num in _cabinetNumbers)
                         {
-                            <MudSelectItem Value="@num">Cabinet @num</MudSelectItem>
+                            <MudSelectItem Value="@num">@(string.IsNullOrWhiteSpace(_selectedStorageType) ? "" : _selectedStorageType + " ")@num</MudSelectItem>
                         }
                     </MudSelect>
 
@@ -103,7 +114,7 @@
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Actions" HeaderStyle="text-align:right;" CellStyle="text-align:right;">
+                <TemplateColumn Title="Actions" CellStyle="text-align:right;">
                     <CellTemplate>
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning"
@@ -151,36 +162,62 @@
 
 @code {
     private List<FillingCabinet> _cabinets = new(); 
+    private string _selectedStorageType = "";
     private string _selectedCabinetNumber = "";
     private string _selectedCabinetLevel = "";
     private string _searchString = "";
     private int _activeTab = 0;
 
+    // All distinct storage types parsed from the first word of the name (Cabinet, Drawer, Shelf, etc.)
+    private IEnumerable<string> _storageTypes =>
+        _cabinets.Select(c => ParseStorageType(c.Name))
+                 .Where(t => t != null).Select(t => t!)
+                 .Distinct().OrderBy(t => t, StringComparer.OrdinalIgnoreCase);
 
-    // FOR FILTERING ETU
-    
+    // Numbers scoped to selected type (or all types if none selected)
     private IEnumerable<string> _cabinetNumbers =>
-        _cabinets.Select(c => ParseCabinetNumber(c.Name))
-                 .Where(n => n != null).Select(n => n!)
-                 .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+        _cabinets
+            .Where(c => string.IsNullOrWhiteSpace(_selectedStorageType) || ParseStorageType(c.Name) == _selectedStorageType)
+            .Select(c => ParseCabinetNumber(c.Name))
+            .Where(n => n != null).Select(n => n!)
+            .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
 
+    // Levels scoped to selected type + number
     private IEnumerable<string> _cabinetLevels =>
-        _cabinets.Select(c => ParseCabinetLevel(c.Name))
-                 .Where(l => l != null).Select(l => l!)
-                 .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
+        _cabinets
+            .Where(c => string.IsNullOrWhiteSpace(_selectedStorageType) || ParseStorageType(c.Name) == _selectedStorageType)
+            .Select(c => ParseCabinetLevel(c.Name))
+            .Where(l => l != null).Select(l => l!)
+            .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
 
-    // FOR CABINET NUM- Parses "Cabinet 1A" -> "1", "Cabinet 12B" -> "12"
+    // Parses "Cabinet 1A" -> "Cabinet", "Drawer 2B" -> "Drawer", "Open Shelf 1A" -> "Open Shelf"
+    private static string? ParseStorageType(string name)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(name.Trim(), @"^(.*?)\s+\d");
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    // Parses "Cabinet 1A" -> "1", "Drawer 12B" -> "12"
     private static string? ParseCabinetNumber(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)[A-Za-z]?$");
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    //FOR CABINET LEVEL- Parses "Cabinet 1A" -> "A", "Cabinet 12B" -> "B"
+    // Parses "Cabinet 1A" -> "A", "Drawer 12B" -> "B"
     private static string? ParseCabinetLevel(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"\d+([A-Za-z])$");
         return match.Success ? match.Groups[1].Value.ToUpper() : null;
+    }
+
+    private void OnStorageTypeChanged(string value)
+    {
+        _selectedStorageType = value;
+        // Reset number/level when type changes so stale selections don't remain
+        _selectedCabinetNumber = "";
+        _selectedCabinetLevel = "";
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
@@ -204,6 +241,12 @@
 
     private Func<FillingCabinet, bool> _quickFilter => x =>
     {
+        if (!string.IsNullOrWhiteSpace(_selectedStorageType))
+        {
+            if (!string.Equals(ParseStorageType(x.Name), _selectedStorageType, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(_selectedCabinetNumber))
         {
             if (ParseCabinetNumber(x.Name) != _selectedCabinetNumber) return false;
@@ -227,6 +270,7 @@
 
     private void ResetFilters()
     {
+        _selectedStorageType = "";
         _selectedCabinetNumber = "";
         _selectedCabinetLevel = "";
         _searchString = "";
