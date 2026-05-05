@@ -103,7 +103,7 @@ else
         await using var db = await DbFactory.CreateDbContextAsync();
 
         var from = (_fromDate ?? DateTime.Today).Date;
-        var to = (_toDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
+        var to = (_toDate ?? DateTime.Today).Date.AddDays(1);
 
         _logs = await db.TransactionLogs
             .Where(x => x.PerformedAt >= from && x.PerformedAt <= to)
