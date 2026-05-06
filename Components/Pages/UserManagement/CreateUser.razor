@@ -86,6 +86,23 @@
                         <MudSelectItem Value="@("Viewer")">Viewer</MudSelectItem>
                     </MudSelect>
                 </MudItem>
+
+                @* Confidentiality Restriction (Viewers only) *@
+                @if (_newUser.Role == "Viewer")
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Class="mb-1">Allowed Confidentiality Levels</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2 d-block">Leave all unchecked to allow all levels.</MudText>
+                        @foreach (var level in _confidentialityLevels)
+                        {
+                            <MudCheckBox T="bool"
+                                         Value="@(_newUser.AllowedLevelIds.Contains(level.Id))"
+                                         ValueChanged="@(v => { if (v) _newUser.AllowedLevelIds.Add(level.Id); else _newUser.AllowedLevelIds.Remove(level.Id); })"
+                                         Label="@level.Name"
+                                         Color="Color.Primary" />
+                        }
+                    </MudItem>
+                }
             </MudGrid>
 
             @if (_isSaving)
@@ -109,6 +126,13 @@
     private bool _isUsernameManuallyEdited = false;
     private bool _isSaving = false;
     private bool _showPassword = false;
+    private List<ConfidentialityLevel> _confidentialityLevels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _confidentialityLevels = await db.ConfidentialityLevels.OrderBy(l => l.Id).ToListAsync();
+    }
 
     private void OnFullNameChanged(string value)
     {
@@ -140,7 +164,11 @@
             var user = new ApplicationUser
             {
                 UserName = _newUser.UserName, EmployeeId = _newUser.EmployeeId,
-                FullName = _newUser.FullName, Department = _newUser.Department, EmailConfirmed = true
+                FullName = _newUser.FullName, Department = _newUser.Department,
+                EmailConfirmed = true,
+                AllowedConfidentialityLevels = _newUser.Role == "Viewer" && _newUser.AllowedLevelIds.Any()
+                    ? string.Join(",", _newUser.AllowedLevelIds.OrderBy(x => x))
+                    : null
             };
             var result = await UserManager.CreateAsync(user, _newUser.Password);
             if (result.Succeeded)
@@ -192,5 +220,6 @@
         [Required] public string Department { get; set; } = "";
         [Required] public string Password { get; set; } = "";
         [Required] public string Role { get; set; } = "";
+        public HashSet<int> AllowedLevelIds { get; set; } = new();
     }
 }

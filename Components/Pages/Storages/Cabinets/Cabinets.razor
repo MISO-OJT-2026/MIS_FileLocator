@@ -102,7 +102,8 @@
                      Filterable="false" 
                      QuickFilter="@_quickFilter" 
                      Dense="false" 
-                     Hover="true">
+                     Hover="true"
+                     Breakpoint="Breakpoint.Sm">
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Cabinet Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />
@@ -131,7 +132,7 @@
 
     @* --- ARCHIVED CABINETS PANEL --- *@
     <MudTabPanel Text="Archived Cabinets" Icon="@Icons.Material.Filled.Archive">
-        <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => c.IsArchived)" Filterable="false" QuickFilter="@_quickFilter" Dense="true" Hover="true">
+        <MudDataGrid T="FillingCabinet" Items="@_cabinets.Where(c => c.IsArchived)" Filterable="false" QuickFilter="@_quickFilter" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Cabinet Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />

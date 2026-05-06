@@ -163,13 +163,21 @@
         var user = await UserManager.FindByIdAsync(userModel.Id);
         if (user == null) return;
 
-    
+        var action = disable ? "disable" : "restore";
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            disable ? "Disable User" : "Restore User",
+            $"Are you sure you want to {action} '{userModel.FullName}'?",
+            yesText: disable ? "Disable" : "Restore",
+            cancelText: "Cancel");
+
+        if (result != true) return;
+
         if (disable)
             await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
         else
             await UserManager.SetLockoutEndDateAsync(user, null);
 
-        Snackbar.Add($"User status updated successfully.", Severity.Success);
+        Snackbar.Add($"User {(disable ? "disabled" : "restored")} successfully.", Severity.Success);
         await LoadUsersAsync();
     }
 

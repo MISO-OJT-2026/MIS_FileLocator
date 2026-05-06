@@ -59,6 +59,24 @@
                                    Color="@(_editUser.IsDisabled ? Color.Error : Color.Success)"
                                    Disabled="@_isSaving" />
                     </MudItem>
+
+                    @* Confidentiality Restriction (Viewers only) *@
+                    @if (_editUser.Role == "Viewer")
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.body2" Class="mb-1">Allowed Confidentiality Levels</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2 d-block">Leave all unchecked to allow all levels.</MudText>
+                            @foreach (var level in _confidentialityLevels)
+                            {
+                                <MudCheckBox T="bool"
+                                             Value="@(_editUser.AllowedLevelIds.Contains(level.Id))"
+                                             ValueChanged="@(v => { if (v) _editUser.AllowedLevelIds.Add(level.Id); else _editUser.AllowedLevelIds.Remove(level.Id); })"
+                                             Label="@level.Name"
+                                             Color="Color.Primary"
+                                             Disabled="@_isSaving" />
+                            }
+                        </MudItem>
+                    }
                 </MudGrid>
 
                 @if (_isSaving)
@@ -86,6 +104,7 @@
     private ApplicationUser? _user;
     private bool _loading = true;
     private bool _isSaving = false;
+    private List<FileLocator.Models.ConfidentialityLevel> _confidentialityLevels = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,6 +118,8 @@
                 .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
                 .FirstOrDefaultAsync() ?? "Viewer";
 
+            _confidentialityLevels = await db.ConfidentialityLevels.OrderBy(l => l.Id).ToListAsync();
+
             _editUser = new EditUserModel
             {
                 EmployeeId = _user.EmployeeId ?? "",
@@ -106,7 +127,8 @@
                 FullName = _user.FullName ?? "",
                 Department = _user.Department ?? "",
                 Role = role,
-                IsDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow
+                IsDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow,
+                AllowedLevelIds = new HashSet<int>(_user.GetAllowedLevelIds())
             };
         }
 
@@ -133,6 +155,13 @@
             if (_user.Department != _editUser.Department) changes.Add($"Department: '{_user.Department}' → '{_editUser.Department}'");
             if (originalRole != _editUser.Role) changes.Add($"Role: '{originalRole}' → '{_editUser.Role}'");
             if (_editUser.IsDisabled != currentlyDisabled) changes.Add(_editUser.IsDisabled ? "Account disabled" : "Account re-activated");
+            var originalAllowed = new HashSet<int>(_user.GetAllowedLevelIds());
+            if (!originalAllowed.SetEquals(_editUser.AllowedLevelIds))
+            {
+                var oldStr = originalAllowed.Any() ? string.Join(", ", originalAllowed.OrderBy(x => x)) : "All levels";
+                var newStr = _editUser.AllowedLevelIds.Any() ? string.Join(", ", _editUser.AllowedLevelIds.OrderBy(x => x)) : "All levels";
+                changes.Add($"Allowed levels: [{oldStr}] → [{newStr}]");
+            }
 
             if (!changes.Any())
             {
@@ -146,6 +175,9 @@
             _user.UserName = _editUser.UserName;
             _user.FullName = _editUser.FullName;
             _user.Department = _editUser.Department;
+            _user.AllowedConfidentialityLevels = _editUser.Role == "Viewer" && _editUser.AllowedLevelIds.Any()
+                ? string.Join(",", _editUser.AllowedLevelIds.OrderBy(x => x))
+                : null;
 
             var updateResult = await UserManager.UpdateAsync(_user);
             if (!updateResult.Succeeded)
@@ -227,5 +259,6 @@
         [Required] public string Department { get; set; } = "";
         [Required] public string Role { get; set; } = "";
         public bool IsDisabled { get; set; } = false;
+        public HashSet<int> AllowedLevelIds { get; set; } = new();
     }
 }

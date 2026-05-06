@@ -102,7 +102,8 @@ else
                      Items="@(_folders?.Where(f => !f.IsArchived) ?? Enumerable.Empty<Folder>())"
                      QuickFilter="@_quickFilter"
                      Dense="true"
-                     Hover="true">
+                     Hover="true"
+                     Breakpoint="Breakpoint.Sm">
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Folder Name" />
                 <PropertyColumn Property="x => x.Description" Title="Description" />
@@ -138,7 +139,7 @@ else
 
     
     <MudTabPanel Text="Archived Folders" Icon="@Icons.Material.Filled.Archive">
-        <MudDataGrid T="Folder" Items="@(_folders?.Where(f => f.IsArchived) ?? Enumerable.Empty<Folder>())" QuickFilter="@_quickFilter">
+        <MudDataGrid T="Folder" Items="@(_folders?.Where(f => f.IsArchived) ?? Enumerable.Empty<Folder>())" QuickFilter="@_quickFilter" Breakpoint="Breakpoint.Sm">
             <Columns>
                 <PropertyColumn Property="x => x.Name" Title="Folder Name" />
                 <TemplateColumn Title="Last Known Location">

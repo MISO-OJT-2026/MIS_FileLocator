@@ -174,6 +174,7 @@
     private List<Documents> _allDocuments = new();
     private string _searchString = "";
     private string _currentUserRole = "";
+    private List<int> _allowedConfidentialityLevels = new(); // empty = no restriction
     private string _selectedStatus = "";
     private string _selectedCabinet = "";
     private string _selectedBox = "";
@@ -186,21 +187,26 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDocuments();
         await LoadCurrentUserRole();
+        await LoadDocuments();
     }
 
     private async Task LoadDocuments()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        _allDocuments = await db.Documents
+        var query = db.Documents
             .AsNoTracking()
             .Include(d => d.ConfidentialityLevel)
             .Include(d => d.Folder)
                 .ThenInclude(f => f.FileBox)
                     .ThenInclude(b => b.FillingCabinet)
-            .ToListAsync();
+            .Where(d => true);
 
+        // Apply confidentiality restriction for Viewers
+        if (_allowedConfidentialityLevels.Any())
+            query = query.Where(d => _allowedConfidentialityLevels.Contains(d.ConfidentialityLevelId));
+
+        _allDocuments = await query.ToListAsync();
         StateHasChanged();
     }
 
@@ -212,6 +218,24 @@
         {
             var roleClaim = user.FindFirst(c => c.Type == ClaimTypes.Role);
             _currentUserRole = roleClaim != null ? roleClaim.Value : "Staff";
+
+            // Load the user's confidentiality restriction from DB
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var appUser = await db.Users.AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => new { u.AllowedConfidentialityLevels })
+                    .FirstOrDefaultAsync();
+                _allowedConfidentialityLevels = appUser != null
+                    ? (string.IsNullOrWhiteSpace(appUser.AllowedConfidentialityLevels)
+                        ? new List<int>()
+                        : appUser.AllowedConfidentialityLevels.Split(',')
+                            .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
+                            .Where(id => id > 0).ToList())
+                    : new List<int>();
+            }
         }
     }
 

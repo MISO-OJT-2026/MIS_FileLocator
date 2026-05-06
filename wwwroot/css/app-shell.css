@@ -384,7 +384,6 @@ input:-webkit-autofill:active {
         -webkit-overflow-scrolling: touch !important;
     }
     
-   
     .mud-table-row {
         min-height: 56px !important;
     }
@@ -393,22 +392,15 @@ input:-webkit-autofill:active {
         padding: 12px 8px !important;
         font-size: 0.875rem !important;
     }
-    
-    
-    .mud-table-cell[data-label="Description"],
-    .mud-table-cell:has(> .mud-text-secondary) {
-        display: none !important;
-    }
-    
-   
-    .mud-table-cell .mud-stack[row="true"] {
-        flex-direction: column !important;
-        gap: 4px !important;
-    }
-    
-    .mud-table-cell .mud-icon-button {
-        width: 100% !important;
-    }
+}
+
+/* Always keep action buttons in a row and never clip them */
+.mud-table-cell .mud-stack,
+.mud-datagrid-cell .mud-stack {
+    flex-wrap: nowrap !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
 }
 
 @media (max-width: 959px) {
