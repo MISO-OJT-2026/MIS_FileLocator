@@ -44,6 +44,7 @@
                     
                     <MudStack Row="true" AlignItems="AlignItems.Center">
                         <MudSelect T="int" Label="Retention (Years)" @bind-Value="_retentionYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
+                            
                             @for (int i = 1; i <= 10; i++)
                             {
                                 var years = i;

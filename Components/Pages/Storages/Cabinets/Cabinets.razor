@@ -87,7 +87,8 @@
             <MudTextField @bind-Value="_searchString" Placeholder="Search..."
                           Adornment="Adornment.Start" Immediate="true"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
+                          AdornmentIcon="@Icons.Material.Filled.Search" 
+                          DebounceInterval="1000" />
         </div>
     </div>
 </MudPaper>
@@ -114,13 +115,12 @@
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Actions" CellStyle="text-align:right;">
+                <TemplateColumn Title="Actions" Sortable="false">
                     <CellTemplate>
-                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning"
-                                           OnClick="@(() => EditCabinet(context.Item))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Archive" Size="Size.Small" Color="Color.Error"
-                                           OnClick="@(() => ConfirmArchive(context.Item))" />
+                        
+                        <MudStack Row="true" Spacing="1" @onclick:stopPropagation="true">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning" OnClick="@(() => EditCabinet(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Archive" Size="Size.Small" Color="Color.Error" OnClick="@(() => ConfirmArchive(context.Item))" />
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
@@ -182,7 +182,7 @@
             .Where(n => n != null).Select(n => n!)
             .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
 
-    // Levels scoped to selected type + number
+    
     private IEnumerable<string> _cabinetLevels =>
         _cabinets
             .Where(c => string.IsNullOrWhiteSpace(_selectedStorageType) || ParseStorageType(c.Name) == _selectedStorageType)

@@ -93,9 +93,9 @@
                         </MudButton>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Actions" CellStyle="text-align:right;">
+                <TemplateColumn Title="Actions" Sortable="false">
                     <CellTemplate>
-                        <MudStack Spacing="1" Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
+                        <MudStack  Row="true" @onclick:stopPropagation="true">
                             <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" OnClick="@(() => OpenEditDialog(context.Item))" />
                             <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Archive" Color="Color.Error" OnClick="@(() => ConfirmArchive(context.Item))" />
                         </MudStack>
