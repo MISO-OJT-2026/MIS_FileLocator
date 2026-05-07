@@ -78,7 +78,8 @@
             </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search folders..."
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                          DebounceInterval="1000"/>
         </div>
     </div>
 </MudPaper>
@@ -300,7 +301,7 @@ else
             return;
         }
 
-        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are you sure?", yesText: "Archive", cancelText: "Cancel");
+        bool? result = await DialogService.ShowMessageBoxAsync("Archive Confirmation", $"Are you sure you want to archive the '{folder.Name}'?", yesText: "Archive", cancelText: "Cancel");
         if (result == true)
         {
             try
@@ -327,7 +328,7 @@ else
 
     private async Task UnarchiveFolder(Folder folder)
     {
-        bool? result = await DialogService.ShowMessageBoxAsync("Restore Folder", $"Restore '{folder.Name}'?", yesText: "Restore", cancelText: "Cancel");
+        bool? result = await DialogService.ShowMessageBoxAsync("Restore ''", $"Restore '{folder.Name}' to active status?", yesText: "Restore", cancelText: "Cancel");
         if (result == true)
         {
             try

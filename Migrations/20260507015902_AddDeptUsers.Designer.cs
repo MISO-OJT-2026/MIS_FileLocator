@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MIS_FileLocator.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260413003444_ForUploads")]
-    partial class ForUploads
+    [Migration("20260507015902_AddDeptUsers")]
+    partial class AddDeptUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -137,6 +137,9 @@ namespace MIS_FileLocator.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DocumentDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("ExpectedReturnDate")
                         .HasColumnType("datetime2");
 
@@ -170,9 +173,6 @@ namespace MIS_FileLocator.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("Year")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -290,6 +290,9 @@ namespace MIS_FileLocator.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("AllowedConfidentialityLevels")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

@@ -39,7 +39,7 @@
             <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
                           Adornment="Adornment.Start" Variant="Variant.Outlined"
                           Immediate="true" Margin="Margin.Dense"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
+                          AdornmentIcon="@Icons.Material.Filled.Search" DebounceInterval="1000" />
         </div>
     </div>
 </MudPaper>

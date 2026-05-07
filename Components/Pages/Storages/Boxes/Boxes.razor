@@ -57,7 +57,8 @@
             </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search..."
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                          DebounceInterval="1000"/>
         </div>
     </div>
 </MudPaper>

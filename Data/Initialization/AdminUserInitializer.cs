@@ -19,9 +19,10 @@ namespace MIS_FileLocator.Data.Initialization
             {
                 var adminUser = new ApplicationUser
                 {
-                    UserName = employeeId,
+                    UserName = "taylorbatumbakal",
                     EmployeeId = employeeId,
                     FullName = "Taylor Batumbakal",
+                    Department = "Front Desk",
                     EmailConfirmed = true
 
                 };

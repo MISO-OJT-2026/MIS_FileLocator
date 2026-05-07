@@ -63,6 +63,7 @@ namespace MIS_FileLocator.Data
 
             modelBuilder.Entity<Documents>()
                 .HasOne(x =>x.ConfidentialityLevel)
+
                 .WithMany()
                 .HasForeignKey(x => x.ConfidentialityLevelId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -75,21 +76,42 @@ namespace MIS_FileLocator.Data
                 );
         }
 
-       
-         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            
+            string currentUsername = CurrentUserOverride;
+            string currentUserId = CurrentUserIdOverride;
+
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                try
+                {
+                    currentUsername = await currentUserService.GetCurrentFullNameAsync();
+                }
+                catch (Exception)
+                {
+                    currentUsername = "System"; 
+                }
+            }
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                try
+                {
+                    currentUserId = await currentUserService.GetCurrentUserIdAsync();
+                }
+                catch (Exception)
+                {
+                    currentUserId = "System"; 
+                }
+            }
+
            
-            var currentUsername = CurrentUserOverride
-                ?? await currentUserService.GetCurrentFullNameAsync();
-            var currentUserId = CurrentUserIdOverride
-                ?? await currentUserService.GetCurrentUserIdAsync();
-
-
-
             foreach (var entry in ChangeTracker.Entries())
             {
-                 if(entry.Entity is Documents doc)
-
+                if (entry.Entity is Documents doc)
+                {
                     if (entry.State == EntityState.Added)
                     {
                         doc.FiledBy = currentUsername;
@@ -101,12 +123,12 @@ namespace MIS_FileLocator.Data
                         if (doc.IsDeleted && isDeletedProperty.IsModified)
                         {
                             doc.DeletedAt = DateTime.UtcNow.AddHours(8);
-
                             doc.DeletedByUserId = currentUserId;
                         }
                     }
-            
-        }
+                }
+            }
+
             
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added ||
@@ -116,7 +138,6 @@ namespace MIS_FileLocator.Data
 
             var auditLogs = new List<AuditTrails>();
 
-           
             foreach (var entry in entries)
             {
                 
@@ -127,22 +148,21 @@ namespace MIS_FileLocator.Data
                 {
                     TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
                     Action = entry.State.ToString(),
-                    PerformedAt = DateTime.UtcNow,
-                    FullName = currentUsername 
+                    PerformedAt = DateTime.UtcNow.AddHours(8),
+                    FullName = currentUsername
                 };
 
-                
                 var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
                 auditTrail.RecordId = primaryKey?.CurrentValue?.ToString() ?? "Unknown";
 
-               
+                
                 if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
                 {
                     var oldValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.OriginalValue);
                     auditTrail.OldValues = JsonSerializer.Serialize(oldValues);
                 }
 
-                
+             
                 if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
                 {
                     var newValues = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
@@ -152,12 +172,13 @@ namespace MIS_FileLocator.Data
                 auditLogs.Add(auditTrail);
             }
 
+            
             if (auditLogs.Any())
             {
                 await AuditTrails.AddRangeAsync(auditLogs, cancellationToken);
             }
 
-            
+            // 5. Finalize the Save
             return await base.SaveChangesAsync(cancellationToken);
         }
     }

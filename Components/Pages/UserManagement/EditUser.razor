@@ -9,6 +9,7 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ICurrentUserService _currentUserService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -41,7 +42,9 @@
                         <MudSelect T="string" @bind-Value="_editUser.Department" Label="Department" Required="true" Variant="Variant.Outlined" Disabled="@_isSaving">
                             <MudSelectItem Value="@("Network Unit")">Network Unit</MudSelectItem>
                             <MudSelectItem Value="@("Hardware Unit")">Hardware Unit</MudSelectItem>
-                            <MudSelectItem Value="@("Software Unit/Front Desk")">Software Unit/Front Desk</MudSelectItem>
+                            <MudSelectItem Value="@("Software Unit")">Software Unit</MudSelectItem>
+                        
+                         <MudSelectItem Value="@("Front Desk")">Front Desk</MudSelectItem>
                         </MudSelect>
                     </MudItem>
 
@@ -137,111 +140,122 @@
 
     private async Task UpdateUser(EditContext context)
     {
-        if (_user == null || _isSaving) return;
+        
 
-        _isSaving = true;
-        StateHasChanged();
-
-        try
+        bool? result = await DialogService.ShowMessageBoxAsync(
+           "Confirm Update",
+           $"Are you sure you want to update this user?",
+           yesText: "Update",
+           cancelText: "Cancel"
+       );
+        if (result == true)
         {
-            
-            var changes = new List<string>();
-            var originalRole = (await UserManager.GetRolesAsync(_user)).FirstOrDefault() ?? "No Role";
-            bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+            if (_user == null || _isSaving) return;
 
-            if (_user.EmployeeId != _editUser.EmployeeId) changes.Add($"Employee ID: '{_user.EmployeeId}' → '{_editUser.EmployeeId}'");
-            if (_user.UserName != _editUser.UserName) changes.Add($"Username: '{_user.UserName}' → '{_editUser.UserName}'");
-            if (_user.FullName != _editUser.FullName) changes.Add($"Full Name: '{_user.FullName}' → '{_editUser.FullName}'");
-            if (_user.Department != _editUser.Department) changes.Add($"Department: '{_user.Department}' → '{_editUser.Department}'");
-            if (originalRole != _editUser.Role) changes.Add($"Role: '{originalRole}' → '{_editUser.Role}'");
-            if (_editUser.IsDisabled != currentlyDisabled) changes.Add(_editUser.IsDisabled ? "Account disabled" : "Account re-activated");
-            var originalAllowed = new HashSet<int>(_user.GetAllowedLevelIds());
-            if (!originalAllowed.SetEquals(_editUser.AllowedLevelIds))
+            _isSaving = true;
+            StateHasChanged();
+            try
             {
-                var oldStr = originalAllowed.Any() ? string.Join(", ", originalAllowed.OrderBy(x => x)) : "All levels";
-                var newStr = _editUser.AllowedLevelIds.Any() ? string.Join(", ", _editUser.AllowedLevelIds.OrderBy(x => x)) : "All levels";
-                changes.Add($"Allowed levels: [{oldStr}] → [{newStr}]");
-            }
 
-            if (!changes.Any())
-            {
-                Snackbar.Add("No changes were made.", Severity.Info);
-                MudDialog.Cancel();
-                return;
-            }
 
-            
-            _user.EmployeeId = _editUser.EmployeeId;
-            _user.UserName = _editUser.UserName;
-            _user.FullName = _editUser.FullName;
-            _user.Department = _editUser.Department;
-            _user.AllowedConfidentialityLevels = _editUser.Role == "Viewer" && _editUser.AllowedLevelIds.Any()
-                ? string.Join(",", _editUser.AllowedLevelIds.OrderBy(x => x))
-                : null;
+                var changes = new List<string>();
+                var originalRole = (await UserManager.GetRolesAsync(_user)).FirstOrDefault() ?? "No Role";
+                bool currentlyDisabled = _user.LockoutEnd.HasValue && _user.LockoutEnd.Value > DateTimeOffset.UtcNow;
 
-            var updateResult = await UserManager.UpdateAsync(_user);
-            if (!updateResult.Succeeded)
-            {
-                foreach (var error in updateResult.Errors)
-                    Snackbar.Add(error.Description, Severity.Error);
-                return;
-            }
-
-            
-            var currentRoles = await UserManager.GetRolesAsync(_user);
-            if (currentRoles.Any())
-            {
-                var removeResult = await UserManager.RemoveFromRolesAsync(_user, currentRoles);
-                if (!removeResult.Succeeded)
+                if (_user.EmployeeId != _editUser.EmployeeId) changes.Add($"Employee ID: '{_user.EmployeeId}' → '{_editUser.EmployeeId}'");
+                if (_user.UserName != _editUser.UserName) changes.Add($"Username: '{_user.UserName}' → '{_editUser.UserName}'");
+                if (_user.FullName != _editUser.FullName) changes.Add($"Full Name: '{_user.FullName}' → '{_editUser.FullName}'");
+                if (_user.Department != _editUser.Department) changes.Add($"Department: '{_user.Department}' → '{_editUser.Department}'");
+                if (originalRole != _editUser.Role) changes.Add($"Role: '{originalRole}' → '{_editUser.Role}'");
+                if (_editUser.IsDisabled != currentlyDisabled) changes.Add(_editUser.IsDisabled ? "Account disabled" : "Account re-activated");
+                var originalAllowed = new HashSet<int>(_user.GetAllowedLevelIds());
+                if (!originalAllowed.SetEquals(_editUser.AllowedLevelIds))
                 {
-                    Snackbar.Add("Failed to update role.", Severity.Error);
+                    var oldStr = originalAllowed.Any() ? string.Join(", ", originalAllowed.OrderBy(x => x)) : "All levels";
+                    var newStr = _editUser.AllowedLevelIds.Any() ? string.Join(", ", _editUser.AllowedLevelIds.OrderBy(x => x)) : "All levels";
+                    changes.Add($"Allowed levels: [{oldStr}] → [{newStr}]");
+                }
+
+                if (!changes.Any())
+                {
+                    Snackbar.Add("No changes were made.", Severity.Info);
+                    MudDialog.Cancel();
                     return;
                 }
-            }
-            var addResult = await UserManager.AddToRoleAsync(_user, _editUser.Role);
-            if (!addResult.Succeeded)
-            {
-                
+
+
+                _user.EmployeeId = _editUser.EmployeeId;
+                _user.UserName = _editUser.UserName;
+                _user.FullName = _editUser.FullName;
+                _user.Department = _editUser.Department;
+                _user.AllowedConfidentialityLevels = _editUser.Role == "Viewer" && _editUser.AllowedLevelIds.Any()
+                    ? string.Join(",", _editUser.AllowedLevelIds.OrderBy(x => x))
+                    : null;
+
+                var updateResult = await UserManager.UpdateAsync(_user);
+                if (!updateResult.Succeeded)
+                {
+                    foreach (var error in updateResult.Errors)
+                        Snackbar.Add(error.Description, Severity.Error);
+                    return;
+                }
+
+
+                var currentRoles = await UserManager.GetRolesAsync(_user);
                 if (currentRoles.Any())
-                    await UserManager.AddToRolesAsync(_user, currentRoles);
-                Snackbar.Add("Failed to assign new role.", Severity.Error);
-                return;
-            }
+                {
+                    var removeResult = await UserManager.RemoveFromRolesAsync(_user, currentRoles);
+                    if (!removeResult.Succeeded)
+                    {
+                        Snackbar.Add("Failed to update role.", Severity.Error);
+                        return;
+                    }
+                }
+                var addResult = await UserManager.AddToRoleAsync(_user, _editUser.Role);
+                if (!addResult.Succeeded)
+                {
 
-            
-            if (_editUser.IsDisabled && !currentlyDisabled)
-            {
-                await UserManager.SetLockoutEnabledAsync(_user, true);
-                await UserManager.SetLockoutEndDateAsync(_user, DateTimeOffset.MaxValue);
-            }
-            else if (!_editUser.IsDisabled && currentlyDisabled)
-            {
-                await UserManager.SetLockoutEndDateAsync(_user, null);
-            }
+                    if (currentRoles.Any())
+                        await UserManager.AddToRolesAsync(_user, currentRoles);
+                    Snackbar.Add("Failed to assign new role.", Severity.Error);
+                    return;
+                }
 
-            var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
-            await using var db = await DbFactory.CreateDbContextAsync();
-            await db.TransactionLogs.AddAsync(new TransactionLog
-            {
-                FullName = currentAdmin,
-                EventName = "User Updated",
-                Description = $"User '{_editUser.FullName}': {string.Join(" | ", changes)}",
-                Status = _editUser.IsDisabled ? "Warning" : "Success",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            });
-            await db.SaveChangesAsync();
 
-            Snackbar.Add("User updated successfully!", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isSaving = false;
-            StateHasChanged();
+                if (_editUser.IsDisabled && !currentlyDisabled)
+                {
+                    await UserManager.SetLockoutEnabledAsync(_user, true);
+                    await UserManager.SetLockoutEndDateAsync(_user, DateTimeOffset.MaxValue);
+                }
+                else if (!_editUser.IsDisabled && currentlyDisabled)
+                {
+                    await UserManager.SetLockoutEndDateAsync(_user, null);
+                }
+
+                var currentAdmin = await _currentUserService.GetCurrentFullNameAsync();
+                await using var db = await DbFactory.CreateDbContextAsync();
+                await db.TransactionLogs.AddAsync(new TransactionLog
+                    {
+                        FullName = currentAdmin,
+                        EventName = "User Updated",
+                        Description = $"User '{_editUser.FullName}': {string.Join(" | ", changes)}",
+                        Status = _editUser.IsDisabled ? "Warning" : "Success",
+                        PerformedAt = DateTime.UtcNow.AddHours(8)
+                    });
+                await db.SaveChangesAsync();
+
+                Snackbar.Add("User updated successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _isSaving = false;
+                StateHasChanged();
+            }
         }
     }
 

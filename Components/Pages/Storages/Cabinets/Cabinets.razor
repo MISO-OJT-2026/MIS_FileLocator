@@ -4,6 +4,7 @@
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Components.Pages  
 @using MIS_FileLocator.Models
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using FileLocator.Models
 @using MIS_FileLocator.Components.Pages.Storages
@@ -12,9 +13,10 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory 
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService //DONT FORGETTI
+@inject IDialogService DialogService 
 @inject ICurrentUserService _currentUserService
-@inject IJSRuntime JSRuntime // calls javascript
+@inject IJSRuntime JSRuntime 
+@inject UserManager<ApplicationUser> UserManager
 
 <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Filing Cabinets</MudText>
 
@@ -169,13 +171,13 @@
     private string _searchString = "";
     private int _activeTab = 0;
 
-    // All distinct storage types parsed from the first word of the name (Cabinet, Drawer, Shelf, etc.)
+
     private IEnumerable<string> _storageTypes =>
         _cabinets.Select(c => ParseStorageType(c.Name))
                  .Where(t => t != null).Select(t => t!)
                  .Distinct().OrderBy(t => t, StringComparer.OrdinalIgnoreCase);
 
-    // Numbers scoped to selected type (or all types if none selected)
+
     private IEnumerable<string> _cabinetNumbers =>
         _cabinets
             .Where(c => string.IsNullOrWhiteSpace(_selectedStorageType) || ParseStorageType(c.Name) == _selectedStorageType)
@@ -183,7 +185,7 @@
             .Where(n => n != null).Select(n => n!)
             .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
 
-    
+
     private IEnumerable<string> _cabinetLevels =>
         _cabinets
             .Where(c => string.IsNullOrWhiteSpace(_selectedStorageType) || ParseStorageType(c.Name) == _selectedStorageType)
@@ -191,21 +193,21 @@
             .Where(l => l != null).Select(l => l!)
             .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
 
-    // Parses "Cabinet 1A" -> "Cabinet", "Drawer 2B" -> "Drawer", "Open Shelf 1A" -> "Open Shelf"
+
     private static string? ParseStorageType(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name.Trim(), @"^(.*?)\s+\d");
         return match.Success ? match.Groups[1].Value.Trim() : null;
     }
 
-    // Parses "Cabinet 1A" -> "1", "Drawer 12B" -> "12"
+
     private static string? ParseCabinetNumber(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)[A-Za-z]?$");
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    // Parses "Cabinet 1A" -> "A", "Drawer 12B" -> "B"
+
     private static string? ParseCabinetLevel(string name)
     {
         var match = System.Text.RegularExpressions.Regex.Match(name, @"\d+([A-Za-z])$");
@@ -215,7 +217,7 @@
     private void OnStorageTypeChanged(string value)
     {
         _selectedStorageType = value;
-        // Reset number/level when type changes so stale selections don't remain
+
         _selectedCabinetNumber = "";
         _selectedCabinetLevel = "";
         StateHasChanged();
@@ -286,10 +288,10 @@
 
     private async Task ArchiveCabinet(FillingCabinet cabinet)
     {
-        
+
         if (cabinet.FileBox != null && cabinet.FileBox.Count > 0)
         {
-          
+
             Snackbar.Add($"Cannot archive '{cabinet.Name}'. You must empty or move all boxes first!", Severity.Error);
             return;
         }
@@ -300,25 +302,25 @@
         cabinet.ArchivedBy = currentAdmin;
 
 
+            var log = new TransactionLog
+                {
+                    FullName = currentAdmin,
+                    EventName = "Cabinet Archived",
+                    Description = $"Archived cabinet '{cabinet.Name}'.",
+                    Status = "Warning",
+                    PerformedAt = DateTime.UtcNow.AddHours(8)
+                };
 
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.FillingCabinets.Update(cabinet);
+            db.TransactionLogs.Add(log);
+            db.CurrentUserOverride = currentAdmin;
+            await db.SaveChangesAsync();
 
-        var log = new TransactionLog
-            {
-                FullName = currentAdmin,
-                EventName = "Cabinet Archived",
-                Description = $"Archived cabinet '{cabinet.Name}'.",
-                Status = "Warning",
-                PerformedAt = DateTime.UtcNow.AddHours(8)
-            };
+            Snackbar.Add($"Cabinet '{cabinet.Name}' successfully archived.", Severity.Success);
+            await LoadCabinets();
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-        db.FillingCabinets.Update(cabinet);
-        db.TransactionLogs.Add(log);
-        db.CurrentUserOverride = currentAdmin;
-        await db.SaveChangesAsync();
-
-        Snackbar.Add($"Cabinet '{cabinet.Name}' successfully archived.", Severity.Success);
-        await LoadCabinets(); // Refresh the table
+        
     }
 
     // CONFIRMATION MODALLLLL

@@ -8,14 +8,10 @@ namespace MIS_FileLocator.Data
         public string FullName { get; set; } = " ";
         public string Department { get; set; } = " ";
 
-        /// <summary>
-        /// Comma-separated ConfidentialityLevel IDs this user can view.
-        /// NULL = no restriction (Admin/Editor see all).
-        /// e.g. "1,2" = can see Public and Internal Use only.
-        /// </summary>
+      
         public string? AllowedConfidentialityLevels { get; set; }
 
-        // Helper: parse to list
+        
         public List<int> GetAllowedLevelIds() =>
             string.IsNullOrWhiteSpace(AllowedConfidentialityLevels)
                 ? new List<int>()

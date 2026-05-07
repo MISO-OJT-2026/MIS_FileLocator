@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MIS_FileLocator.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260415074721_SyncDocumentDateColumn")]
-    partial class SyncDocumentDateColumn
+    [Migration("20260507002548_newOne")]
+    partial class newOne
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -290,6 +290,9 @@ namespace MIS_FileLocator.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("AllowedConfidentialityLevels")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

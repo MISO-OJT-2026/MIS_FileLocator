@@ -5,7 +5,7 @@
 namespace MIS_FileLocator.Migrations
 {
     /// <inheritdoc />
-    public partial class AddDocumentFileColumns : Migration
+    public partial class @try : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
