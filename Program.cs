@@ -23,10 +23,10 @@ builder.Services.AddServerSideBlazor().AddHubOptions(options =>
 
 builder.Services.AddScoped<IdentityRedirectManager>();
 
-// enable detailed circuit errors (good for debugging)
+// enable detailed circuit errors (development only)
 builder.Services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options =>
 {
-    options.DetailedErrors = true;
+    options.DetailedErrors = builder.Environment.IsDevelopment();
 });
 
 // MudBlazor (ONLY ONCE)
@@ -61,8 +61,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
 
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;   // important for local dev
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest  // allows HTTP in local dev
+        : CookieSecurePolicy.Always;        // HTTPS only in production
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();

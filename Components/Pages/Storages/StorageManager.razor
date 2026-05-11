@@ -1,0 +1,712 @@
+@page "/storages"
+@attribute [Authorize(Roles = "Admin,Editor")]
+@using Microsoft.AspNetCore.Authorization
+@using MIS_FileLocator.Data
+@using MIS_FileLocator.Models
+@using FileLocator.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+@using MIS_FileLocator.Components.Pages.Storages
+@using MIS_FileLocator.Components.Pages.Storages.Cabinets
+@using MIS_FileLocator.Components.Pages.Storages.Boxes
+@using MIS_FileLocator.Components.Pages.Storages.Folders
+@using MIS_FileLocator.Services
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ICurrentUserService _currentUserService
+
+<MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Storage Management</MudText>
+
+<MudGrid Spacing="3">
+
+    @* ══════════════════════════════════════
+       LEFT PANEL — Add Storage
+    ══════════════════════════════════════ *@
+    <MudItem xs="12" md="3">
+        <MudPaper Outlined="true" Class="pa-4 h-100">
+            <MudText Typo="Typo.h6" Class="mb-4" Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-1 mb-n1" Size="Size.Small" />
+                Add Storage
+            </MudText>
+
+            <MudStack Spacing="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Inventory2"
+                           OnClick="OpenAddCabinetDialog">
+                    Add Cabinet
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Archive"
+                           OnClick="OpenAddBoxDialog">
+                    Add Box
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled" FullWidth="true"
+                           Style="background:#7b6ab3; color:white;"
+                           StartIcon="@Icons.Material.Filled.Folder"
+                           OnClick="OpenAddFolderDialog">
+                    Add Folder
+                </MudButton>
+            </MudStack>
+
+            <MudDivider Class="my-4" />
+
+            @* Quick Stats *@
+            <MudText Typo="Typo.overline" Class="mud-text-secondary mb-2 d-block">Overview</MudText>
+            <MudStack Spacing="2">
+                <div class="storage-stat-row">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Small" />
+                    <MudText Typo="Typo.body2"><b>@_cabinets.Count(c => !c.IsArchived)</b> Active Cabinets</MudText>
+                </div>
+                <div class="storage-stat-row">
+                    <MudIcon Icon="@Icons.Material.Filled.Archive" Color="Color.Secondary" Size="Size.Small" />
+                    <MudText Typo="Typo.body2"><b>@_boxes.Count(b => !b.IsArchived)</b> Active Boxes</MudText>
+                </div>
+                <div class="storage-stat-row">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Style="color:#7b6ab3;" Size="Size.Small" />
+                    <MudText Typo="Typo.body2"><b>@_folders.Count(f => !f.IsArchived)</b> Active Folders</MudText>
+                </div>
+                <div class="storage-stat-row">
+                    <MudIcon Icon="@Icons.Material.Filled.Archive" Color="Color.Error" Size="Size.Small" />
+                    <MudText Typo="Typo.body2"><b>@(_cabinets.Count(c => c.IsArchived) + _boxes.Count(b => b.IsArchived) + _folders.Count(f => f.IsArchived))</b> Archived</MudText>
+                </div>
+            </MudStack>
+
+            <MudDivider Class="my-4" />
+
+            @* Export *@
+            <MudText Typo="Typo.overline" Class="mud-text-secondary mb-2 d-block">Export</MudText>
+            <MudStack Spacing="2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Print" Size="Size.Small"
+                           OnClick="@(() => ExportCSV(false))">
+                    Export Active
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Print" Size="Size.Small"
+                           OnClick="@(() => ExportCSV(true))">
+                    Export Archived
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    @* ══════════════════════════════════════
+       RIGHT PANEL — Storage Hierarchy
+    ══════════════════════════════════════ *@
+    <MudItem xs="12" md="9">
+        <MudPaper Outlined="true" Class="pa-4">
+
+            @* Toolbar *@
+            <div class="page-toolbar mb-3">
+                <div class="toolbar-actions storage-view-buttons">
+                    <div class="d-flex flex-wrap gap-1">
+                        <MudButton Size="Size.Small"
+                                   Variant="@(_activeView == "all" ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => _activeView = "all")">All</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@(_activeView == "cabinets" ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Inventory2"
+                                   OnClick="@(() => _activeView = "cabinets")">Cabinets</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@(_activeView == "boxes" ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Archive"
+                                   OnClick="@(() => _activeView = "boxes")">Boxes</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@(_activeView == "folders" ? Variant.Filled : Variant.Outlined)"
+                                   Style="@(_activeView == "folders" ? "background:#7b6ab3 !important; color:white !important; border-color:#7b6ab3 !important;" : "border-color:#7b6ab3 !important; color:#7b6ab3 !important;")"
+                                   StartIcon="@Icons.Material.Filled.Folder"
+                                   OnClick="@(() => _activeView = "folders")">Folders</MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="@(_activeView == "archived" ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Archive"
+                                   OnClick="@(() => _activeView = "archived")">Archived</MudButton>
+                    </div>
+                </div>
+                <div class="toolbar-filters">
+                    <MudMenu Label="Filter" Variant="Variant.Outlined" Dense="true"
+                             EndIcon="@Icons.Material.Filled.FilterList">
+                        <div class="pa-4" style="min-width:320px;">
+                            <MudText Typo="Typo.subtitle2" Class="mb-3">Filter Options</MudText>
+
+                            @* ── Cabinet filters ── *@
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1 d-block" Style="font-weight:700; letter-spacing:0.05em;">CABINETS</MudText>
+
+                            <MudSelect T="string" Value="_filterStorageType" Label="Storage Type"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       Searchable="true" Class="mb-2"
+                                       ValueChanged="OnStorageTypeChanged">
+                                <MudSelectItem Value="@("")">All Types</MudSelectItem>
+                                @foreach (var type in _storageTypes)
+                                {
+                                    <MudSelectItem Value="@type">@type</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudSelect T="string" @bind-Value="_filterCabinetNumber"
+                                       Label="@(string.IsNullOrWhiteSpace(_filterStorageType) ? "Number" : $"{_filterStorageType} No.")"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       Searchable="true" Class="mb-2">
+                                <MudSelectItem Value="@("")">All Numbers</MudSelectItem>
+                                @foreach (var num in _cabinetNumbers)
+                                {
+                                    <MudSelectItem Value="@num">@(string.IsNullOrWhiteSpace(_filterStorageType) ? num : $"{_filterStorageType} {num}")</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudSelect T="string" @bind-Value="_filterCabinetLevel" Label="Level"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       Searchable="true" Class="mb-3">
+                                <MudSelectItem Value="@("")">All Levels</MudSelectItem>
+                                @foreach (var lvl in _cabinetLevels)
+                                {
+                                    <MudSelectItem Value="@lvl">Level @lvl</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            @* ── Box / Folder filters ── *@
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1 d-block" Style="font-weight:700; letter-spacing:0.05em;">BOXES & FOLDERS</MudText>
+
+                            <MudSelect T="string" Value="_filterCabinet" Label="Cabinet"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       Searchable="true" Class="mb-2"
+                                       ValueChanged="@(v => { _filterCabinet = v; _filterBox = ""; })">
+                                <MudSelectItem Value="@("")">All Cabinets</MudSelectItem>
+                                @foreach (var c in _cabinets.Where(c => !c.IsArchived).OrderBy(c => c.Name))
+                                {
+                                    <MudSelectItem Value="@c.Name">@c.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudSelect T="string" @bind-Value="_filterBox" Label="Box"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       Searchable="true" Class="mb-3"
+                                       Disabled="@string.IsNullOrWhiteSpace(_filterCabinet)">
+                                <MudSelectItem Value="@("")">All Boxes</MudSelectItem>
+                                @foreach (var b in _boxes.Where(b => !b.IsArchived && b.FillingCabinet?.Name == _filterCabinet).OrderBy(b => b.Name))
+                                {
+                                    <MudSelectItem Value="@b.Name">@b.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters">Reset All Filters</MudButton>
+                        </div>
+                    </MudMenu>
+                    <MudTextField @bind-Value="_searchString" Placeholder="Search..."
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  DebounceInterval="300" />
+                </div>
+            </div>
+
+            @if (_isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+                <MudText Align="Align.Center" Class="mud-text-secondary">Loading storage...</MudText>
+            }
+            else if (_activeView != "archived")
+            {
+                @* ── UNIFIED TABLE ── *@
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2 d-block">
+                    @UnifiedRows.Count() item@(UnifiedRows.Count() != 1 ? "s" : "")
+                </MudText>
+                <MudDataGrid T="StorageRow" Items="@UnifiedRows" Dense="true" Hover="true"
+                             Filterable="false" Breakpoint="Breakpoint.Sm" Class="storage-manager-grid">
+                    <Columns>
+                        <TemplateColumn Title="Type" CellStyle="width:110px;">
+                            <CellTemplate>
+                                @if (context.Item.Type == "Cabinet")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text"
+                                             Icon="@Icons.Material.Filled.Inventory2">Cabinet</MudChip>
+                                }
+                                else if (context.Item.Type == "Box")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text"
+                                             Icon="@Icons.Material.Filled.Archive">Box</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Style="color:#7b6ab3;" Icon="@Icons.Material.Filled.Folder">Folder</MudChip>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Name">
+                            <CellTemplate>
+                                <MudText Typo="Typo.body2"><b>@context.Item.Name</b></MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Description">
+                            <CellTemplate>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(context.Item.Description ?? "—")</MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Location">
+                            <CellTemplate>
+                                @if (!string.IsNullOrWhiteSpace(context.Item.Location))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Item.Location</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Contents">
+                            <CellTemplate>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
+                                    @context.Item.ContentsCount @context.Item.ContentsLabel
+                                </MudChip>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn CellStyle="text-align:right;">
+                            <HeaderTemplate><div style="text-align:right;width:100%;">Actions</div></HeaderTemplate>
+                            <CellTemplate>
+                                <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
+                                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
+                                                   Color="Color.Warning" OnClick="@context.Item.OnEdit" />
+                                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Archive"
+                                                   Color="Color.Error" OnClick="@context.Item.OnArchive" />
+                                </MudStack>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent><MudDataGridPager T="StorageRow" /></PagerContent>
+                </MudDataGrid>
+            }
+            else
+            {
+                @* ── ARCHIVED VIEW — unified table ── *@
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2 d-block">
+                    @ArchivedRows.Count() archived item@(ArchivedRows.Count() != 1 ? "s" : "")
+                </MudText>
+                <MudDataGrid T="ArchivedRow" Items="@ArchivedRows" Dense="true" Hover="true"
+                             Filterable="false" Breakpoint="Breakpoint.Sm" Class="storage-manager-grid">
+                    <Columns>
+                        <TemplateColumn Title="Type" CellStyle="width:110px;">
+                            <CellTemplate>
+                                @if (context.Item.Type == "Cabinet")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text"
+                                             Icon="@Icons.Material.Filled.Inventory2">Cabinet</MudChip>
+                                }
+                                else if (context.Item.Type == "Box")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text"
+                                             Icon="@Icons.Material.Filled.Archive">Box</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                             Style="color:#7b6ab3;" Icon="@Icons.Material.Filled.Folder">Folder</MudChip>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.Name" Title="Name" />
+                        <PropertyColumn Property="x => x.ArchivedBy" Title="Archived By" />
+                        <TemplateColumn Title="Date Archived">
+                            <CellTemplate>@context.Item.ArchivedAt?.ToString("MMM dd, yyyy")</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn CellStyle="text-align:right;">
+                            <HeaderTemplate><div style="text-align:right;width:100%;">Actions</div></HeaderTemplate>
+                            <CellTemplate>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success"
+                                           StartIcon="@Icons.Material.Filled.Restore"
+                                           OnClick="@context.Item.OnRestore">Restore</MudButton>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent><MudDataGridPager T="ArchivedRow" /></PagerContent>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .storage-section-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 6px 0;
+        border-bottom: 2px solid var(--mud-palette-primary);
+    }
+    .storage-stat-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    /* Force Actions header to right-align in StorageManager tables */
+    .storage-manager-grid .mud-table-head th:last-child .mud-table-cell,
+    .storage-manager-grid th:last-child {
+        text-align: right !important;
+        justify-content: flex-end !important;
+    }
+    /* On mobile, wrap the button group */
+    @@media (max-width: 599px) {
+        .storage-view-buttons .mud-button-group {
+            flex-wrap: wrap !important;
+        }
+        .storage-view-buttons .mud-button-group .mud-button-root {
+            flex: 1 1 calc(50% - 2px) !important;
+            min-width: 0 !important;
+        }
+    }
+</style>
+
+@code {
+    private List<FillingCabinet> _cabinets = new();
+    private List<FileBoxes> _boxes = new();
+    private List<Folder> _folders = new();
+    private bool _isLoading = true;
+    private string _activeView = "all";
+    private string _searchString = "";
+    private string _filterCabinet = "";
+    private string _filterBox = "";
+    private string _filterStorageType = "";
+    private string _filterCabinetNumber = "";
+    private string _filterCabinetLevel = "";
+
+    // ── Cabinet type/number/level parsed from name (same as old Cabinets page) ──
+    private IEnumerable<string> _storageTypes =>
+        _cabinets.Select(c => ParseStorageType(c.Name)).Where(t => t != null).Select(t => t!)
+                 .Distinct().OrderBy(t => t, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<string> _cabinetNumbers =>
+        _cabinets
+            .Where(c => string.IsNullOrWhiteSpace(_filterStorageType) || ParseStorageType(c.Name) == _filterStorageType)
+            .Select(c => ParseCabinetNumber(c.Name)).Where(n => n != null).Select(n => n!)
+            .Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<string> _cabinetLevels =>
+        _cabinets
+            .Where(c => string.IsNullOrWhiteSpace(_filterStorageType) || ParseStorageType(c.Name) == _filterStorageType)
+            .Select(c => ParseCabinetLevel(c.Name)).Where(l => l != null).Select(l => l!)
+            .Distinct().OrderBy(l => l, StringComparer.OrdinalIgnoreCase);
+
+    private static string? ParseStorageType(string name)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(name.Trim(), @"^(.*?)\s+\d");
+        return m.Success ? m.Groups[1].Value.Trim() : null;
+    }
+    private static string? ParseCabinetNumber(string name)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)[A-Za-z]?$");
+        return m.Success ? m.Groups[1].Value : null;
+    }
+    private static string? ParseCabinetLevel(string name)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(name, @"\d+([A-Za-z])$");
+        return m.Success ? m.Groups[1].Value.ToUpper() : null;
+    }
+
+    private void OnStorageTypeChanged(string value)
+    {
+        _filterStorageType = value;
+        _filterCabinetNumber = "";
+        _filterCabinetLevel = "";
+        StateHasChanged();
+    }
+
+    // ── View models ──
+    private record StorageRow(
+        string Type,
+        string Name,
+        string? Description,
+        string? Location,
+        int ContentsCount,
+        string ContentsLabel,
+        EventCallback OnEdit,
+        EventCallback OnArchive
+    );
+
+    private IEnumerable<StorageRow> UnifiedRows
+    {
+        get
+        {
+            var rows = new List<StorageRow>();
+
+            if (_activeView == "all" || _activeView == "cabinets")
+                rows.AddRange(FilteredCabinets.Select(c => new StorageRow(
+                    "Cabinet", c.Name, c.Description, null,
+                    c.FileBox?.Count(b => !b.IsArchived) ?? 0, "Boxes",
+                    EventCallback.Factory.Create(this, () => EditCabinet(c)),
+                    EventCallback.Factory.Create(this, () => ArchiveCabinet(c))
+                )));
+
+            if (_activeView == "all" || _activeView == "boxes")
+                rows.AddRange(FilteredBoxes.Select(b => new StorageRow(
+                    "Box", b.Name, b.Description,
+                    b.FillingCabinet?.Name,
+                    b.Folders?.Count(f => !f.IsArchived) ?? 0, "Folders",
+                    EventCallback.Factory.Create(this, () => EditBox(b)),
+                    EventCallback.Factory.Create(this, () => ArchiveBox(b))
+                )));
+
+            if (_activeView == "all" || _activeView == "folders")
+                rows.AddRange(FilteredFolders.Select(f => new StorageRow(
+                    "Folder", f.Name, f.Description,
+                    $"{f.FileBox?.FillingCabinet?.Name} › {f.FileBox?.Name}",
+                    f.Documents?.Count(d => !d.IsDeleted && !d.IsDisposal) ?? 0, "Docs",
+                    EventCallback.Factory.Create(this, () => EditFolder(f)),
+                    EventCallback.Factory.Create(this, () => ArchiveFolder(f))
+                )));
+
+            return rows;
+        }
+    }
+
+    private record ArchivedRow(
+        string Type, string Name, string? ArchivedBy, DateTime? ArchivedAt, EventCallback OnRestore
+    );
+
+    private IEnumerable<ArchivedRow> ArchivedRows
+    {
+        get
+        {
+            var rows = new List<ArchivedRow>();
+            rows.AddRange(ArchivedCabinets.Where(c => string.IsNullOrWhiteSpace(_searchString) || c.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new ArchivedRow("Cabinet", c.Name, c.ArchivedBy, c.ArchivedAt, EventCallback.Factory.Create(this, () => RestoreCabinet(c)))));
+            rows.AddRange(ArchivedBoxes.Where(b => string.IsNullOrWhiteSpace(_searchString) || b.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                .Select(b => new ArchivedRow("Box", b.Name, b.ArchivedBy, b.ArchivedAt, EventCallback.Factory.Create(this, () => RestoreBox(b)))));
+            rows.AddRange(ArchivedFolders.Where(f => string.IsNullOrWhiteSpace(_searchString) || f.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                .Select(f => new ArchivedRow("Folder", f.Name, f.ArchivedBy, f.ArchivedAt, EventCallback.Factory.Create(this, () => RestoreFolder(f)))));
+            return rows.OrderByDescending(r => r.ArchivedAt);
+        }
+    }
+    private IEnumerable<FillingCabinet> FilteredCabinets => _cabinets
+        .Where(c => !c.IsArchived)
+        .Where(c => string.IsNullOrWhiteSpace(_filterStorageType) || ParseStorageType(c.Name) == _filterStorageType)
+        .Where(c => string.IsNullOrWhiteSpace(_filterCabinetNumber) || ParseCabinetNumber(c.Name) == _filterCabinetNumber)
+        .Where(c => string.IsNullOrWhiteSpace(_filterCabinetLevel) || string.Equals(ParseCabinetLevel(c.Name), _filterCabinetLevel, StringComparison.OrdinalIgnoreCase))
+        .Where(c => string.IsNullOrWhiteSpace(_filterCabinet) || c.Name == _filterCabinet)
+        .Where(c => string.IsNullOrWhiteSpace(_searchString) ||
+                    c.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                    (c.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true));
+
+    private IEnumerable<FileBoxes> FilteredBoxes => _boxes
+        .Where(b => !b.IsArchived)
+        .Where(b => string.IsNullOrWhiteSpace(_filterCabinet) || b.FillingCabinet?.Name == _filterCabinet)
+        .Where(b => string.IsNullOrWhiteSpace(_filterBox) || b.Name == _filterBox)
+        .Where(b => string.IsNullOrWhiteSpace(_searchString) ||
+                    b.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                    (b.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true));
+
+    private IEnumerable<Folder> FilteredFolders => _folders
+        .Where(f => !f.IsArchived)
+        .Where(f => string.IsNullOrWhiteSpace(_filterCabinet) || f.FileBox?.FillingCabinet?.Name == _filterCabinet)
+        .Where(f => string.IsNullOrWhiteSpace(_filterBox) || f.FileBox?.Name == _filterBox)
+        .Where(f => string.IsNullOrWhiteSpace(_searchString) ||
+                    f.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                    (f.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true));
+
+    private IEnumerable<FillingCabinet> ArchivedCabinets => _cabinets.Where(c => c.IsArchived)
+        .Where(c => string.IsNullOrWhiteSpace(_searchString) || c.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<FileBoxes> ArchivedBoxes => _boxes.Where(b => b.IsArchived)
+        .Where(b => string.IsNullOrWhiteSpace(_searchString) || b.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<Folder> ArchivedFolders => _folders.Where(f => f.IsArchived)
+        .Where(f => string.IsNullOrWhiteSpace(_searchString) || f.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await LoadAll();
+
+    private async Task LoadAll()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _cabinets = await db.FillingCabinets
+                .Include(c => c.FileBox).ThenInclude(b => b.Folders).ThenInclude(f => f.Documents)
+                .OrderBy(c => c.Name).ToListAsync();
+            _boxes = await db.FileBoxes
+                .Include(b => b.FillingCabinet).Include(b => b.Folders)
+                .OrderBy(b => b.Name).ToListAsync();
+            _folders = await db.Folders
+                .Include(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
+                .Include(f => f.Documents)
+                .OrderBy(f => f.Name).ToListAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error loading storage: {ex.Message}", Severity.Error); }
+        finally
+        {
+            _isLoading = false;
+            // Ensure view is never null/empty — default to "all"
+            if (string.IsNullOrWhiteSpace(_activeView)) _activeView = "all";
+            StateHasChanged();
+        }
+    }
+
+    private void ResetFilters()
+    {
+        _filterStorageType = "";
+        _filterCabinetNumber = "";
+        _filterCabinetLevel = "";
+        _filterCabinet = "";
+        _filterBox = "";
+        _searchString = "";
+        StateHasChanged();
+    }
+
+    // ── Add dialogs ──
+    private async Task OpenAddCabinetDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddCabinetDialog>("Add Cabinet",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    private async Task OpenAddBoxDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddBoxDialog>("Add Box",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    private async Task OpenAddFolderDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddFolderDialog>("Add Folder",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    // ── Edit dialogs ──
+    private async Task EditCabinet(FillingCabinet cabinet)
+    {
+        var p = new DialogParameters { ["CabinetToEdit"] = cabinet };
+        var dialog = await DialogService.ShowAsync<EditCabinetDialog>("Edit Cabinet", p,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    private async Task EditBox(FileBoxes box)
+    {
+        var p = new DialogParameters { ["BoxToEdit"] = box };
+        var dialog = await DialogService.ShowAsync<EditBoxDialog>("Edit Box", p,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    private async Task EditFolder(Folder folder)
+    {
+        var p = new DialogParameters { ["FolderToEdit"] = folder };
+        var dialog = await DialogService.ShowAsync<EditFolderDialog>("Edit Folder", p,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        if (!(await dialog.Result).Canceled) await LoadAll();
+    }
+
+    // ── Archive ──
+    private async Task ArchiveCabinet(FillingCabinet cabinet)
+    {
+        if (cabinet.FileBox?.Any(b => !b.IsArchived) == true)
+        { Snackbar.Add("Move or archive all boxes first.", Severity.Error); return; }
+        bool? r = await DialogService.ShowMessageBoxAsync("Archive Cabinet", $"Archive '{cabinet.Name}'?", yesText: "Archive", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        cabinet.IsArchived = true; cabinet.ArchivedAt = DateTime.UtcNow.AddHours(8); cabinet.ArchivedBy = admin;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.FillingCabinets.Update(cabinet); db.CurrentUserOverride = admin;
+        db.TransactionLogs.Add(new TransactionLog { FullName = admin, EventName = "Cabinet Archived", Description = $"Archived '{cabinet.Name}'.", Status = "Warning", PerformedAt = DateTime.UtcNow.AddHours(8) });
+        await db.SaveChangesAsync(); await LoadAll();
+        Snackbar.Add("Cabinet archived.", Severity.Success);
+    }
+
+    private async Task ArchiveBox(FileBoxes box)
+    {
+        if (box.Folders?.Any(f => !f.IsArchived) == true)
+        { Snackbar.Add("Move or archive all folders first.", Severity.Error); return; }
+        bool? r = await DialogService.ShowMessageBoxAsync("Archive Box", $"Archive '{box.Name}'?", yesText: "Archive", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        box.IsArchived = true; box.ArchivedAt = DateTime.UtcNow.AddHours(8); box.ArchivedBy = admin;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.FileBoxes.Update(box); db.CurrentUserOverride = admin;
+        db.TransactionLogs.Add(new TransactionLog { FullName = admin, EventName = "Box Archived", Description = $"Archived '{box.Name}'.", Status = "Warning", PerformedAt = DateTime.UtcNow.AddHours(8) });
+        await db.SaveChangesAsync(); await LoadAll();
+        Snackbar.Add("Box archived.", Severity.Success);
+    }
+
+    private async Task ArchiveFolder(Folder folder)
+    {
+        if (folder.Documents?.Any(d => !d.IsDeleted) == true)
+        { Snackbar.Add("Move or archive all documents first.", Severity.Error); return; }
+        bool? r = await DialogService.ShowMessageBoxAsync("Archive Folder", $"Archive '{folder.Name}'?", yesText: "Archive", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        await db.Folders.Where(f => f.Id == folder.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.IsArchived, true)
+                .SetProperty(f => f.ArchivedAt, DateTime.UtcNow.AddHours(8))
+                .SetProperty(f => f.ArchivedBy, admin));
+        await LoadAll();
+        Snackbar.Add("Folder archived.", Severity.Success);
+    }
+
+    // ── Restore ──
+    private async Task RestoreCabinet(FillingCabinet cabinet)
+    {
+        bool? r = await DialogService.ShowMessageBoxAsync("Restore Cabinet", $"Restore '{cabinet.Name}'?", yesText: "Restore", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        cabinet.IsArchived = false; cabinet.ArchivedAt = null; cabinet.ArchivedBy = null;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.FillingCabinets.Update(cabinet); db.CurrentUserOverride = admin;
+        db.TransactionLogs.Add(new TransactionLog { FullName = admin, EventName = "Cabinet Restored", Description = $"Restored '{cabinet.Name}'.", Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8) });
+        await db.SaveChangesAsync(); await LoadAll();
+        Snackbar.Add("Cabinet restored.", Severity.Success);
+    }
+
+    private async Task RestoreBox(FileBoxes box)
+    {
+        bool? r = await DialogService.ShowMessageBoxAsync("Restore Box", $"Restore '{box.Name}'?", yesText: "Restore", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        box.IsArchived = false; box.ArchivedAt = null; box.ArchivedBy = null;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.FileBoxes.Update(box); db.CurrentUserOverride = admin;
+        db.TransactionLogs.Add(new TransactionLog { FullName = admin, EventName = "Box Restored", Description = $"Restored '{box.Name}'.", Status = "Success", PerformedAt = DateTime.UtcNow.AddHours(8) });
+        await db.SaveChangesAsync(); await LoadAll();
+        Snackbar.Add("Box restored.", Severity.Success);
+    }
+
+    private async Task RestoreFolder(Folder folder)
+    {
+        bool? r = await DialogService.ShowMessageBoxAsync("Restore Folder", $"Restore '{folder.Name}'?", yesText: "Restore", cancelText: "Cancel");
+        if (r != true) return;
+        var admin = await _currentUserService.GetCurrentFullNameAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        await db.Folders.Where(f => f.Id == folder.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.IsArchived, false)
+                .SetProperty(f => f.ArchivedAt, (DateTime?)null)
+                .SetProperty(f => f.ArchivedBy, (string?)null));
+        await LoadAll();
+        Snackbar.Add("Folder restored.", Severity.Success);
+    }
+
+    // ── Export ──
+    private async Task ExportCSV(bool archived)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Type,Name,Location,Status,Archived By,Date Archived");
+        foreach (var c in _cabinets.Where(x => x.IsArchived == archived))
+            sb.AppendLine($"Cabinet,\"{c.Name}\",—,{(archived ? "Archived" : "Active")},\"{c.ArchivedBy ?? ""}\",\"{c.ArchivedAt?.ToString("MMM dd, yyyy") ?? ""}\"");
+        foreach (var b in _boxes.Where(x => x.IsArchived == archived))
+            sb.AppendLine($"Box,\"{b.Name}\",\"{b.FillingCabinet?.Name ?? ""}\",{(archived ? "Archived" : "Active")},\"{b.ArchivedBy ?? ""}\",\"{b.ArchivedAt?.ToString("MMM dd, yyyy") ?? ""}\"");
+        foreach (var f in _folders.Where(x => x.IsArchived == archived))
+            sb.AppendLine($"Folder,\"{f.Name}\",\"{f.FileBox?.Name ?? ""} > {f.FileBox?.FillingCabinet?.Name ?? ""}\",{(archived ? "Archived" : "Active")},\"{f.ArchivedBy ?? ""}\",\"{f.ArchivedAt?.ToString("MMM dd, yyyy") ?? ""}\"");
+        await JSRuntime.InvokeVoidAsync("downloadFile", $"{(archived ? "Archived" : "Active")}_Storage_{DateTime.Now:yyyyMMdd}.csv", sb.ToString());
+    }
+}

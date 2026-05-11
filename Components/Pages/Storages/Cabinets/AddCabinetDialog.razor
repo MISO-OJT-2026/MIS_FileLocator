@@ -49,7 +49,7 @@
         var existingActive = await db.FillingCabinets.AnyAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && !c.IsArchived);
         if (existingActive) { Snackbar.Add("A cabinet with this name already exists.", Severity.Error); return; }
         var existingArchived = await db.FillingCabinets.FirstOrDefaultAsync(c => c.Name.ToLower() == _newCabinet.Name.ToLower() && c.IsArchived);
-        if (existingArchived != null) { Snackbar.Add("This name exists in Archives. Restore it or use a different name.", Severity.Info); return; }
+        if (existingArchived != null) { Snackbar.Add("This name exists in Archives. Restore it or use a different name.", Severity.Warning); return; }
 
         _isSaving = true;
         StateHasChanged();

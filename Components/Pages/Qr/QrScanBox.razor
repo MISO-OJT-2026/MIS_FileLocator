@@ -90,51 +90,6 @@ else
         </MudStack>
     </MudPaper>
 
-   
-    <MudPaper Class="pa-6" Elevation="2">
-        <MudStack Spacing="3">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                <MudText Typo="Typo.h6" Color="Color.Primary">
-                    <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
-                    All Documents in this Box
-                </MudText>
-                <MudChip T="string" Color="Color.Success" Size="Size.Small">@_documents.Count document(s)</MudChip>
-            </MudStack>
-
-            @if (_documents.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Dense="true">No active documents in this box.</MudAlert>
-            }
-            else
-            {
-                <MudTable Items="@_documents" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Class="mt-2">
-                    <HeaderContent>
-                        <MudTh Style="font-weight: 600;">Title</MudTh>
-                        <MudTh Style="font-weight: 600;">Folder</MudTh>
-                        <MudTh Style="font-weight: 600; text-align: center;">Status</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Title">
-                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Title</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Folder">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Folder?.Name</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Status" Style="text-align: center;">
-                            @if (context.IsBorrowed)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Outbound">Borrowed</MudChip>
-                            }
-                            else
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Available</MudChip>
-                            }
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
-        </MudStack>
-    </MudPaper>
 }
 
 <style>
@@ -149,7 +104,6 @@ else
 
     private FileBoxes? _box;
     private List<Folder> _folders = new();
-    private List<Documents> _documents = new();
     private Dictionary<int, int> _docsInFolder = new();
     private string _locationPath = "";
     private bool _loading = true;
@@ -184,14 +138,11 @@ else
             .ToListAsync();
 
         var folderIds = _folders.Select(f => f.Id).ToList();
-        var docs = await _context.Documents.AsNoTracking()
-            .Include(d => d.Folder)
+        _docsInFolder = await _context.Documents.AsNoTracking()
             .Where(d => folderIds.Contains(d.FolderId) && !d.IsDeleted && !d.IsDisposal)
-            .OrderBy(d => d.Title)
-            .ToListAsync();
-
-        _documents = docs;
-        _docsInFolder = docs.GroupBy(d => d.FolderId).ToDictionary(g => g.Key, g => g.Count());
+            .GroupBy(d => d.FolderId)
+            .Select(g => new { FolderId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.FolderId, g => g.Count);
 
         _loading = false;
     }

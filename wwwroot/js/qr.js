@@ -13,7 +13,8 @@ window.misQr.copyTextFallback = function (text) {
 };
 
 window.misQr.printQrLabel = async function (title, dataUrl, url, locationPath) {
-    
+    // Note: 'url' parameter is intentionally not displayed in the label
+    // The QR code itself encodes the URL — no need to show it as text
     const blob = await (await fetch(dataUrl)).blob();
     const blobUrl = URL.createObjectURL(blob);
 
@@ -34,19 +35,32 @@ window.misQr.printQrLabel = async function (title, dataUrl, url, locationPath) {
       print-color-adjust: exact !important; 
   }
   .url { font-size: 13px; color: #333; margin-top: 10px; }
+  .print-btn {
+      margin-top: 24px;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #0e1824;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+  }
+  .print-btn:hover { background: #1a3a52; }
+  @media print { .print-btn { display: none; } }
 </style></head><body>
   <h1>${escapeHtml(title)}</h1>
   ${loc}
   <img src="${blobUrl}" id="qrImg" />
-  <p class="url">${escapeHtml(url)}</p>
+
+  <br/>
+  <button class="print-btn" onclick="window.print()">🖨️ Print</button>
   <script>
-    const img = document.getElementById('qrImg');
-    img.onload = () => {
-        window.print();
-        window.onafterprint = () => {
-            URL.revokeObjectURL('${blobUrl}'); // Clean up memory
-            window.close();
-        };
+    document.getElementById('qrImg').onload = () => {
+        URL.revokeObjectURL('${blobUrl}');
     };
   </script>
 </body></html>`);

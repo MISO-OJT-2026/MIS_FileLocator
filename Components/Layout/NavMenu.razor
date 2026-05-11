@@ -49,9 +49,7 @@
                 {
                     
                     <div class="nav-section-label mt-2">STORAGE</div>
-                    <MudNavLink Href="/storages/cabinets" Icon="@Icons.Material.Filled.Inventory2">Filing Cabinets</MudNavLink>
-                    <MudNavLink Href="/storages/boxes" Icon="@Icons.Material.Filled.Archive">Filing Boxes</MudNavLink>
-                    <MudNavLink Href="/storages/folders" Icon="@Icons.Material.Filled.Folder">Filing Folders</MudNavLink>
+                    <MudNavLink Href="/storages" Icon="@Icons.Material.Filled.Inventory2">Storage Manager</MudNavLink>
 
                     <div class="nav-section-label mt-2">DOCUMENTS</div>
                     <MudNavLink Href="/documentsPage" Icon="@Icons.Material.Filled.Description">All Documents</MudNavLink>
@@ -134,8 +132,8 @@
 
             @if (RoleService.CanAccessStorage(_currentUserRole))
             {
-                <MudTooltip Text="Storage" Placement="Placement.Right">
-                    <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Href="/storages/cabinets" Color="Color.Inherit" />
+                <MudTooltip Text="Storage Manager" Placement="Placement.Right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Href="/storages" Color="Color.Inherit" />
                 </MudTooltip>
                 <MudTooltip Text="Documents" Placement="Placement.Right">
                     <MudIconButton Icon="@Icons.Material.Filled.Description" Href="/documentsPage" Color="Color.Inherit" />

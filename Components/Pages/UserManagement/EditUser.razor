@@ -57,9 +57,11 @@
                     </MudItem>
 
                     <MudItem xs="12" md="6" Class="d-flex align-center">
-                        <MudSwitch @bind-Value="_editUser.IsDisabled"
-                                   Label="@(_editUser.IsDisabled ? "Account Disabled (Locked)" : "Account Active")"
-                                   Color="@(_editUser.IsDisabled ? Color.Error : Color.Success)"
+                        <MudSwitch Value="@(!_editUser.IsDisabled)"
+                                   ValueChanged="@((bool v) => _editUser.IsDisabled = !v)"
+                                   Label="@(_editUser.IsDisabled ? "Account Disabled" : "Account Active")"
+                                   Color="Color.Success"
+                                   UnCheckedColor="Color.Default"
                                    Disabled="@_isSaving" />
                     </MudItem>
 
@@ -211,7 +213,7 @@
                         return;
                     }
                 }
-                var addResult = await UserManager.AddToRoleAsync(_user, _editUser.Role);
+                var addResult = await UserManager.AddToRoleAsync(_user , _editUser.Role);
                 if (!addResult.Succeeded)
                 {
 

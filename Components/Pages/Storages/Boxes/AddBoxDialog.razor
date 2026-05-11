@@ -106,6 +106,18 @@
                 return;
             }
 
+            // Also check archived boxes in the same cabinet
+            var archivedNames = await db.FileBoxes
+                .Where(b => b.FillingCabinetId == _newBox.FillingCabinetId && b.IsArchived)
+                .Select(b => b.Name)
+                .ToListAsync();
+
+            if (archivedNames.Any(n => n.Trim().ToLower() == nameLower))
+            {
+                Snackbar.Add("A box with this name exists in the archive. Restore it or use a different name.", Severity.Warning);
+                return;
+            }
+
             var parentCabinet = await db.FillingCabinets
                 .Where(c => c.Id == _newBox.FillingCabinetId)
                 .Select(c => c.Name)

@@ -62,38 +62,73 @@
                 </MudStack>
             </MudTabPanel>
 
-            
             <MudTabPanel Text="Digital Copy" Icon="@Icons.Material.Filled.Cloud">
                 <MudStack Spacing="4" Class="mt-4">
-                    @if (!string.IsNullOrEmpty(_editDoc.FilePath))
+
+                    @if (!string.IsNullOrEmpty(_editDoc.FilePath) && !_pendingFileRemoval)
                     {
+                        @* Current file exists and not yet marked for removal *@
                         <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%;">
                                 <MudText>
-                                    Current Digital Copy: 
-                                    <MudLink Href="@_editDoc.FilePath" Target="_blank" Style="color: white !important;"><b>View File</b></MudLink>
+                                    Current Digital Copy:
+                                    <MudLink Href="@_editDoc.FilePath" Target="_blank" Style="color:white !important;"><b>View File</b></MudLink>
                                 </MudText>
                                 <MudSpacer />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                               Color="Color.Error" 
-                                               Variant="Variant.Filled"
-                                               OnClick="RemoveDigitalFile" 
-                                               Title="Remove from cloud" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error" Variant="Variant.Filled"
+                                               OnClick="MarkFileForRemoval"
+                                               Title="Mark for removal (will delete on Save)" />
+                            </MudStack>
+                        </MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">
+                            To replace this file, click 🗑 to mark it for removal, then browse a new file. Changes apply when you click Save Changes.
+                        </MudAlert>
+                    }
+
+                    @if (_pendingFileRemoval)
+                    {
+                        @* Marked for removal — show undo option *@
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%;">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                                <MudText>Current file will be <b>permanently deleted</b> when you save.</MudText>
+                                <MudSpacer />
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                                           StartIcon="@Icons.Material.Filled.Undo"
+                                           OnClick="UndoFileRemoval">Undo</MudButton>
                             </MudStack>
                         </MudAlert>
                     }
 
-                    <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
-                        <ActivatorContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FileUpload" FullWidth="true">
-                                @(_selectedFile == null ? "Replace/Upload New Digital Copy" : _selectedFile.Name)
-                            </MudButton>
-                        </ActivatorContent>
-                    </MudFileUpload>
-                    
+                    @if (_pendingFileRemoval || string.IsNullOrEmpty(_editDoc.FilePath))
+                    {
+                        @* Show upload section when no current file or marked for removal *@
+                        @if (_selectedFile != null)
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Text" Dense="true">
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudText Typo="Typo.body2"><b>New file selected:</b> @_selectedFile.Name (@((_selectedFile.Size / 1024.0 / 1024.0).ToString("0.00")) MB)</MudText>
+                                    <MudSpacer />
+                                    
+                                </MudStack>
+                            </MudAlert>
+                        }
+
+                        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Filled.FileUpload" FullWidth="true">
+                                    @(_selectedFile == null ? "Browse & Select New File" : "Change Selected File")
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+                    }
+
                     @if (_isUploading)
                     {
                         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary">Uploading file, please wait...</MudText>
                     }
                 </MudStack>
             </MudTabPanel>
@@ -104,7 +139,26 @@
                     <MudAlert Severity="@(_editDoc.IsBorrowed ? Severity.Error : Severity.Success)" Variant="Variant.Outlined">
                         Status: @(_editDoc.IsBorrowed ? $"OUT (Borrowed by {_editDoc.CurrentBorrower})" : "IN (Available)")
                     </MudAlert>
-                    <MudSwitch @bind-Value="_editDoc.IsBorrowed" Label="@(_editDoc.IsBorrowed ? "Mark as Returned" : "Mark as Borrowed")" Color="Color.Error" UnCheckedColor="Color.Success" />
+                    @if (_editDoc.IsBorrowed)
+                    {
+                        @* Document is borrowed — show Return toggle on the left *@
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudSwitch @bind-Value="_editDoc.IsBorrowed"
+                                       Color="Color.Warning"
+                                       UnCheckedColor="Color.Success" />
+                            <MudText Typo="Typo.body2" Color="Color.Warning"><b>Return</b></MudText>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        @* Document is available — show Borrow toggle on the right *@
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudSwitch @bind-Value="_editDoc.IsBorrowed"
+                                       Color="Color.Warning"
+                                       UnCheckedColor="Color.Success" />
+                            <MudText Typo="Typo.body2" Color="Color.Success"><b>Borrow</b></MudText>
+                        </MudStack>
+                    }
                     @if (_editDoc.IsBorrowed)
                     {
                         <MudTextField @bind-Value="_editDoc.CurrentBorrower" Label="Borrower Name" Variant="Variant.Outlined" Required="true" />
@@ -132,6 +186,7 @@
     private IBrowserFile? _selectedFile;
     private bool _isUploading = false;
     private int _retentionYears = 2;
+    private bool _pendingFileRemoval = false; // true = user marked file for deletion, not yet saved
 
     // Deep-copy options — prevents circular reference crash when cloning the document
     private JsonSerializerOptions _jsonOptions = new() { ReferenceHandler = ReferenceHandler.IgnoreCycles };
@@ -212,6 +267,29 @@
             if (DocumentToEdit.DateOfDisposal != _editDoc.DateOfDisposal)
                 changeLog.Add($"Disposal Date: {DocumentToEdit.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"} → {_editDoc.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"}");
 
+            
+            if (!string.IsNullOrEmpty(DocumentToEdit.FilePath) && string.IsNullOrEmpty(_editDoc.FilePath))
+                changeLog.Add("Digital file removed");
+
+            
+            if (_pendingFileRemoval && !string.IsNullOrEmpty(DocumentToEdit.FilePath))
+            {
+                try
+                {
+                    string conn = _config.GetConnectionString("AzureStorage");
+                    var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
+                    string blobName = Path.GetFileName(new Uri(DocumentToEdit.FilePath).LocalPath);
+                    await container.GetBlobClient(blobName).DeleteIfExistsAsync();
+                }
+                catch { }
+
+                realDoc.FilePath = null;
+                realDoc.FileName = null;
+                _editDoc.FilePath = null;
+                if (!changeLog.Contains("Digital file removed"))
+                    changeLog.Add("Digital file removed");
+            }
+
             if (DocumentToEdit.IsBorrowed != _editDoc.IsBorrowed)
                 changeLog.Add(_editDoc.IsBorrowed ? $"Marked as Borrowed by {_editDoc.CurrentBorrower}" : $"Returned by {DocumentToEdit.CurrentBorrower}");
 
@@ -230,9 +308,15 @@
             
             if (_selectedFile != null)
             {
+                
+                if (!string.IsNullOrEmpty(realDoc.FilePath))
+                {
+                    Snackbar.Add("Please remove the current file before uploading a new one.", Severity.Warning);
+                    return;
+                }
+
                 string conn = _config.GetConnectionString("AzureStorage");
                 var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
-                
                 
                 string safeFileName = _selectedFile.Name.Replace(" ", "_");
                 string fileName = $"{Guid.NewGuid()}_{safeFileName}";
@@ -250,10 +334,10 @@
                 realDoc.FilePath = blob.Uri.ToString();
                 realDoc.FileName = _selectedFile.Name;
                 _editDoc.FilePath = realDoc.FilePath; 
-                changeLog.Add("Replaced digital attachment");
+                changeLog.Add($"Uploaded digital file: '{_selectedFile.Name}'");
             }
 
-            if (!changeLog.Any() && _selectedFile == null)
+            if (!changeLog.Any() && _selectedFile == null && !_pendingFileRemoval)
             {
                 Snackbar.Add("No changes were made.", Severity.Info);
                 MudDialog.Cancel();
@@ -263,7 +347,7 @@
             _context.Entry(realDoc).CurrentValues.SetValues(_editDoc);
             realDoc.UpdatedBy = user;
 
-            // Borrowing logic — update dates
+            
             if (_editDoc.IsBorrowed && realDoc.BorrowedAt == null) realDoc.BorrowedAt = DateTime.UtcNow.AddHours(8);
             if (!_editDoc.IsBorrowed) { realDoc.BorrowedAt = null; realDoc.CurrentBorrower = null; realDoc.ExpectedReturnDate = null; realDoc.BorrowRemarks = null; }
 
@@ -283,42 +367,18 @@
         finally { _isUploading = false; }
     }
 
-    private async Task RemoveDigitalFile()
+    private void MarkFileForRemoval()
     {
-        using var _context = await DbFactory.CreateDbContextAsync();
-        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Delete the cloud file?", yesText: "Remove", cancelText: "Cancel");
-        if (confirmed == true)
-        {
-            try
-            {
-                var realDoc = await _context.Documents.FindAsync(_editDoc.Id);
-                if (realDoc == null || string.IsNullOrEmpty(realDoc.FilePath)) return;
+        _pendingFileRemoval = true;
+        _selectedFile = null;
+        StateHasChanged();
+    }
 
-                string conn = _config.GetConnectionString("AzureStorage");
-                var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
-                string blobName = Path.GetFileName(new Uri(realDoc.FilePath).LocalPath);
-                await container.GetBlobClient(blobName).DeleteIfExistsAsync();
-
-                realDoc.FilePath = null;
-                realDoc.FileName = null;
-                _editDoc.FilePath = null;
-
-                
-                var user = await _currentUserService.GetCurrentFullNameAsync();
-                _context.TransactionLogs.Add(new TransactionLog {
-                    FullName = user,
-                    EventName = "Digital Copy Removed",
-                    Description = $"Removed cloud file from document '{realDoc.Title}'",
-                    Status = "Warning",
-                    PerformedAt = DateTime.UtcNow.AddHours(8)
-                });
-
-                await _context.SaveChangesAsync();
-                Snackbar.Add("Digital copy removed.", Severity.Warning);
-                StateHasChanged();
-            }
-            catch (Exception ex) { Snackbar.Add("Error: " + ex.Message, Severity.Error); }
-        }
+    private void UndoFileRemoval()
+    {
+        _pendingFileRemoval = false;
+        _selectedFile = null;
+        StateHasChanged();
     }
 
     private void Cancel() => MudDialog.Cancel();

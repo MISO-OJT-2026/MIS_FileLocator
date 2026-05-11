@@ -27,7 +27,7 @@
                           Elevation="0"
                           Class="mt-0 mb-1.5"
                           Style="width: 120px; height: auto;" />
-                <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0e1824; letter-spacing: 1px;">LOG IN</MudText>
+                <MudText Typo="Typo.h5" Style="font-weight: 800; color: #0e1824; letter-spacing: 1px;">LOG IN</MudText>
                 <MudText Typo="Typo.body2" Style="color: #555;" Align="Align.Center">Access the MIS File Locator System</MudText>
             </div>
 
@@ -189,7 +189,6 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    // We initialize this to ensure it's never null
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
@@ -208,8 +207,7 @@
     {
         _isProcessing = true;
         errorMessage = null;
-        StateHasChanged(); 
-
+        StateHasChanged();
 
         var user = await UserManager.Users
             .FirstOrDefaultAsync(u => u.EmployeeId == Input.EmployeeId);
@@ -244,7 +242,7 @@
         else
         {
             errorMessage = "Invalid login attempt.";
-            ClearFields(); // Reset the UI on failure
+            ClearFields();
             _isProcessing = false;
         }
     }
@@ -253,7 +251,6 @@
     {
         Input.Password = "";
         Input.RememberMe = false;
-       
     }
 
     private sealed class InputModel

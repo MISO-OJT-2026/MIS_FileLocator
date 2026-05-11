@@ -6,203 +6,352 @@
 @using FileLocator.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Text
+@using System.Text.Json
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
-@inject IServiceProvider ServiceProvider
 
+<MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Borrowing Management</MudText>
 
-<MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary">Borrowed Inventory Tracking</MudText>
-
+@* ── Toolbar ── *@
 <MudPaper Outlined="true" Class="pa-3 mb-3">
     <div class="page-toolbar">
+        <div class="toolbar-actions">
+            <MudIconButton Variant="Variant.Outlined" Color="Color.Success"
+                           Icon="@Icons.Material.Filled.Print" OnClick="ExportCSV" />
+        </div>
         <div class="toolbar-filters">
-            <MudMenu Label="Filter Borrowed" Variant="Variant.Outlined" Dense="true"
+            <MudMenu Label="Filter" Variant="Variant.Outlined" Dense="true"
                      EndIcon="@Icons.Material.Filled.FilterList">
-                <div class="pa-4" style="min-width: 260px;">
+                <div class="pa-4" style="min-width:260px;">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Filter Options</MudText>
-                    <MudDatePicker Label="Borrow Date (From)" @bind-Date="_borrowDateFrom"
+                    <MudDatePicker Label="From Date" @bind-Date="_dateFrom"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2" />
-                    <MudDatePicker Label="Borrow Date (To)" @bind-Date="_borrowDateTo"
+                    <MudDatePicker Label="To Date" @bind-Date="_dateTo"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2" />
-                    <MudSelect T="string" Label="Status" @bind-Value="_selectedOverdue"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="mb-2">
+                    <MudSelect T="string" Label="Status" @bind-Value="_selectedStatus"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2">
                         <MudSelectItem Value="@("")">All</MudSelectItem>
                         <MudSelectItem Value="@("overdue")">Overdue</MudSelectItem>
                         <MudSelectItem Value="@("ontime")">On Time</MudSelectItem>
+                        <MudSelectItem Value="@("returned")">Returned</MudSelectItem>
                     </MudSelect>
-                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetBorrowFilters" Class="mt-2">Reset</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" OnClick="ResetFilters">Reset</MudButton>
                 </div>
             </MudMenu>
             <MudTextField @bind-Value="_searchString" Placeholder="Search borrower or title..."
-                          Adornment="Adornment.Start" Variant="Variant.Outlined"
-                          Immediate="true" Margin="Margin.Dense"
-                          AdornmentIcon="@Icons.Material.Filled.Search" DebounceInterval="1000" />
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          DebounceInterval="300" />
         </div>
     </div>
 </MudPaper>
 
+@* ── Summary Cards ── *@
+<MudGrid Spacing="2" Class="mb-4">
+    <MudItem xs="6" sm="3">
+        <MudPaper Outlined="true" Class="pa-3 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Primary"><b>@_activeBorrows.Count</b></MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Currently Borrowed</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Outlined="true" Class="pa-3 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Error">
+                <b>@_activeBorrows.Count(d => d.ExpectedReturnDate.HasValue && d.ExpectedReturnDate.Value < DateTime.Today)</b>
+            </MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Overdue</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Outlined="true" Class="pa-3 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Success"><b>@_history.Count(h => h.WasReturned)</b></MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Total Returned</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Outlined="true" Class="pa-3 text-center">
+            <MudText Typo="Typo.h5" Color="Color.Warning"><b>@_history.Count(h => h.WasReturned && h.IsLate)</b></MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Returned Late</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
 @if (_isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
-    <MudText Align="Align.Center" Class="my-4">Loading borrowed documents...</MudText>
-}
-else if (_borrowedDocs == null || !_borrowedDocs.Any())
-{
-    <MudAlert Severity="Severity.Info" Class="my-4">No borrowed documents found. All documents are currently in their storage locations.</MudAlert>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
 }
 else
 {
-<MudDataGrid T="Documents" Items="@_borrowedDocs" Filterable="false" Hover="true" RowClick="OnRowClicked" Dense="true" QuickFilter="@_quickFilter">
-    <Columns>
-      
-        <TemplateColumn Title="Alert" Size="Size.Small">
-            <CellTemplate>
-                @if (context.Item.ExpectedReturnDate.HasValue && context.Item.ExpectedReturnDate.Value < DateTime.Today)
-                {
-                    <MudTooltip Text="Overdue!">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
-                    </MudTooltip>
-                }
-            </CellTemplate>
-        </TemplateColumn>
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3"
+             SliderColor="Color.Primary" ScrollButtons="true" AlwaysShowScrollButtons="false">
 
-        <PropertyColumn Property="x => x.Title" Title="Document" />
-        <PropertyColumn Property="x => x.CurrentBorrower" Title="Borrower" />
+        @* ── TAB 1: Active Borrows ── *@
+        <MudTabPanel Text="Active" Icon="@Icons.Material.Filled.Outbound"
+                     BadgeData="@_activeBorrows.Count.ToString()" BadgeColor="Color.Primary">
+            @if (!_activeBorrows.Any())
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-3">All documents are in storage. No active borrows.</MudAlert>
+            }
+            else
+            {
+                <MudDataGrid T="Documents" Items="@FilteredActive" Hover="true" Dense="true"
+                             Filterable="false" Breakpoint="Breakpoint.Sm" RowClick="OnRowClicked">
+                    <Columns>
+                        <TemplateColumn CellStyle="width:36px; padding-right:0;">
+                            <CellTemplate>
+                                @if (context.Item.ExpectedReturnDate.HasValue && context.Item.ExpectedReturnDate.Value < DateTime.Today)
+                                {
+                                    <MudTooltip Text="Overdue!">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" />
+                                    </MudTooltip>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.Title" Title="Document" />
+                        <PropertyColumn Property="x => x.CurrentBorrower" Title="Borrower" />
+                        <TemplateColumn Title="Borrowed On">
+                            <CellTemplate>@context.Item.BorrowedAt?.ToString("MMM dd, yyyy")</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Due Date">
+                            <CellTemplate>
+                                @{var late = context.Item.ExpectedReturnDate.HasValue && context.Item.ExpectedReturnDate.Value < DateTime.Today;}
+                                <MudText Typo="Typo.body2" Color="@(late ? Color.Error : Color.Default)">
+                                    @context.Item.ExpectedReturnDate?.ToString("MMM dd, yyyy")
+                                    @if (late) { <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">OVERDUE</MudChip> }
+                                </MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Location">
+                            <CellTemplate>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @(context.Item.Folder?.FileBox?.FillingCabinet?.Name) › @(context.Item.Folder?.FileBox?.Name) › @(context.Item.Folder?.Name)
+                                </MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.BorrowRemarks" Title="Remarks" />
+                        <TemplateColumn CellStyle="text-align:right;">
+                            <HeaderTemplate><div style="text-align:right;width:100%;">Actions</div></HeaderTemplate>
+                            <CellTemplate>
+                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success"
+                                           StartIcon="@Icons.Material.Filled.AssignmentReturn"
+                                           OnClick="@(() => ManageBorrow(context.Item))">
+                                    Return
+                                </MudButton>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
+                </MudDataGrid>
+            }
+        </MudTabPanel>
 
-        <TemplateColumn Title="Borrow Date">
-            <CellTemplate>
-                @context.Item.BorrowedAt?.ToString("MMM dd, yyyy")
-            </CellTemplate>
-        </TemplateColumn>
+        @* ── TAB 2: Borrow History (from AuditTrails) ── *@
+        <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History"
+                     BadgeData="@_history.Count.ToString()" BadgeColor="Color.Default">
+            @if (!_history.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-3">No borrow history found in audit trail.</MudAlert>
+            }
+            else
+            {
+                <MudDataGrid T="BorrowAuditRow" Items="@FilteredHistory" Hover="true" Dense="true"
+                             Filterable="false" Breakpoint="Breakpoint.Sm" SortMode="SortMode.Multiple">
+                    <Columns>
+                        <PropertyColumn Property="x => x.DocumentTitle" Title="Document" />
+                        <PropertyColumn Property="x => x.Borrower" Title="Borrower" />
+                        <TemplateColumn Title="Action" SortBy="x => x.PerformedAt">
+                            <CellTemplate>
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(context.Item.EventType == "Borrowed" ? Color.Warning : Color.Success)"
+                                         Variant="Variant.Filled">
+                                    @context.Item.EventType
+                                </MudChip>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Date" SortBy="x => x.PerformedAt">
+                            <CellTemplate>@context.Item.PerformedAt.ToString("MMM dd, yyyy hh:mm tt")</CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.DueDate" Title="Due Date" />
+                        <TemplateColumn Title="Status">
+                            <CellTemplate>
+                                @if (context.Item.EventType == "Borrowed")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">Active Borrow</MudChip>
+                                }
+                                else if (context.Item.IsLate)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">Returned Late</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">On Time</MudChip>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.ProcessedBy" Title="Processed By" />
+                    </Columns>
+                    <PagerContent><MudDataGridPager T="BorrowAuditRow" /></PagerContent>
+                </MudDataGrid>
+            }
+        </MudTabPanel>
 
-        <TemplateColumn Title="Due Date">
-            <CellTemplate>
-                <MudText Color="@(GetDueDateColor(context.Item.ExpectedReturnDate))" Typo="Typo.body2">
-                    @context.Item.ExpectedReturnDate?.ToString("MMM dd, yyyy")
-                </MudText>
-            </CellTemplate>
-        </TemplateColumn>
-
-        <PropertyColumn Property="x => x.BorrowRemarks" Title="Remarks" />
-
-        <TemplateColumn Title="Actions">
-            <CellTemplate>
-                <MudButton Variant="Variant.Outlined"
-                           Size="Size.Small"
-                           Color="Color.Info"
-                           OnClick="@(() => ManageBorrow(context.Item))">
-                    Manage/Return
-                </MudButton>
-            </CellTemplate>
-        </TemplateColumn>
-    </Columns>
-    <PagerContent><MudDataGridPager T="Documents" /></PagerContent>
-</MudDataGrid>
+    </MudTabs>
 }
-<style>
-    .mud-button-label{
-        font-weight:100 !important;
-    }
-</style>
+
 @code {
-    private List<Documents>? _borrowedDocs = null;
-    private string _searchString = "";
-    private DateTime? _borrowDateFrom = null;
-    private DateTime? _borrowDateTo = null;
-    private string _selectedOverdue = "";
+    private List<Documents> _activeBorrows = new();
+    private List<BorrowAuditRow> _history = new();
     private bool _isLoading = true;
+    private string _searchString = "";
+    private string _selectedStatus = "";
+    private DateTime? _dateFrom = null;
+    private DateTime? _dateTo = null;
 
-    protected override async Task OnInitializedAsync() => await LoadBorrowed();
+    // ── View model parsed from AuditTrails JSON ──
+    private record BorrowAuditRow(
+        string DocumentTitle,
+        string Borrower,
+        string EventType,       // "Borrowed" or "Returned"
+        DateTime PerformedAt,
+        string? DueDate,
+        bool IsLate,
+        bool WasReturned,
+        string? ProcessedBy
+    );
 
-    private async Task LoadBorrowed()
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
     {
+        _isLoading = true;
+        StateHasChanged();
         try
         {
-            _isLoading = true;
-            using var scope = ServiceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            _borrowedDocs = await context.Documents
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Active borrows
+            _activeBorrows = await db.Documents
                 .AsNoTracking()
-                .Include(d => d.ConfidentialityLevel)
-                .Include(d => d.Folder)
-                .ThenInclude(f => f.FileBox)
-                .ThenInclude(b => b.FillingCabinet)
+                .Include(d => d.Folder).ThenInclude(f => f.FileBox).ThenInclude(b => b.FillingCabinet)
                 .Where(d => d.IsBorrowed && !d.IsDeleted)
                 .OrderBy(d => d.ExpectedReturnDate)
                 .ToListAsync();
+
+            // Borrow history from AuditTrails — find all Document modifications where IsBorrowed changed
+            var auditRows = await db.AuditTrails
+                .AsNoTracking()
+                .Where(a => a.TableName == "Documents" && a.Action == "Modified"
+                         && (a.NewValues != null && a.NewValues.Contains("IsBorrowed")))
+                .OrderByDescending(a => a.PerformedAt)
+                .Take(500)
+                .ToListAsync();
+
+            // Load document titles for the record IDs found
+            var docIds = auditRows
+                .Select(a => int.TryParse(a.RecordId, out var id) ? id : 0)
+                .Where(id => id > 0).Distinct().ToList();
+
+            var docTitles = await db.Documents.AsNoTracking()
+                .Where(d => docIds.Contains(d.Id))
+                .Select(d => new { d.Id, d.Title })
+                .ToDictionaryAsync(d => d.Id, d => d.Title);
+
+            _history = auditRows.Select(a =>
+            {
+                try
+                {
+                    var newVals = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(a.NewValues ?? "{}");
+                    var oldVals = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(a.OldValues ?? "{}");
+
+                    var newBorrowed = newVals?.TryGetValue("IsBorrowed", out var nb) == true && nb.GetBoolean();
+                    var oldBorrowed = oldVals?.TryGetValue("IsBorrowed", out var ob) == true && ob.GetBoolean();
+
+                    // Only include rows where IsBorrowed actually changed
+                    if (newBorrowed == oldBorrowed) return null;
+
+                    var eventType = newBorrowed ? "Borrowed" : "Returned";
+                    var borrower = newVals?.TryGetValue("CurrentBorrower", out var cb) == true && cb.ValueKind != JsonValueKind.Null
+                        ? cb.GetString() ?? ""
+                        : oldVals?.TryGetValue("CurrentBorrower", out var ocb) == true && ocb.ValueKind != JsonValueKind.Null
+                            ? ocb.GetString() ?? "" : "";
+
+                    var dueRaw = newVals?.TryGetValue("ExpectedReturnDate", out var dr) == true && dr.ValueKind != JsonValueKind.Null
+                        ? dr.GetString() : null;
+                    DateTime.TryParse(dueRaw, out var dueDate);
+                    var dueDateStr = dueDate != default ? dueDate.ToString("MMM dd, yyyy") : null;
+
+                    var isLate = !newBorrowed && dueDate != default && a.PerformedAt.Date > dueDate.Date;
+
+                    int.TryParse(a.RecordId, out var docId);
+                    var title = docTitles.TryGetValue(docId, out var t) ? t : $"Document #{a.RecordId}";
+
+                    return new BorrowAuditRow(title, borrower, eventType, a.PerformedAt, dueDateStr, isLate, !newBorrowed, a.FullName);
+                }
+                catch { return null; }
+            })
+            .Where(r => r != null)
+            .Select(r => r!)
+            .ToList();
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading borrowed documents: {ex.Message}", Severity.Error);
-            _borrowedDocs = new List<Documents>();
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _isLoading = false; StateHasChanged(); }
     }
 
-    private Func<Documents, bool> _quickFilter => x =>
+    private IEnumerable<Documents> FilteredActive => _activeBorrows.Where(x =>
     {
-       
-        if (_borrowDateFrom.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date < _borrowDateFrom.Value.Date) return false;
-        if (_borrowDateTo.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date > _borrowDateTo.Value.Date) return false;
-
-        
-        if (!string.IsNullOrWhiteSpace(_selectedOverdue))
-        {
-            var isOverdue = x.ExpectedReturnDate.HasValue && x.ExpectedReturnDate.Value < DateTime.Today;
-            if (_selectedOverdue == "overdue" && !isOverdue) return false;
-            if (_selectedOverdue == "ontime" && isOverdue) return false;
-        }
-
-       
+        if (_dateFrom.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date < _dateFrom.Value.Date) return false;
+        if (_dateTo.HasValue && x.BorrowedAt.HasValue && x.BorrowedAt.Value.Date > _dateTo.Value.Date) return false;
+        if (_selectedStatus == "overdue" && !(x.ExpectedReturnDate.HasValue && x.ExpectedReturnDate.Value < DateTime.Today)) return false;
+        if (_selectedStatus == "ontime" && x.ExpectedReturnDate.HasValue && x.ExpectedReturnDate.Value < DateTime.Today) return false;
+        if (_selectedStatus == "returned") return false;
         if (!string.IsNullOrWhiteSpace(_searchString))
-        {
-            if (x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-            if (x.CurrentBorrower?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
-            return false;
-        }
+            return x.Title.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                   (x.CurrentBorrower?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true);
         return true;
-    };
+    });
 
-    private void ResetBorrowFilters()
+    private IEnumerable<BorrowAuditRow> FilteredHistory => _history.Where(x =>
     {
-        _borrowDateFrom = null;
-        _borrowDateTo = null;
-        _selectedOverdue = "";
-        _searchString = "";
-    }
+        if (_dateFrom.HasValue && x.PerformedAt.Date < _dateFrom.Value.Date) return false;
+        if (_dateTo.HasValue && x.PerformedAt.Date > _dateTo.Value.Date) return false;
+        if (_selectedStatus == "overdue" && !x.IsLate) return false;
+        if (_selectedStatus == "ontime" && (x.IsLate || !x.WasReturned)) return false;
+        if (_selectedStatus == "returned" && !x.WasReturned) return false;
+        if (!string.IsNullOrWhiteSpace(_searchString))
+            return x.DocumentTitle.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                   x.Borrower.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
+        return true;
+    });
 
-    private Color GetDueDateColor(DateTime? dueDate)
-    {
-        if (!dueDate.HasValue) return Color.Default;
-        return dueDate.Value < DateTime.Today ? Color.Error : Color.Default;
-    }
+    private void ResetFilters() { _dateFrom = null; _dateTo = null; _selectedStatus = ""; _searchString = ""; }
 
     private async Task ManageBorrow(Documents doc)
     {
         var parameters = new DialogParameters<EditDocumentDialog> { { x => x.DocumentToEdit, doc } };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-
         var dialog = await DialogService.ShowAsync<EditDocumentDialog>("Update Borrowing Status", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadBorrowed();
-        }
+        if (!(await dialog.Result).Canceled) await LoadData();
     }
 
     private async Task OnRowClicked(DataGridRowClickEventArgs<Documents> args)
     {
         var parameters = new DialogParameters<DocumentDetailsDialog> { { x => x.SelectedDoc, args.Item } };
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-
         await DialogService.ShowAsync<DocumentDetailsDialog>("Document Overview", parameters, options);
+    }
+
+    private async Task ExportCSV()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Document,Borrower,Event,Date,Due Date,Status,Processed By");
+        foreach (var h in _history)
+        {
+            var status = h.EventType == "Borrowed" ? "Active" : h.IsLate ? "Returned Late" : "On Time";
+            sb.AppendLine($"\"{h.DocumentTitle}\",\"{h.Borrower}\",\"{h.EventType}\",\"{h.PerformedAt:MMM dd, yyyy}\",\"{h.DueDate}\",\"{status}\",\"{h.ProcessedBy}\"");
+        }
+        await JSRuntime.InvokeVoidAsync("downloadFile", $"Borrow_History_{DateTime.Now:yyyyMMdd}.csv", sb.ToString());
     }
 }
