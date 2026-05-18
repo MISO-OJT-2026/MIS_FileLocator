@@ -9,7 +9,7 @@
 @using static MudBlazor.CategoryTypes
 
 @inject NavigationManager Nav
-@inject ApplicationDbContext _context
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject IJSRuntime jSRunTime 
 @inject ICurrentUserService _currentUserService
@@ -149,9 +149,11 @@
         _loading = true;
         try
         {
-            _allForms = await _context.FormTemplates
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _allForms = await db.FormTemplates
                 .Where(f => !f.IsArchived)
                 .OrderByDescending(f => f.DateAdded)
+                .AsNoTracking()
                 .ToListAsync();
 
             
@@ -205,6 +207,7 @@
         if (result != null && !result.Canceled)
         {
             await LoadData();
+            StateHasChanged(); // Force UI refresh
         }
     }
 

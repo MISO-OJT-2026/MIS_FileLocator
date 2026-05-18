@@ -91,6 +91,21 @@ function _carouselState(trackId) {
     return { track, slides, current, total: slides.length };
 }
 
+function _updateArrowVisibility(trackId, current, total) {
+    const carousel = document.getElementById(trackId)?.closest('.story-carousel');
+    if (!carousel) return;
+    
+    const leftArrow = carousel.querySelector('.carousel-arrow-left');
+    const rightArrow = carousel.querySelector('.carousel-arrow-right');
+    
+    if (leftArrow) {
+        leftArrow.style.display = current === 0 ? 'none' : 'flex';
+    }
+    if (rightArrow) {
+        rightArrow.style.display = current === total - 1 ? 'none' : 'flex';
+    }
+}
+
 function _carouselApply(trackId, dotsId, idx) {
     const s = _carouselState(trackId);
     if (!s) return;
@@ -100,22 +115,35 @@ function _carouselApply(trackId, dotsId, idx) {
 
     const dots = document.querySelectorAll(`#${dotsId} .dot`);
     dots.forEach((d, i) => d.classList.toggle('active', i === clamped));
+    
+    // Update arrow visibility
+    _updateArrowVisibility(trackId, clamped, s.total);
 }
 
 window.carouselNext = function(trackId, dotsId) {
     const s = _carouselState(trackId);
     if (!s) return;
-    const next = (s.current + 1) % s.total;
+    const next = Math.min(s.current + 1, s.total - 1);
     _carouselApply(trackId, dotsId, next);
 };
 
 window.carouselPrev = function(trackId, dotsId) {
     const s = _carouselState(trackId);
     if (!s) return;
-    const prev = (s.current - 1 + s.total) % s.total;
+    const prev = Math.max(s.current - 1, 0);
     _carouselApply(trackId, dotsId, prev);
 };
 
 window.carouselGo = function(trackId, dotsId, idx) {
     _carouselApply(trackId, dotsId, idx);
 };
+
+// Initialize arrow visibility on page load
+document.addEventListener('DOMContentLoaded', function() {
+    ['track-journey', 'track-process', 'track-thanks'].forEach(trackId => {
+        const s = _carouselState(trackId);
+        if (s) {
+            _updateArrowVisibility(trackId, s.current, s.total);
+        }
+    });
+});

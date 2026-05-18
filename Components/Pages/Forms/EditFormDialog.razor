@@ -1,16 +1,13 @@
 ﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
-@using Azure.Storage.Blobs
-@using Azure.Storage.Blobs.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Threading
 @using System.IO
-@using System.Text.RegularExpressions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
-@inject IConfiguration _config
+@inject MIS_FileLocator.Services.FileStorageService FileStorage
 @inject IDialogService DialogService
 @inject IJSRuntime JS
 
@@ -57,7 +54,7 @@
                             <MudAlert Severity="Severity.Info" Variant="Variant.Filled" NoIcon="false" Class="py-1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width:100%">
                                     <MudText>
-                                        Current: <b>@Path.GetFileName(new Uri(_editForm.PdfUrl).LocalPath).Split('_').Last()</b>
+                                        Current: <b>@GetFileNameFromPath(_editForm.PdfUrl)</b>
                                     </MudText>
                                     <MudStack Row="true" Spacing="1">
                                         @if (_canPreview)
@@ -227,18 +224,12 @@
 
     private async Task RemoveDigitalFile()
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Permanently delete the file from cloud storage?", yesText: "Delete", cancelText: "Cancel");
+        var confirmed = await DialogService.ShowMessageBoxAsync("Remove File", "Permanently delete the file from storage?", yesText: "Delete", cancelText: "Cancel");
         if (confirmed == true)
         {
             try
             {
-                if (!string.IsNullOrEmpty(_editForm.PdfUrl) && _editForm.PdfUrl.Contains("blob.core.windows.net"))
-                {
-                    string conn = _config.GetConnectionString("AzureStorage");
-                    var client = new BlobServiceClient(conn).GetBlobContainerClient("templates");
-                    string blobName = Path.GetFileName(new Uri(_editForm.PdfUrl).LocalPath);
-                    await client.GetBlobClient(blobName).DeleteIfExistsAsync();
-                }
+                FileStorage.DeleteFile(_editForm.PdfUrl);
                 _editForm.PdfUrl = "";
                 _previewUrl = null;
                 _showPreview = false;
@@ -273,21 +264,7 @@
 
             if (_selectedFile != null)
             {
-                string conn = _config.GetConnectionString("AzureStorage");
-                var container = new BlobServiceClient(conn).GetBlobContainerClient("templates");
-                await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
-
-                string safeName = Regex.Replace(_selectedFile.Name, @"\s+", "_");
-                string fileName = $"TEMPLATE_UPD_{Guid.NewGuid()}_{safeName}";
-                var blob = container.GetBlobClient(fileName);
-
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                await blob.UploadAsync(stream, new BlobHttpHeaders {
-                    ContentType = _selectedFile.ContentType,
-                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\""
-                });
-
-                _editForm.PdfUrl = blob.Uri.ToString();
+                _editForm.PdfUrl = await FileStorage.SaveFileAsync(_selectedFile, "templates");
                 changes.Add($"Digital file replaced with '{_selectedFile.Name}'");
             }
 
@@ -336,4 +313,32 @@
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private string GetFileNameFromPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return "Unknown";
+        
+        try
+        {
+            // Try to parse as URI first (for full URLs)
+            if (Uri.TryCreate(path, UriKind.Absolute, out var uri))
+            {
+                var fileName = Path.GetFileName(uri.LocalPath);
+                // Remove timestamp prefix if exists (format: timestamp_filename)
+                var parts = fileName.Split('_', 2);
+                return parts.Length > 1 ? parts[1] : fileName;
+            }
+            
+            // Otherwise treat as file path
+            var name = Path.GetFileName(path);
+            var parts2 = name.Split('_', 2);
+            return parts2.Length > 1 ? parts2[1] : name;
+        }
+        catch
+        {
+            // Fallback: just return the last part after the last slash
+            var lastSlash = path.LastIndexOfAny(new[] { '/', '\\' });
+            return lastSlash >= 0 ? path.Substring(lastSlash + 1) : path;
+        }
+    }
 }

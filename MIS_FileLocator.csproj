@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
+    <Folder Include="wwwroot\uploads\documents\" />
+    <Folder Include="wwwroot\uploads\templates\" />
   </ItemGroup>
 
 </Project>

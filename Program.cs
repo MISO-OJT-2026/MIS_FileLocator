@@ -7,6 +7,7 @@ using MIS_FileLocator.Data.Initialization;
 using MudBlazor.Services;
 using MIS_FileLocator.Services;
 using FileLocator.Services;
+using FileLocator.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,6 +73,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<QrCodeGeneratorService>();
+builder.Services.AddScoped<FileStorageService>();
 
 var app = builder.Build();
 

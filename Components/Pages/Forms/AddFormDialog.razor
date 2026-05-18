@@ -1,16 +1,13 @@
 ﻿@using FileLocator.Models
 @using MIS_FileLocator.Data
 @using MIS_FileLocator.Models
-@using Azure.Storage.Blobs
-@using Azure.Storage.Blobs.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Threading
 @using System.IO
-@using System.Text.RegularExpressions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject MIS_FileLocator.Services.ICurrentUserService _currentUserService
-@inject IConfiguration _config
+@inject MIS_FileLocator.Services.FileStorageService FileStorage
 
 <MudDialog>
     <DialogContent>
@@ -142,7 +139,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var defaultCategories = new List<string> { "Registrar", "Admissions", "CCS", "Scholarship", "MIS" };
+        var defaultCategories = new List<string> { "MISO" };
         await using var db = await DbFactory.CreateDbContextAsync();
         var dbCategories = await db.FormTemplates
             .Where(f => !string.IsNullOrEmpty(f.Category))
@@ -242,25 +239,7 @@
 
             if (_selectedFile != null)
             {
-                string connectionString = _config.GetConnectionString("AzureStorage");
-                var blobServiceClient = new BlobServiceClient(connectionString);
-                var containerClient = blobServiceClient.GetBlobContainerClient("templates");
-                await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
-
-               
-                string safeFileName = Regex.Replace(_selectedFile.Name, @"\s+", "_");
-                string fileName = $"TEMPLATE_{Guid.NewGuid()}_{safeFileName}";
-                var blobClient = containerClient.GetBlobClient(fileName);
-
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                
-                var headers = new BlobHttpHeaders { 
-                    ContentType = _selectedFile.ContentType,
-                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
-                };
-
-                await blobClient.UploadAsync(stream, headers);
-                _newForm.PdfUrl = blobClient.Uri.ToString();
+                _newForm.PdfUrl = await FileStorage.SaveFileAsync(_selectedFile, "templates");
             }
 
             var user = await _currentUserService.GetCurrentFullNameAsync();

@@ -9,6 +9,8 @@
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JS
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
 
 <PageTitle>Home – MIS File Locator</PageTitle>
 
@@ -176,7 +178,8 @@ else
         {
             @foreach (var doc in _documents)
             {
-                <div class="showroom-item no-drill">
+                var d = doc;
+                <div class="showroom-item" style="cursor: pointer;" @onclick="@(() => ViewDocument(d))">
                     <div class="object-wrap">
                         <div class="document-sheet @(doc.IsBorrowed ? "doc-borrowed" : "")">
                             <div class="doc-lines">
@@ -228,6 +231,16 @@ else
 
        
         <div class="story-carousel" id="carousel-journey">
+            <button class="carousel-arrow carousel-arrow-left" onclick="carouselPrev('track-journey','dots-journey')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="carousel-arrow carousel-arrow-right" onclick="carouselNext('track-journey','dots-journey')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
             <div class="carousel-track" id="track-journey">
                 <div class="carousel-slide">
                     <img src="images/journey/JOURNEY-1.jpg"
@@ -270,6 +283,16 @@ else
 
        
         <div class="story-carousel" id="carousel-process">
+            <button class="carousel-arrow carousel-arrow-left" onclick="carouselPrev('track-process','dots-process')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="carousel-arrow carousel-arrow-right" onclick="carouselNext('track-process','dots-process')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
             <div class="carousel-track" id="track-process">
                 <div class="carousel-slide">
                     <img src="images/process/PROCESS-1.jpg"
@@ -315,6 +338,16 @@ else
         <div class="glass-blob blob-3"></div>
 
         <div class="story-carousel" id="carousel-thanks">
+            <button class="carousel-arrow carousel-arrow-left" onclick="carouselPrev('track-thanks','dots-thanks')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="carousel-arrow carousel-arrow-right" onclick="carouselNext('track-thanks','dots-thanks')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
             <div class="carousel-track" id="track-thanks">
                 <div class="carousel-slide">
                     <img src="images/thanks/OJT-3.jpg"
@@ -777,6 +810,53 @@ else
     transform: scale(1.03);
 }
 
+/* Arrow buttons */
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    color: #333;
+}
+
+.story-carousel:hover .carousel-arrow {
+    display: flex;
+}
+
+.carousel-arrow:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.carousel-arrow:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.carousel-arrow-left {
+    left: 12px;
+}
+
+.carousel-arrow-right {
+    right: 12px;
+}
+
+.carousel-arrow svg {
+    width: 20px;
+    height: 20px;
+}
+
 /* Dots */
 .carousel-dots {
     position: absolute;
@@ -997,5 +1077,23 @@ else
         if (_selectedCabinet != null) _breadcrumbs.Add(new Crumb(_selectedCabinet.Name, Level.Boxes, Cabinet: _selectedCabinet));
         if (_selectedBox != null)     _breadcrumbs.Add(new Crumb(_selectedBox.Name, Level.Folders, Cabinet: _selectedCabinet, Box: _selectedBox));
         if (_selectedFolder != null)  _breadcrumbs.Add(new Crumb(_selectedFolder.Name, Level.Documents, Cabinet: _selectedCabinet, Box: _selectedBox, Folder: _selectedFolder));
+    }
+
+    async Task ViewDocument(Documents doc)
+    {
+        if (!string.IsNullOrEmpty(doc.FilePath))
+        {
+            // Open the file in a new tab
+            await JS.InvokeVoidAsync("open", doc.FilePath, "_blank");
+        }
+        else
+        {
+            // Show dialog that no file is uploaded
+            await DialogService.ShowMessageBoxAsync(
+                "No Digital Copy",
+                $"The document '{doc.Title}' does not have a digital copy uploaded.",
+                yesText: "OK"
+            );
+        }
     }
 }

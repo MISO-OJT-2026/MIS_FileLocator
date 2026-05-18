@@ -6,14 +6,12 @@
 @using System.Text.Json.Serialization
 @using System.Threading
 @using Microsoft.EntityFrameworkCore
-@using Azure.Storage.Blobs
-@using Azure.Storage.Blobs.Models
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ICurrentUserService _currentUserService
 @inject IDialogService DialogService
-@inject IConfiguration _config
+@inject FileStorageService FileStorage
 
 <MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
     <DialogContent>
@@ -41,6 +39,31 @@
                     </MudStack>
 
                     <MudTextField @bind-Value="_editDoc.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mt-2">Physical Location</MudText>
+                    <MudStack Row="true">
+                        <MudSelect T="int?" Label="Cabinet" ValueChanged="OnCabinetChanged" Value="_selectedCabinetId"
+                                   Placeholder="Choose Cabinet" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var cab in _cabinets)
+                            {
+                                <MudSelectItem Value="@((int?)cab.Id)">@cab.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="int?" Label="Box" ValueChanged="OnBoxChanged" Value="_selectedBoxId"
+                                   Disabled="@(!_boxes.Any())" Placeholder="Choose Box" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var box in _boxes)
+                            {
+                                <MudSelectItem Value="@((int?)box.Id)">@box.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="int" Label="Folder" @bind-Value="_editDoc.FolderId"
+                                   Disabled="@(!_folders.Any())" Placeholder="Choose Folder" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var folder in _folders)
+                            {
+                                <MudSelectItem Value="@folder.Id">@folder.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
                     
                     <MudStack Row="true" AlignItems="AlignItems.Center">
                         <MudSelect T="int" Label="Retention (Years)" @bind-Value="_retentionYears" @bind-Value:after="CalculateDisposal" Variant="Variant.Outlined">
@@ -75,12 +98,34 @@
                                     <MudLink Href="@_editDoc.FilePath" Target="_blank" Style="color:white !important;"><b>View File</b></MudLink>
                                 </MudText>
                                 <MudSpacer />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                               Color="Color.Error" Variant="Variant.Filled"
-                                               OnClick="MarkFileForRemoval"
-                                               Title="Mark for removal (will delete on Save)" />
+                                <MudStack Row="true" Spacing="1">
+                                    @if (_canPreview)
+                                    {
+                                        <MudIconButton Icon="@(_showPreview ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                                       Color="Color.Inherit" 
+                                                       Variant="Variant.Filled"
+                                                       OnClick="TogglePreview"
+                                                       Title="@(_showPreview ? "Hide Preview" : "Show Preview")" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Color="Color.Error" Variant="Variant.Filled"
+                                                   OnClick="MarkFileForRemoval"
+                                                   Title="Mark for removal (will delete on Save)" />
+                                </MudStack>
                             </MudStack>
                         </MudAlert>
+
+                        @* PREVIEW AREA *@
+                        @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
+                        {
+                            <MudPaper Outlined="true" Class="w-100 rounded-lg overflow-hidden border-2" Style="height: 500px; background: white; border-color: var(--mud-palette-primary);">
+                                <iframe src="@_previewUrl" style="width:100%; height:100%; border:none;" allow="fullscreen"></iframe>
+                            </MudPaper>
+                            <MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary">
+                                Preview of current file. If blank, the file format may not support browser preview.
+                            </MudText>
+                        }
+
                         <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">
                             To replace this file, click 🗑 to mark it for removal, then browse a new file. Changes apply when you click Save Changes.
                         </MudAlert>
@@ -110,9 +155,27 @@
                                 <MudStack Row="true" AlignItems="AlignItems.Center">
                                     <MudText Typo="Typo.body2"><b>New file selected:</b> @_selectedFile.Name (@((_selectedFile.Size / 1024.0 / 1024.0).ToString("0.00")) MB)</MudText>
                                     <MudSpacer />
-                                    
+                                    @if (_canPreviewNewFile)
+                                    {
+                                        <MudIconButton Icon="@(_showPreview ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       OnClick="TogglePreview"
+                                                       Title="@(_showPreview ? "Hide Preview" : "Preview New File")" />
+                                    }
                                 </MudStack>
                             </MudAlert>
+
+                            @* PREVIEW NEW FILE *@
+                            @if (_showPreview && !string.IsNullOrEmpty(_previewUrl))
+                            {
+                                <MudPaper Outlined="true" Class="w-100 rounded-lg overflow-hidden border-2" Style="height: 500px; background: white; border-color: var(--mud-palette-success);">
+                                    <iframe src="@_previewUrl" style="width:100%; height:100%; border:none;" allow="fullscreen"></iframe>
+                                </MudPaper>
+                                <MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary">
+                                    Preview of new file. If preview is blank, your browser may have blocked the local data stream. It will work once saved.
+                                </MudText>
+                            }
                         }
 
                         <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.jpg,.png">
@@ -185,16 +248,30 @@
     private List<ConfidentialityLevel> _levels = new();
     private IBrowserFile? _selectedFile;
     private bool _isUploading = false;
-    private int _retentionYears = 2;
+    private int _retentionYears = 5;
     private bool _pendingFileRemoval = false; // true = user marked file for deletion, not yet saved
+
+    // Preview support
+    private string? _previewUrl;
+    private bool _showPreview = false;
+    private bool _canPreview = false;
+    private bool _canPreviewNewFile = false;
 
     // Deep-copy options — prevents circular reference crash when cloning the document
     private JsonSerializerOptions _jsonOptions = new() { ReferenceHandler = ReferenceHandler.IgnoreCycles };
+
+    // Location change support
+    private List<FillingCabinet> _cabinets = new();
+    private List<FileBoxes> _boxes = new();
+    private List<Folder> _folders = new();
+    private int? _selectedCabinetId;
+    private int? _selectedBoxId;
 
     protected override async Task OnInitializedAsync()
     {
         using var _context = await DbFactory.CreateDbContextAsync();
         _levels = await _context.ConfidentialityLevels.ToListAsync();
+        _cabinets = await _context.FillingCabinets.Where(c => !c.IsArchived).ToListAsync();
         
         if (DocumentToEdit != null)
         {
@@ -204,9 +281,41 @@
             if (_editDoc.DocumentDate.HasValue && _editDoc.DateOfDisposal.HasValue)
             {
                 _retentionYears = _editDoc.DateOfDisposal.Value.Year - _editDoc.DocumentDate.Value.Year;
-                if (_retentionYears < 1) _retentionYears = 2;
+                if (_retentionYears < 1) _retentionYears = 5;
             }
+
+            // Load current location hierarchy
+            if (_editDoc.FolderId > 0)
+            {
+                var folder = await _context.Folders.Include(f => f.FileBox).ThenInclude(b => b.FillingCabinet).FirstOrDefaultAsync(f => f.Id == _editDoc.FolderId);
+                if (folder != null)
+                {
+                    _selectedCabinetId = folder.FileBox?.FillingCabinetId;
+                    _selectedBoxId = folder.FileBoxId;
+                    
+                    if (_selectedCabinetId.HasValue)
+                        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == _selectedCabinetId && !b.IsArchived).ToListAsync();
+                    
+                    if (_selectedBoxId.HasValue)
+                        _folders = await _context.Folders.Where(f => f.FileBoxId == _selectedBoxId && !f.IsArchived).ToListAsync();
+                }
+            }
+
+            // Check if current file can be previewed
+            CheckIfPreviewable(_editDoc.FilePath);
         }
+    }
+
+    private void CheckIfPreviewable(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) 
+        { 
+            _canPreview = false; 
+            return; 
+        }
+        
+        string ext = Path.GetExtension(filePath).ToLower();
+        _canPreview = (ext == ".pdf" || ext == ".jpg" || ext == ".jpeg" || ext == ".png");
     }
 
     private void OnDocumentDateChanged(DateTime? newDate)
@@ -226,6 +335,80 @@
     private void OnFileSelected(IBrowserFile file)
     {
         _selectedFile = file;
+        _previewUrl = null;
+        _showPreview = false;
+        
+        // Check if new file can be previewed
+        if (file != null)
+        {
+            string ext = Path.GetExtension(file.Name).ToLower();
+            _canPreviewNewFile = (ext == ".pdf" || ext == ".jpg" || ext == ".jpeg" || ext == ".png");
+        }
+        else
+        {
+            _canPreviewNewFile = false;
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task TogglePreview()
+    {
+        _showPreview = !_showPreview;
+
+        if (_showPreview && string.IsNullOrEmpty(_previewUrl))
+        {
+            try
+            {
+                if (_selectedFile != null)
+                {
+                    // Preview new file being uploaded
+                    using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    _previewUrl = $"data:{_selectedFile.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+                }
+                else if (!string.IsNullOrEmpty(_editDoc.FilePath))
+                {
+                    // Preview existing file
+                    _previewUrl = _editDoc.FilePath;
+                }
+            }
+            catch (Exception ex)
+            {
+                _showPreview = false;
+                Snackbar.Add("Preview failed: " + ex.Message, Severity.Warning);
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task OnCabinetChanged(int? id)
+    {
+        _selectedCabinetId = id;
+        _boxes.Clear(); 
+        _folders.Clear(); 
+        _selectedBoxId = null;
+        _editDoc.FolderId = 0;
+        
+        if (id == null) return;
+        
+        using var _context = await DbFactory.CreateDbContextAsync();
+        _boxes = await _context.FileBoxes.Where(b => b.FillingCabinetId == id && !b.IsArchived).ToListAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnBoxChanged(int? id)
+    {
+        _selectedBoxId = id;
+        _folders.Clear(); 
+        _editDoc.FolderId = 0;
+        
+        if (id == null) return;
+        
+        using var _context = await DbFactory.CreateDbContextAsync();
+        _folders = await _context.Folders.Where(f => f.FileBoxId == id && !f.IsArchived).ToListAsync();
         StateHasChanged();
     }
 
@@ -267,6 +450,15 @@
             if (DocumentToEdit.DateOfDisposal != _editDoc.DateOfDisposal)
                 changeLog.Add($"Disposal Date: {DocumentToEdit.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"} → {_editDoc.DateOfDisposal?.ToString("MMM dd, yyyy") ?? "None"}");
 
+            if (DocumentToEdit.FolderId != _editDoc.FolderId)
+            {
+                var oldFolder = await _context.Folders.Include(f => f.FileBox).ThenInclude(b => b.FillingCabinet).FirstOrDefaultAsync(f => f.Id == DocumentToEdit.FolderId);
+                var newFolder = await _context.Folders.Include(f => f.FileBox).ThenInclude(b => b.FillingCabinet).FirstOrDefaultAsync(f => f.Id == _editDoc.FolderId);
+                var oldLocation = oldFolder != null ? $"{oldFolder.FileBox?.FillingCabinet?.Name}/{oldFolder.FileBox?.Name}/{oldFolder.Name}" : "Unknown";
+                var newLocation = newFolder != null ? $"{newFolder.FileBox?.FillingCabinet?.Name}/{newFolder.FileBox?.Name}/{newFolder.Name}" : "Unknown";
+                changeLog.Add($"Location: '{oldLocation}' → '{newLocation}'");
+            }
+
             
             if (!string.IsNullOrEmpty(DocumentToEdit.FilePath) && string.IsNullOrEmpty(_editDoc.FilePath))
                 changeLog.Add("Digital file removed");
@@ -274,15 +466,7 @@
             
             if (_pendingFileRemoval && !string.IsNullOrEmpty(DocumentToEdit.FilePath))
             {
-                try
-                {
-                    string conn = _config.GetConnectionString("AzureStorage");
-                    var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
-                    string blobName = Path.GetFileName(new Uri(DocumentToEdit.FilePath).LocalPath);
-                    await container.GetBlobClient(blobName).DeleteIfExistsAsync();
-                }
-                catch { }
-
+                FileStorage.DeleteFile(DocumentToEdit.FilePath);
                 realDoc.FilePath = null;
                 realDoc.FileName = null;
                 _editDoc.FilePath = null;
@@ -308,32 +492,14 @@
             
             if (_selectedFile != null)
             {
-                
                 if (!string.IsNullOrEmpty(realDoc.FilePath))
                 {
                     Snackbar.Add("Please remove the current file before uploading a new one.", Severity.Warning);
                     return;
                 }
-
-                string conn = _config.GetConnectionString("AzureStorage");
-                var container = new BlobServiceClient(conn).GetBlobContainerClient("documents");
-                
-                string safeFileName = _selectedFile.Name.Replace(" ", "_");
-                string fileName = $"{Guid.NewGuid()}_{safeFileName}";
-                var blob = container.GetBlobClient(fileName);
-
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
-                
-                var headers = new BlobHttpHeaders { 
-                    ContentType = _selectedFile.ContentType,
-                    ContentDisposition = $"attachment; filename=\"{_selectedFile.Name}\"" 
-                };
-
-                await blob.UploadAsync(stream, headers);
-
-                realDoc.FilePath = blob.Uri.ToString();
+                realDoc.FilePath = await FileStorage.SaveFileAsync(_selectedFile, "documents");
                 realDoc.FileName = _selectedFile.Name;
-                _editDoc.FilePath = realDoc.FilePath; 
+                _editDoc.FilePath = realDoc.FilePath;
                 changeLog.Add($"Uploaded digital file: '{_selectedFile.Name}'");
             }
 
@@ -371,6 +537,9 @@
     {
         _pendingFileRemoval = true;
         _selectedFile = null;
+        _previewUrl = null;
+        _showPreview = false;
+        _canPreview = false;
         StateHasChanged();
     }
 
@@ -378,6 +547,9 @@
     {
         _pendingFileRemoval = false;
         _selectedFile = null;
+        _previewUrl = null;
+        _showPreview = false;
+        CheckIfPreviewable(_editDoc.FilePath);
         StateHasChanged();
     }
 
